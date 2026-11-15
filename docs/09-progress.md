@@ -16,7 +16,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Item | Status |
 |---|---|
 | Overview dashboard, Inbox, ⌘K search | ☑ |
-| Customers list/detail/map, tags, data freshness, pin approvals | ◐ list, detail, tags, freshness done; map and pin approvals next |
+| Customers list/detail/map, tags, data freshness, pin approvals | ☑ (map lives at `/map` and approvals at `/pin-approvals`, because `/customers/<x>/` is rewritten to the detail page) |
 | Collections, Conflicts resolution, Cash & deposits | ☑ (refund proof upload pending) |
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
 | Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals are Phase 4; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |

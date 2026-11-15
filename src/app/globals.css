@@ -193,3 +193,41 @@
 }
 
 /* Leaflet base (self-hosted, CSP-safe) is imported by the map module only. */
+
+/* Map (shared/map/map-view.tsx): cluster bubbles and Leaflet chrome from design tokens */
+.fos-cluster {
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--c) 88%, transparent);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent);
+  cursor: pointer;
+}
+.fos-map .leaflet-container,
+.fos-map.leaflet-container {
+  background: var(--surface-subtle);
+  font: inherit;
+}
+.fos-map .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  color: var(--fg-secondary);
+  font-size: 10px;
+}
+.fos-map .leaflet-control-attribution a { color: inherit; }
+.fos-map .leaflet-bar a {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--line);
+}
+.fos-map .leaflet-tooltip {
+  background: var(--fg);
+  color: var(--surface);
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: none;
+}
+.fos-map .leaflet-tooltip-top::before { border-top-color: var(--fg); }

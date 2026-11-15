@@ -123,5 +123,54 @@
       "sent": "Sent"
     },
     "phoneN": "Phone {{n}}"
+  },
+  "map": {
+    "title": "Customer map",
+    "subtitle": "See where customers are and which areas carry the most overdue.",
+    "toList": "View as list",
+    "inView": "Customers in view",
+    "nCustomers": "{{n}} customers",
+    "zoomHint": "Individual customers cannot be shown from this far. Select a cluster to zoom in.",
+    "cluster": "Cluster {{n}}",
+    "empty": "No customers in this part of the map.",
+    "more": "{{n}} more; zoom in to see them",
+    "open": "View on map"
+  },
+  "pins": {
+    "title": "Pin approvals",
+    "subtitle": "Field staff proposed the correct home location of customers. Compare and approve.",
+    "status": "Status",
+    "tab": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "empty": {
+      "pending": "No proposals are waiting",
+      "approved": "No approved proposals",
+      "rejected": "No rejected proposals"
+    },
+    "emptyBody": "New pin proposals from the app appear here.",
+    "current": "Current pin",
+    "proposed": "Proposed pin",
+    "moved": "Moves by",
+    "accuracy": "GPS accuracy",
+    "by": "Proposed by",
+    "noPin": "No pin before",
+    "metres": "{{n}} m",
+    "plusMinus": "± {{n}} m",
+    "check": "Check carefully",
+    "mapOf": "Map of the pin for {{name}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveFor": "Approve pin for {{name}}",
+    "rejectFor": "Reject pin for {{name}}",
+    "back": "Go back",
+    "approveTitle": "Approve this pin?",
+    "approveDesc": "The location of {{name}} changes to the proposed place. The earlier pin stays in the audit log.",
+    "approved": "Pin approved",
+    "rejectTitle": "Reject this proposal?",
+    "rejectDesc": "{{name}} keeps the current pin. The staff member will see the reason.",
+    "rejected": "Proposal rejected"
   }
 }

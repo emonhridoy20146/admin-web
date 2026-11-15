@@ -249,6 +249,65 @@ export const handlers = [
     return HttpResponse.json({ temporaryPassword: temp });
   })),
 
+  // ---------- map & pin proposals ----------
+  http.get(`${BASE}/customers/map`, authed(({ ctx, url, request }) => {
+    const deny = need(ctx, 'customer.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const [minLng, minLat, maxLng, maxLat] = (url.searchParams.get('bbox') ?? '').split(',').map(Number) as [number, number, number, number];
+    if ([minLng, minLat, maxLng, maxLat].some((n) => !Number.isFinite(n))) return problem(400, 'VALIDATION_FAILED', 'bbox is required: minLng,minLat,maxLng,maxLat');
+    const zoom = Number(url.searchParams.get('zoom') ?? 13);
+    const filter = (url.searchParams.get('filter') ?? '').split(',').filter(Boolean);
+    const ORDER = ['tagged_bad', 'bad_suggested', 'overdue', 'promised_today', 'due_today', 'current', 'paid_up'];
+    const worst = (b: string[] | undefined) => ORDER.find((s) => b?.includes(s as never)) ?? 'current';
+    const inBox = db.customers
+      .filter((c) => sc.includes(c.branchId) && c.item.location?.status === 'ok')
+      .filter((c) => c.item.location!.lat! >= minLat && c.item.location!.lat! <= maxLat && c.item.location!.lng! >= minLng && c.item.location!.lng! <= maxLng)
+      .filter((c) => !filter.length || filter.some((f) => c.item.badges?.includes(f as never)));
+    if (zoom < 13) {
+      const cell = 360 / 2 ** (zoom + 2);
+      const cells = new Map<string, { lat: number; lng: number; count: number; rank: number }>();
+      for (const c of inBox) {
+        const k = `${Math.floor(c.item.location!.lat! / cell)}:${Math.floor(c.item.location!.lng! / cell)}`;
+        const cur = cells.get(k) ?? { lat: 0, lng: 0, count: 0, rank: 99 };
+        cur.lat += c.item.location!.lat!;
+        cur.lng += c.item.location!.lng!;
+        cur.count++;
+        cur.rank = Math.min(cur.rank, ORDER.indexOf(worst(c.item.badges)));
+        cells.set(k, cur);
+      }
+      return HttpResponse.json({ pins: [], clusters: [...cells.values()].map((v) => ({ lat: v.lat / v.count, lng: v.lng / v.count, count: v.count, worstStatus: ORDER[v.rank] as S['CustomerStatus'] })) });
+    }
+    return HttpResponse.json({
+      clusters: [],
+      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged' })),
+    });
+  })),
+  http.get(`${BASE}/location-proposals`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'customer.location.approve');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const status = url.searchParams.get('status');
+    return HttpResponse.json(db.proposals.filter((p) => sc.includes(p.branchId)).map((p) => p.row).filter((p) => !status || p.status === status).sort((a, b) => (a.createdAt! < b.createdAt! ? 1 : -1)));
+  })),
+  http.post(`${BASE}/location-proposals/:id/decision`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'customer.location.approve');
+    if (deny) return deny;
+    const b = (await request.json()) as { decision: 'approve' | 'reject'; reason?: string };
+    const p = db.proposals.find((x) => x.row.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Proposal not found');
+    if (p.row.status !== 'pending') return problem(409, 'PROPOSAL_DECIDED', 'This proposal was already decided');
+    if (b.decision === 'reject' && (!b.reason || b.reason.length < 5)) return problem(400, 'VALIDATION_FAILED', 'Reason required');
+    p.row.status = b.decision === 'approve' ? 'approved' : 'rejected';
+    const c = db.customerById(p.row.customer?.id ?? '');
+    const before = c?.item.location ? { lat: c.item.location.lat, lng: c.item.location.lng } : {};
+    if (c && b.decision === 'approve') {
+      c.item.location = { lat: p.row.lat!, lng: p.row.lng!, status: 'overridden', source: 'overlay' };
+      c.detail.location = c.item.location;
+    }
+    db.addAudit({ actor: actor(ctx.user), action: `location.proposal.${b.decision}`, entity: 'customer', entityId: p.row.customer?.id, branchId: p.branchId, before, after: b.decision === 'approve' ? { lat: p.row.lat, lng: p.row.lng } : before, reason: b.reason ?? '' });
+    return HttpResponse.json({});
+  })),
   // ---------- attendance ----------
   http.get(`${BASE}/attendance/days`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'attendance.view');

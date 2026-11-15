@@ -49,3 +49,9 @@ Only with `NEXT_PUBLIC_API_MOCK=1`: the MSW mock stores the signed-in demo user 
 | OD-W03 | Bangla heading font | Noto Sans Bengali everywhere; Hind Siliguri optional for titles |
 | OD-W04 | Dark sidebar vs light sidebar | Light sidebar (neutral.0) with brand active state |
 | OD-W05 | Session idle timeout | 30 min |
+
+## ADR-W11 — Map: plain Leaflet, vector markers, routes outside `/customers/`
+- **Decision:** `shared/map/MapView` wraps Leaflet directly (dynamic import on the client), draws pins as vector circles coloured from design tokens and clusters as token-coloured bubbles; no marker images. The customer map is `/map` and pin approvals `/pin-approvals`.
+- **Reason:** Leaflet touches `window` at import, which breaks static pre-rendering if imported at module top. Vector markers need no image hosts, so the CSP only gains the tile origin. `/customers/<anything>/` is rewritten by hosts to the detail page (ADR-W02), so `/customers/map` would collide.
+- **Accessibility:** the map is `role="application"` and is never the only path: each map page lists the same items as text beside it.
+- **Alternatives rejected:** react-leaflet components (more code for the same result, SSR guards everywhere); MapLibre GL (heavier, needs vector tiles and `worker-src blob:`).

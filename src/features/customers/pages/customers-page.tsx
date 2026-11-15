@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, MapPinOff, SearchX, Users } from 'lucide-react';
+import { ExternalLink, Map as MapIcon, MapPinOff, SearchX, Users } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatDate, formatMoney, formatNumber, formatRelative } from '@/shared/lib/format';
@@ -133,7 +133,16 @@ export function CustomersPage() {
   const asOf = query.data?.items?.[0]?.erpFetchedAt;
   return (
     <>
-      <PageHeader title={t('title')} asOf={asOf}>
+      <PageHeader
+        title={t('title')}
+        asOf={asOf}
+        actions={
+          <Link href="/map/" className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-line bg-surface px-3 text-sm font-medium text-fg shadow-e1 hover:bg-surface-hover">
+            <MapIcon className="size-4" aria-hidden />
+            {t('map.open')}
+          </Link>
+        }
+      >
         {query.data?.total != null && <span>{t('subtitle')}</span>}
       </PageHeader>
 

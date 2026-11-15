@@ -63,7 +63,7 @@ export function toCustomerRow(c: CustomerListItem, locale: Locale): CustomerRowV
     statuses,
     lastVisitAt: c.lastVisitAt ?? null,
     openPromise: c.openPromise ? { date: c.openPromise.promisedDate, amountPoisha: c.openPromise.promisedAmountPoisha } : null,
-    hasLocation: c.location?.status === 'ok' && c.location.lat != null,
+    hasLocation: (c.location?.status === 'ok' || c.location?.status === 'overridden') && c.location.lat != null,
     asOf: c.erpFetchedAt ?? null,
     urgency,
   };

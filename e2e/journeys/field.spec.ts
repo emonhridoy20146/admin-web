@@ -157,6 +157,7 @@ test('visits: filter by outcome, open a visit with photos and view one', async (
   await login(page);
   await nav(page, visitsBn.title);
   await page.getByRole('group', { name: visitsBn.range.label }).getByRole('button', { name: visitsBn.range['7d'] }).click();
+  await expect(page).toHaveURL(/range=7d/);
   await page.getByLabel(visitsBn.col.outcome).selectOption('not_home');
   await expect(page).toHaveURL(/outcome=not_home/);
   await expect(page.locator('tbody tr button').first()).toBeVisible();
@@ -201,4 +202,33 @@ test('staff: performance list, month view, drawer and jump to the staff member\'
   await drawer.getByRole('link', { name: staffBn.link.visits }).click();
   await expect(page).toHaveURL(/\/visits\/\?userId=/);
   await expect(page.getByRole('button', { name: visitsBn.clearStaff })).toBeVisible();
+});
+
+test('customer map: pins listed beside the map, filter, open a customer', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, custBn.map.title);
+  const list = page.getByRole('region', { name: custBn.map.inView });
+  await expect(list.getByRole('button').first()).toBeVisible();
+  await expect(page.getByRole('application', { name: custBn.map.title })).toBeVisible();
+  await toggleChip(page, custBn.filters.overdue);
+  await expect(page).toHaveURL(/filter=overdue/);
+  await expect(list.getByRole('button').first()).toBeVisible();
+  await list.getByRole('button').first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page).toHaveURL(/drawer=customer/);
+});
+
+test('pin approvals: approve one proposal and reject another with a reason', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, custBn.pins.title);
+  const cards = page.locator('main ul > li');
+  await expect(cards.first()).toBeVisible();
+  const before = await cards.count();
+  await cards.first().getByRole('button', { name: new RegExp(`${custBn.pins.approve}$`) }).click();
+  await page.getByRole('dialog').getByRole('button', { name: custBn.pins.approve, exact: true }).click();
+  await expect(page.getByText(custBn.pins.approved)).toBeVisible();
+  await expect(cards).toHaveCount(before - 1);
+  await cards.first().getByRole('button', { name: new RegExp(`${custBn.pins.reject}$`) }).click();
+  await confirmWithReason(page, 'পিন রাস্তার ওপর পড়েছে, বাড়িতে নয়', custBn.pins.reject);
+  await expect(cards).toHaveCount(before - 2);
 });

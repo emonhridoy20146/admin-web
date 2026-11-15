@@ -60,3 +60,38 @@ export function useContactAttempts(id: string) {
     staleTime: 60_000,
   });
 }
+
+export type MapPin = components['schemas']['MapPin'];
+export type LocationProposal = components['schemas']['LocationProposal'];
+
+/** FR-CUS-008: pins in the visible box (max 2000) or clusters when zoomed out. */
+export function useCustomerMap(bbox: string | null, zoom: number, filter: string) {
+  const branchId = useBranchId();
+  useInvalidateOn([EV.customerTagged], [['customers', 'map']]);
+  return useQuery({
+    queryKey: ['customers', 'map', { branchId, bbox, zoom, filter }],
+    queryFn: () => unwrap(api.GET('/customers/map', { params: { query: { bbox: bbox!, zoom, filter: filter || undefined, branchId } } })),
+    enabled: !!bbox,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+}
+
+/** FR-CUS-010: pin corrections proposed from the field, waiting for a manager. */
+export function useProposals(status: 'pending' | 'approved' | 'rejected') {
+  const branchId = useBranchId();
+  return useQuery({
+    queryKey: ['customers', 'location-proposals', { branchId, status }],
+    queryFn: () => unwrap(api.GET('/location-proposals', { params: { query: { branchId, status } } })),
+    staleTime: 30_000,
+  });
+}
+
+export function useDecideProposal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, decision, reason }: { id: string; decision: 'approve' | 'reject'; reason?: string }) =>
+      unwrap(api.POST('/location-proposals/{id}/decision', { params: { path: { id } }, body: { decision, reason } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
+  });
+}

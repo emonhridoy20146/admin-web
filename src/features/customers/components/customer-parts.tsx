@@ -109,7 +109,7 @@ export function PendingCallout({ c }: { c: CustomerDetail }) {
 export function ContactCard({ c }: { c: CustomerDetail }) {
   const { t } = useTranslation('customers');
   const locale = useUi((s) => s.locale);
-  const hasLoc = c.location?.status === 'ok' && c.location.lat != null;
+  const hasLoc = (c.location?.status === 'ok' || c.location?.status === 'overridden') && c.location.lat != null;
   return (
     <dl className="space-y-3 text-base">
       <Item icon={Phone} label={t('phones')}>

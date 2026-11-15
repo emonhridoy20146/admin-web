@@ -671,3 +671,29 @@ export function attendanceDay(u: MockUser, date: string): S['AttendanceDay'] {
     autoClosed, corrected: !!corr, flags: breakMin > 60 ? ['over_break'] : [],
   };
 }
+
+// ---------- pin proposals ----------
+export interface MockProposal { row: S['LocationProposal']; branchId: string }
+export const proposals: MockProposal[] = [];
+{
+  const PNOTES = ['বাড়ি মসজিদের পাশের গলিতে', 'ERP pin was at the market, home is behind the school', 'নতুন বাড়িতে উঠেছেন', null];
+  const withPin = customers.filter((c) => c.item.location?.status === 'ok');
+  const noPin = customers.filter((c) => c.item.location?.status !== 'ok');
+  const pickN = (arr: MockCustomer[], n: number) => Array.from({ length: Math.min(n, arr.length) }, (_, i) => arr[(i * 37 + 11) % arr.length]!);
+  [...pickN(withPin, 7), ...pickN(noPin, 3)].forEach((c, i) => {
+    const cur = c.item.location?.status === 'ok' ? { lat: c.item.location.lat!, lng: c.item.location.lng! } : null;
+    const b = branches.find((x) => x.id === c.branchId)!;
+    const far = i % 4 === 3;
+    const base = cur ?? { lat: (b.lat ?? 22.7) + (r2() - 0.5) * 0.05, lng: (b.lng ?? 90.36) + (r2() - 0.5) * 0.05 };
+    const off = (far ? i2(600, 1400) : i2(25, 220)) / 111_000;
+    const status = i < 6 ? 'pending' : i % 2 ? 'approved' : 'rejected';
+    proposals.push({
+      branchId: c.branchId,
+      row: {
+        id: oid('6772'), customer: { id: c.item.id, name: c.item.name, code: c.item.code, current: cur as never }, lat: base.lat + off * (i % 2 ? 1 : -0.6), lng: base.lng + off * (i % 3 ? 0.8 : -1),
+        accuracyM: far ? i2(40, 90) : i2(5, 24), photoMediaId: null, note: PNOTES[i % PNOTES.length], proposedBy: c.item.assignee?.id, proposer: { id: c.item.assignee?.id, name: c.item.assignee?.name },
+        status, createdAt: isoAt(now().minus({ hours: 3 + i * 7 })),
+      },
+    });
+  });
+}
