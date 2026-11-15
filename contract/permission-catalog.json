@@ -1,0 +1,600 @@
+[
+  {
+    "key": "user.view",
+    "module": "users",
+    "description": "List/view users in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "user.manage",
+    "module": "users",
+    "description": "Create/edit/deactivate users, reset password, in scope (BM cannot create SA/BM)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "rbac.view",
+    "module": "rbac",
+    "description": "View roles, overrides, effective permissions",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "rbac.manage",
+    "module": "rbac",
+    "description": "Change branch/user permission overrides",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "branch.view",
+    "module": "branches",
+    "description": "View branches",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "settings.manage",
+    "module": "settings",
+    "description": "Org settings, duty hours, thresholds, holidays",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "flag.manage",
+    "module": "flags",
+    "description": "Toggle feature flags (global / per branch)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "device.manage",
+    "module": "devices",
+    "description": "View devices, revoke sessions, unbind device",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "customer.view",
+    "module": "customers",
+    "description": "View customers in scope (list, detail, plan, schedule, payments)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "customer.export",
+    "module": "customers",
+    "description": "Export customer lists",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "customer.location.propose",
+    "module": "customers",
+    "description": "Propose a corrected pin",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "customer.location.approve",
+    "module": "customers",
+    "description": "Approve/reject pin corrections",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "tag.view",
+    "module": "tags",
+    "description": "See bad-customer suggestion, tag and history",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "tag.set",
+    "module": "tags",
+    "description": "Tag/untag (reason required)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "tag.approve",
+    "module": "tags",
+    "description": "Review queue: approve/revert staff-set tags, act on \"balance cleared\" prompts",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "collection.record",
+    "module": "collections",
+    "description": "Record a field collection",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "collection.view",
+    "module": "collections",
+    "description": "View collections in scope (own only for FS)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "collection.void",
+    "module": "collections",
+    "description": "Void a collection not yet posted to ERP (reason required)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "collection.resolve",
+    "module": "collections",
+    "description": "Resolve conflicts",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "cash.view",
+    "module": "cash",
+    "description": "View cash positions (own only for FS)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "cash.deposit.record",
+    "module": "cash",
+    "description": "Record a deposit",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "cash.deposit.verify",
+    "module": "cash",
+    "description": "Verify/reject deposits",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "cash.limit.manage",
+    "module": "cash",
+    "description": "Set cash-on-hand limits per user/branch",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "assignment.view",
+    "module": "assignments",
+    "description": "View assignments and areas",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "assignment.manage",
+    "module": "assignments",
+    "description": "Assign customers/areas, edit areas",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "handover.create",
+    "module": "handovers",
+    "description": "Create a handover between staff",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "handover.request",
+    "module": "handovers",
+    "description": "Staff requests handover of own customers (needs manager approval)",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "visit.record",
+    "module": "visits",
+    "description": "Check in / out at a customer",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "visit.view",
+    "module": "visits",
+    "description": "View visits in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "note.create",
+    "module": "notes",
+    "description": "Add notes",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "note.view",
+    "module": "notes",
+    "description": "View notes in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "promise.create",
+    "module": "promises",
+    "description": "Record/update promise-to-pay",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "promise.view",
+    "module": "promises",
+    "description": "View promises in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "attendance.record",
+    "module": "attendance",
+    "description": "Own work-in/out and breaks",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": false,
+      "branch_manager": false,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "attendance.view",
+    "module": "attendance",
+    "description": "View attendance of others in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "attendance.manage",
+    "module": "attendance",
+    "description": "Corrections, leave approval, shift assignment",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "location.view",
+    "module": "location",
+    "description": "Latest location map",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "location.history.view",
+    "module": "location",
+    "description": "Route history and stops",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "report.view",
+    "module": "reports",
+    "description": "Reports and dashboards in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "report.export",
+    "module": "reports",
+    "description": "Export reports (CSV/XLSX/PDF)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "notification.broadcast",
+    "module": "notifications",
+    "description": "Send announcements to staff in scope",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "audit.view",
+    "module": "audit",
+    "description": "View audit log in scope",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "inbox.view",
+    "module": "inbox",
+    "description": "\"Needs attention\" exceptions inbox",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "leave.request",
+    "module": "attendance",
+    "description": "Request leave",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": false,
+      "branch_manager": false,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "microfinance.view",
+    "module": "microfinance",
+    "description": "RESERVED — not grantable until MF-001 unblocked",
+    "added": false,
+    "reserved": true,
+    "defaults": {
+      "super_admin": null,
+      "branch_manager": null,
+      "field_staff": null,
+      "viewer": null
+    }
+  },
+  {
+    "key": "microfinance.manage",
+    "module": "microfinance",
+    "description": "RESERVED",
+    "added": false,
+    "reserved": true,
+    "defaults": {
+      "super_admin": null,
+      "branch_manager": null,
+      "field_staff": null,
+      "viewer": null
+    }
+  }
+]

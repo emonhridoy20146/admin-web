@@ -1,0 +1,213 @@
+{
+  "appName": "Howlader Field",
+  "appTagline": "Field operations",
+  "asOf": "as of {{time}}",
+  "allBranches": "All branches",
+  "nav": {
+    "top": "Overview",
+    "field": "Field work",
+    "people": "People",
+    "insights": "Insights",
+    "admin": "Admin",
+    "menu": "Menu",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
+  "actions": {
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "saveWithReason": "Save with reason",
+    "clear": "Clear",
+    "apply": "Apply",
+    "export": "Export",
+    "open": "Open",
+    "view": "View",
+    "viewAll": "View all",
+    "back": "Back",
+    "refresh": "Refresh",
+    "search": "Search",
+    "filters": "Filters",
+    "reset": "Reset",
+    "copy": "Copy",
+    "copied": "Copied",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "discard": "Discard changes"
+  },
+  "status": {
+    "overdue": "Overdue",
+    "due_today": "Due today",
+    "promised_today": "Promised today",
+    "paid_up": "Paid up",
+    "current": "Running",
+    "bad_suggested": "Suggested bad",
+    "tagged_bad": "Tagged bad",
+    "received": "Received",
+    "posting": "Posting",
+    "posted": "Posted",
+    "conflict": "Conflict",
+    "posting_failed": "Posting failed",
+    "resolved_posted": "Resolved · posted",
+    "resolved_refund": "Resolved · refund",
+    "resolved_voided": "Resolved · voided",
+    "voided": "Voided",
+    "pending": "Pending",
+    "verified": "Verified",
+    "rejected": "Rejected",
+    "cash_ok": "Within limit",
+    "cash_warning": "Near limit",
+    "cash_exceeded": "Over limit",
+    "paid": "Paid",
+    "partial": "Partial",
+    "due": "Due",
+    "upcoming": "Upcoming",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "flags": {
+    "mock_location": "Mock GPS",
+    "far_from_pin": "Far from pin",
+    "clock_skew": "Clock skew",
+    "late_sync": "Late sync",
+    "duplicate_txn_ref": "Duplicate txn ID",
+    "not_in_scope_at_record_time": "Out of scope"
+  },
+  "method": {
+    "cash": "Cash",
+    "bkash": "bKash",
+    "nagad": "Nagad",
+    "rocket": "Rocket",
+    "bank_transfer": "Bank",
+    "other_mobile": "Other mobile"
+  },
+  "role": {
+    "super_admin": "Super admin",
+    "branch_manager": "Branch manager",
+    "field_staff": "Field staff",
+    "viewer": "Viewer"
+  },
+  "money": {
+    "pendingInErp": "Pending in ERP — not yet posted",
+    "posted": "Posted",
+    "pending": "Pending"
+  },
+  "table": {
+    "empty": "Nothing to show here yet.",
+    "total": "{{n}} total",
+    "page": "Page {{n}}",
+    "prev": "Previous",
+    "next": "Next",
+    "perPage": "Rows",
+    "columns": "Columns",
+    "density": "Toggle row density",
+    "sort": "sort",
+    "selectAll": "Select all rows on this page",
+    "selectRow": "Select row",
+    "selected": "{{n}} selected"
+  },
+  "reason": {
+    "code": "Reason type",
+    "text": "Reason",
+    "help": "Recorded in the audit log with your name and the time.",
+    "placeholder": "Explain why, in a sentence or two",
+    "tooShort": "Write at least {{n}} characters."
+  },
+  "errors": {
+    "GENERIC": "Something went wrong. Please try again.",
+    "NETWORK": "Cannot reach the server. Check the internet connection.",
+    "SERVER": "The server had a problem. Try again in a moment.",
+    "FORBIDDEN": "You do not have permission for this action.",
+    "NOT_FOUND": "This item was not found or is outside your branch.",
+    "CONFLICT": "This was changed by someone else. Reload and try again.",
+    "INVALID_CREDENTIALS": "Wrong username or password.",
+    "USER_INACTIVE": "This account is deactivated. Contact your super admin.",
+    "WEB_NOT_ALLOWED": "Field staff accounts sign in from the mobile app.",
+    "ACCOUNT_LOCKED": "Too many attempts. The account is locked for a while.",
+    "INVALID_CURRENT_PASSWORD": "The current password is wrong.",
+    "WEAK_PASSWORD": "Choose a stronger password.",
+    "VALIDATION_FAILED": "Some fields are not valid.",
+    "ALREADY_RESOLVED": "This conflict was already resolved.",
+    "ALREADY_DECIDED": "This deposit was already decided.",
+    "ALREADY_POSTED": "Posted collections must be reversed in the ERP.",
+    "LAST_SUPER_ADMIN": "The last super admin cannot be deactivated.",
+    "FLAG_LOCKED": "This flag is locked.",
+    "PERMISSION_RESERVED": "Reserved permissions cannot be granted.",
+    "PHONE_TAKEN": "This phone number is already used.",
+    "copyDetails": "Copy details"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last7": "Last 7 days",
+    "thisMonth": "This month",
+    "custom": "Custom"
+  },
+  "erp": {
+    "label": "ERP",
+    "live": "ERP connected",
+    "record_only": "ERP offline — recording only",
+    "mock": "ERP mock",
+    "lastSync": "Last sync {{time}}",
+    "outbox": "{{n}} waiting to post",
+    "failed": "{{n}} failed",
+    "fresh": "Fresh",
+    "stale": "Delayed",
+    "down": "Not syncing"
+  },
+  "user": {
+    "language": "Language",
+    "bangla": "বাংলা",
+    "english": "English",
+    "bnDigits": "Bangla digits",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "changePassword": "Change password",
+    "logout": "Sign out"
+  },
+  "session": {
+    "idleTitle": "Still there?",
+    "idleBody": "You will be signed out in {{s}} seconds because of inactivity.",
+    "stay": "Stay signed in",
+    "reused": "Your session was used from another place and has been closed for safety. Please sign in again.",
+    "expired": "Your session ended. Please sign in again."
+  },
+  "offline": "You are offline — showing last loaded data. Changes are disabled.",
+  "moduleOff": {
+    "title": "This module is turned off",
+    "body": "This module is turned off for this branch.",
+    "manage": "Open feature flags"
+  },
+  "forbidden": {
+    "title": "No access",
+    "body": "Your role does not include access to this page."
+  },
+  "search": {
+    "placeholder": "Search customers, staff, receipts…",
+    "short": "Search",
+    "empty": "No results for “{{q}}”.",
+    "hint": "Type at least 2 characters",
+    "customers": "Customers",
+    "users": "Staff & users",
+    "receipts": "Receipts",
+    "commands": "Go to",
+    "navigate": "to navigate",
+    "select": "to open"
+  },
+  "bell": "Needs attention",
+  "skip": "Skip to content",
+  "demo": "Demo data",
+  "chart": {
+    "showTable": "View as table",
+    "showChart": "View as chart"
+  }
+}

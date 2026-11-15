@@ -1,0 +1,41 @@
+{
+  "title": "ইনবক্স",
+  "subtitle": "যেসব বিষয়ে সিদ্ধান্ত দরকার, সবচেয়ে জরুরিগুলো আগে।",
+  "widgetTitle": "মনোযোগ প্রয়োজন",
+  "open": "খোলা",
+  "snoozed": "স্থগিত",
+  "resolved": "সমাধানকৃত",
+  "all": "সব",
+  "emptyTitle": "সব ঠিক আছে",
+  "emptyBody": "এই শাখায় এখন কিছুতে মনোযোগ প্রয়োজন নেই।",
+  "snooze": "১ দিন স্থগিত",
+  "markResolved": "সমাধান হয়েছে",
+  "resolveTitle": "বিষয়টি সমাধান হিসেবে চিহ্নিত করুন",
+  "resolveConfirm": "সমাধান চিহ্নিত",
+  "snoozedToast": "আগামীকাল পর্যন্ত স্থগিত",
+  "resolvedToast": "সমাধান চিহ্নিত হয়েছে",
+  "ago": "{{t}}",
+  "types": {
+    "collection.conflict": "আদায় কনফ্লিক্ট",
+    "collection.posting_failed": "ERP পোস্টিং ব্যর্থ",
+    "cash.limit_exceeded": "নগদ সীমা ছাড়িয়েছে",
+    "cash.deposit_pending": "জমা যাচাই",
+    "tag.balance_cleared": "ট্যাগ পর্যালোচনা",
+    "fraud.mock_location": "নকল লোকেশন",
+    "device.pending_approval": "নতুন ডিভাইস",
+    "location.proposal": "পিন সংশোধন",
+    "promise.broken": "প্রতিশ্রুতি ভঙ্গ"
+  },
+  "action": {
+    "collection.conflict": "সমাধান",
+    "collection.posting_failed": "পর্যালোচনা",
+    "cash.limit_exceeded": "নগদ দেখুন",
+    "cash.deposit_pending": "যাচাই",
+    "tag.balance_cleared": "ট্যাগ দেখুন",
+    "fraud.mock_location": "তদন্ত",
+    "device.pending_approval": "অনুমোদন",
+    "location.proposal": "পিন দেখুন",
+    "promise.broken": "গ্রাহক খুলুন",
+    "default": "খুলুন"
+  }
+}

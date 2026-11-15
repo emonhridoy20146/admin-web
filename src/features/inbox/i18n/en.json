@@ -1,0 +1,41 @@
+{
+  "title": "Inbox",
+  "subtitle": "Exceptions that need a decision, most urgent first.",
+  "widgetTitle": "Needs attention",
+  "open": "Open",
+  "snoozed": "Snoozed",
+  "resolved": "Resolved",
+  "all": "All",
+  "emptyTitle": "All clear",
+  "emptyBody": "Nothing needs attention in this branch right now.",
+  "snooze": "Snooze 1 day",
+  "markResolved": "Mark resolved",
+  "resolveTitle": "Mark this item resolved",
+  "resolveConfirm": "Mark resolved",
+  "snoozedToast": "Snoozed until tomorrow",
+  "resolvedToast": "Marked resolved",
+  "ago": "{{t}}",
+  "types": {
+    "collection.conflict": "Collection conflict",
+    "collection.posting_failed": "ERP posting failed",
+    "cash.limit_exceeded": "Cash over limit",
+    "cash.deposit_pending": "Deposit to verify",
+    "tag.balance_cleared": "Tag review",
+    "fraud.mock_location": "Mock location",
+    "device.pending_approval": "New device",
+    "location.proposal": "Pin correction",
+    "promise.broken": "Broken promise"
+  },
+  "action": {
+    "collection.conflict": "Resolve",
+    "collection.posting_failed": "Review",
+    "cash.limit_exceeded": "View cash",
+    "cash.deposit_pending": "Verify",
+    "tag.balance_cleared": "Review tag",
+    "fraud.mock_location": "Investigate",
+    "device.pending_approval": "Approve",
+    "location.proposal": "Review pin",
+    "promise.broken": "Open customer",
+    "default": "Open"
+  }
+}

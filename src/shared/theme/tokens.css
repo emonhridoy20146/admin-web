@@ -1,0 +1,174 @@
+/*
+ * Shared design tokens v1.0 — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
+ * Any change here must also be applied to staff-app/docs/03-design-guide.md §2 and both CHANGELOGs.
+ * Components never use raw hex values: they use the semantic variables below via the Tailwind theme.
+ */
+:root {
+  /* brand */
+  --brand-50: #eef3ff;
+  --brand-100: #dce5ff;
+  --brand-200: #bacbff;
+  --brand-300: #8ea8ff;
+  --brand-400: #5f7df7;
+  --brand-500: #3d5ae8;
+  --brand-600: #2c44cc;
+  --brand-700: #2437a6;
+  --brand-800: #1f3085;
+  --brand-900: #1c2b6b;
+  --brand-950: #121a42;
+
+  /* neutral (cool grey) */
+  --neutral-0: #ffffff;
+  --neutral-25: #fbfcfd;
+  --neutral-50: #f6f7f9;
+  --neutral-100: #edeff3;
+  --neutral-200: #dde1e8;
+  --neutral-300: #c4cad4;
+  --neutral-400: #98a1b0;
+  --neutral-500: #6b7587;
+  --neutral-600: #4d5666;
+  --neutral-700: #374050;
+  --neutral-800: #232a36;
+  --neutral-900: #151a23;
+  --neutral-950: #0b0e14;
+
+  /* chart palette (categorical, colour-blind safe order) */
+  --chart-1: #2c44cc;
+  --chart-2: #0ea5a4;
+  --chart-3: #f59e0b;
+  --chart-4: #db2777;
+  --chart-5: #7c3aed;
+  --chart-6: #65a30d;
+  --chart-7: #0284c7;
+  --chart-8: #ea580c;
+  --pay-cash: #2c44cc;
+  --pay-bkash: #db2777;
+  --pay-nagad: #ea580c;
+  --pay-rocket: #7c3aed;
+  --pay-bank: #0ea5a4;
+  --pay-other: #64748b;
+
+  /* semantic surfaces — light */
+  --bg: var(--neutral-25);
+  --surface: var(--neutral-0);
+  --surface-subtle: var(--neutral-50);
+  --surface-hover: var(--neutral-100);
+  --surface-raised: var(--neutral-0);
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+  --fg: var(--neutral-900);
+  --fg-secondary: var(--neutral-600);
+  --fg-tertiary: var(--neutral-500);
+  --fg-disabled: var(--neutral-400);
+  --primary: var(--brand-600);
+  --primary-hover: var(--brand-700);
+  --primary-fg: var(--neutral-0);
+  --primary-subtle: var(--brand-50);
+  --primary-subtle-hover: var(--brand-100);
+  --primary-subtle-fg: var(--brand-700);
+  --focus-ring: var(--brand-600);
+  --focus-offset: var(--neutral-0);
+  --overlay: rgb(11 14 20 / 0.42);
+
+  /* semantic & status (fg / bg) */
+  --success-fg: #166534;
+  --success-bg: #e8f6ec;
+  --warning-fg: #92400e;
+  --warning-bg: #fef3c7;
+  --danger-fg: #b91c1c;
+  --danger-bg: #fdecec;
+  --info-fg: #0369a1;
+  --info-bg: #e6f4fb;
+  --st-overdue-fg: #c62828;
+  --st-overdue-bg: #fdecec;
+  --st-due-today-fg: #92400e;
+  --st-due-today-bg: #fef3c7;
+  --st-promised-fg: #6d28d9;
+  --st-promised-bg: #f1eafe;
+  --st-current-fg: #2c44cc;
+  --st-current-bg: #eef3ff;
+  --st-paid-fg: #166534;
+  --st-paid-bg: #e8f6ec;
+  --st-bad-suggested-fg: #c2410c;
+  --st-bad-suggested-bg: #fff1e8;
+  --st-tagged-fg: #ffffff;
+  --st-tagged-bg: #7f1d1d;
+  --st-pending-fg: #475569;
+  --st-pending-bg: #eef1f5;
+  --st-mock-fg: #9d174d;
+  --st-mock-bg: #fce7f3;
+
+  /* elevation (light) */
+  --e1: 0 1px 2px rgb(16 24 40 / 0.06);
+  --e2: 0 2px 8px rgb(16 24 40 / 0.08);
+  --e3: 0 12px 32px rgb(16 24 40 / 0.14);
+
+  /* motion */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+
+  color-scheme: light;
+}
+
+/* Dark mode (03 §9): surface steps instead of shadows, dark status column of §2.3. */
+:root[data-theme='dark'] {
+  --bg: #0b0e14;
+  --surface: #121722;
+  --surface-subtle: #161c28;
+  --surface-hover: #1a2030;
+  --surface-raised: #1a2030;
+  --border: #262e3f;
+  --border-strong: #323b4f;
+  --fg: #e7eaf0;
+  --fg-secondary: #a9b1bf;
+  --fg-tertiary: #8790a0;
+  --fg-disabled: #5d6677;
+  --primary: var(--brand-400);
+  --primary-hover: var(--brand-300);
+  --primary-fg: #0b0e14;
+  --primary-subtle: #141b3d;
+  --primary-subtle-hover: #1b2550;
+  --primary-subtle-fg: #a9bbff;
+  --focus-ring: var(--brand-400);
+  --focus-offset: var(--neutral-950);
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --success-fg: #4ade80;
+  --success-bg: #0f2a1a;
+  --warning-fg: #fbbf24;
+  --warning-bg: #2e2208;
+  --danger-fg: #f87171;
+  --danger-bg: #2d1212;
+  --info-fg: #38bdf8;
+  --info-bg: #0b2230;
+  --st-overdue-fg: #f87171;
+  --st-overdue-bg: #2d1212;
+  --st-due-today-fg: #fbbf24;
+  --st-due-today-bg: #2e2208;
+  --st-promised-fg: #a78bfa;
+  --st-promised-bg: #1f1536;
+  --st-current-fg: #7c93fa;
+  --st-current-bg: #141b3d;
+  --st-paid-fg: #4ade80;
+  --st-paid-bg: #0f2a1a;
+  --st-bad-suggested-fg: #fb923c;
+  --st-bad-suggested-bg: #2e1a0c;
+  --st-tagged-fg: #ffffff;
+  --st-tagged-bg: #b91c1c;
+  --st-pending-fg: #a9b1bf;
+  --st-pending-bg: #1a2030;
+  --st-mock-fg: #f472b6;
+  --st-mock-bg: #2e1020;
+
+  --chart-1: #5f7df7;
+  --pay-cash: #5f7df7;
+
+  --e1: 0 0 0 1px rgb(255 255 255 / 0.02);
+  --e2: 0 4px 16px rgb(0 0 0 / 0.4);
+  --e3: 0 16px 40px rgb(0 0 0 / 0.55);
+
+  color-scheme: dark;
+}

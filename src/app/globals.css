@@ -1,0 +1,195 @@
+@import 'tailwindcss';
+@import '../shared/theme/tokens.css';
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/noto-sans-bengali/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Tailwind theme mapped onto design tokens (03-design-guide §2). Default palette is cleared so raw colours cannot be used. */
+@theme {
+  --color-*: initial;
+  --font-sans: 'Inter Variable', 'Noto Sans Bengali Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 22px;
+  --text-md: 16px;
+  --text-md--line-height: 24px;
+  --text-lg: 18px;
+  --text-lg--line-height: 28px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 38px;
+  --text-4xl: 36px;
+  --text-4xl--line-height: 44px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+@theme inline {
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: var(--neutral-0);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-raised: var(--surface-raised);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-disabled: var(--fg-disabled);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-hover: var(--primary-subtle-hover);
+  --color-primary-subtle-fg: var(--primary-subtle-fg);
+  --color-overlay: var(--overlay);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-400: var(--brand-400);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+  --color-success: var(--success-fg);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-info: var(--info-fg);
+  --color-info-bg: var(--info-bg);
+  --color-st-overdue: var(--st-overdue-fg);
+  --color-st-overdue-bg: var(--st-overdue-bg);
+  --color-st-due-today: var(--st-due-today-fg);
+  --color-st-due-today-bg: var(--st-due-today-bg);
+  --color-st-promised: var(--st-promised-fg);
+  --color-st-promised-bg: var(--st-promised-bg);
+  --color-st-current: var(--st-current-fg);
+  --color-st-current-bg: var(--st-current-bg);
+  --color-st-paid: var(--st-paid-fg);
+  --color-st-paid-bg: var(--st-paid-bg);
+  --color-st-bad-suggested: var(--st-bad-suggested-fg);
+  --color-st-bad-suggested-bg: var(--st-bad-suggested-bg);
+  --color-st-tagged: var(--st-tagged-fg);
+  --color-st-tagged-bg: var(--st-tagged-bg);
+  --color-st-pending: var(--st-pending-fg);
+  --color-st-pending-bg: var(--st-pending-bg);
+  --color-st-mock: var(--st-mock-fg);
+  --color-st-mock-bg: var(--st-mock-bg);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-pay-cash: var(--pay-cash);
+  --color-pay-bkash: var(--pay-bkash);
+  --color-pay-nagad: var(--pay-nagad);
+  --color-pay-rocket: var(--pay-rocket);
+  --color-pay-bank: var(--pay-bank);
+  --color-pay-other: var(--pay-other);
+
+  --shadow-e1: var(--e1);
+  --shadow-e2: var(--e2);
+  --shadow-e3: var(--e3);
+  --ease-standard: var(--ease-standard);
+  --ease-emphasized: var(--ease-emphasized);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--primary-subtle-hover);
+  }
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+@utility bn-leading {
+  line-height: calc(1em * 1.6);
+}
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Bangla line-height ×1.15 for the main text roles */
+[lang='bn'] .text-xs { line-height: 18px; }
+[lang='bn'] .text-sm { line-height: 23px; }
+[lang='bn'] .text-base { line-height: 25px; }
+[lang='bn'] .text-md { line-height: 28px; }
+[lang='bn'] .text-lg { line-height: 32px; }
+
+@keyframes fos-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fos-slide-in-right { from { transform: translateX(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes fos-pop { from { transform: translateY(4px) scale(.98); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes fos-shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
+@utility animate-fade { animation: fos-fade-in var(--dur-base) var(--ease-standard); }
+@utility animate-drawer { animation: fos-slide-in-right var(--dur-slow) var(--ease-emphasized); }
+@utility animate-pop { animation: fos-pop var(--dur-base) var(--ease-emphasized); }
+@utility skeleton {
+  background: linear-gradient(90deg, var(--surface-hover) 0, var(--surface-subtle) 50%, var(--surface-hover) 100%);
+  background-size: 800px 100%;
+  animation: fos-shimmer 1.4s linear infinite;
+  border-radius: var(--radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drawer, .animate-pop { animation: fos-fade-in var(--dur-fast) linear; }
+  .skeleton { animation: none; }
+}
+
+/* Leaflet base (self-hosted, CSP-safe) is imported by the map module only. */
