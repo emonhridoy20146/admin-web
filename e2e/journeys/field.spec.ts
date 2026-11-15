@@ -3,6 +3,8 @@ import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'jso
 import tagsBn from '../../src/features/tags/i18n/bn.json' with { type: 'json' };
 import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
+import promisesBn from '../../src/features/promises/i18n/bn.json' with { type: 'json' };
+import visitsBn from '../../src/features/visits/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
@@ -133,4 +135,33 @@ test('W-E7 create a temporary handover, see it pending, then cancel it', async (
   await expect(page.locator('tbody tr')).toHaveCount(before);
   await page.getByRole('group', { name: handoversBn.col.status }).getByRole('button', { name: handoversBn.group.closed }).click();
   await expect(page.getByText(commonBn.status.cancelled).first()).toBeVisible();
+});
+
+test('promises: filter by window, open one and cancel it with a reason', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, promisesBn.title);
+  await page.getByRole('group', { name: promisesBn.when }).getByRole('button', { name: promisesBn.window.next7 }).click();
+  await expect(page).toHaveURL(/when=next7/);
+  await page.getByLabel(promisesBn.col.status).selectOption('open');
+  await expect(page.locator('tbody tr button').first()).toBeVisible();
+  await page.locator('tbody tr button').first().click();
+  const drawer = page.getByRole('dialog');
+  await drawer.getByRole('button', { name: promisesBn.cancel }).click();
+  await confirmWithReason(page, 'গ্রাহক আজই পুরো টাকা দিয়েছেন', promisesBn.cancel);
+  await expect(page.getByText(promisesBn.cancelled)).toBeVisible();
+});
+
+test('visits: filter by outcome, open a visit with photos and view one', async ({ page }) => {
+  await login(page);
+  await nav(page, visitsBn.title);
+  await page.getByRole('group', { name: visitsBn.range.label }).getByRole('button', { name: visitsBn.range['7d'] }).click();
+  await page.getByLabel(visitsBn.col.outcome).selectOption('not_home');
+  await expect(page).toHaveURL(/outcome=not_home/);
+  await expect(page.locator('tbody tr button').first()).toBeVisible();
+  await expect(page.locator('tbody tr').first()).toContainText(visitsBn.outcome.not_home);
+  // a row that has photos
+  const row = page.locator('tbody tr', { has: page.locator('svg.lucide-camera') }).first();
+  await row.getByRole('button').first().click();
+  await page.getByRole('dialog').getByRole('button', { name: /ছবি .* খুলুন/ }).first().click();
+  await expect(page.getByRole('img', { name: /ভিজিটের ছবি/ })).toBeVisible();
 });

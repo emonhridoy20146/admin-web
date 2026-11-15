@@ -35,4 +35,5 @@ export const EV = {
   permissionsChanged: 'rbac.changed',
   flagsChanged: 'flags.changed',
   handoverChanged: 'handover.changed',
+  promiseChanged: 'promise.changed',
 } as const;

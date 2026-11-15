@@ -1937,6 +1937,7 @@ export interface components {
         };
         DeviceSyncState: {
             userId?: string;
+            userName?: string;
             deviceId?: string;
             lastPullAt?: string;
             lastPushAt?: string;
@@ -2350,6 +2351,103 @@ export interface components {
             paidTowardsPoisha?: number;
             createdAt?: string;
         };
+        /** @description Visit plus display refs, returned by GET /visits (1.4.0) */
+        VisitListItem: components["schemas"]["Visit"] & {
+            customer?: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                code?: string;
+            };
+            user?: {
+                id?: string;
+                name?: string;
+            };
+        };
+        /** @description Promise plus display refs, returned by GET /promises (1.4.0) */
+        PromiseListItem: components["schemas"]["Promise"] & {
+            customer?: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                code?: string;
+            };
+            owner?: {
+                id?: string;
+                name?: string;
+            };
+        };
+        LocationProposal: {
+            id?: string;
+            customer?: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                code?: string;
+                /** @description Current pin, if any */
+                current?: Record<string, never> | null;
+            };
+            lat?: number;
+            lng?: number;
+            accuracyM?: number;
+            photoMediaId?: string | null;
+            note?: string | null;
+            proposedBy?: string;
+            proposer?: {
+                id?: string;
+                name?: string;
+            };
+            /** @enum {string} */
+            status?: "pending" | "approved" | "rejected";
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        AttendanceSummaryRow: {
+            userId?: string;
+            userName?: string;
+            present?: number;
+            late?: number;
+            absent?: number;
+            leave?: number;
+            holiday?: number;
+            weeklyOff?: number;
+            lateMin?: number;
+            breakMin?: number;
+            dutyMin?: number;
+            overBreakDays?: number;
+        };
+        LeaveRequest: {
+            id?: string;
+            userId?: string;
+            userName?: string;
+            /** @enum {string} */
+            type?: "casual" | "sick" | "other";
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+            reason?: string;
+            /** @enum {string} */
+            status?: "pending" | "approved" | "rejected";
+            decidedBy?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        Broadcast: {
+            id?: string;
+            title?: components["schemas"]["I18nText"];
+            body?: components["schemas"]["I18nText"];
+            branchIds?: string[];
+            roles?: components["schemas"]["Role"][];
+            requireAck?: boolean;
+            createdBy?: {
+                id?: string;
+                name?: string;
+            };
+            /** Format: date-time */
+            createdAt?: string;
+            recipientCount?: number;
+            ackCount?: number;
+        };
         AttendanceDay: {
             userId?: string;
             /** Format: date */
@@ -2413,6 +2511,12 @@ export interface components {
             activity?: string;
             todayVisits?: number;
             todayCollectedPoisha?: number;
+            /**
+             * @description From the last heartbeat (1.5.0)
+             * @enum {string}
+             */
+            trackingProvider?: "free" | "paid";
+            trackingProviderFallback?: boolean;
         };
         Stop: {
             start?: string;
@@ -2447,6 +2551,11 @@ export interface components {
              *     promise → POST /promises body · deposit → DepositCreate · attendance_event → POST /attendance/events body ·
              *     tag → PUT /customers/{id}/tag body (+ customerId) · location_proposal → POST /customers/{id}/location-proposals body (+ customerId) ·
              *     contact_attempt → ContactAttemptCreate
+             *     Declared in 1.5.0: collection and deposit may carry `idempotencyKey` (uuid); without it the mutationId is the key ·
+             *     visit_checkout → { visitId | visitClientId, checkOutAt, outcome? } · promise_cancel → { promiseId, reason } ·
+             *     cash_closing → { businessDate, note? } · handover_decision → { handoverId, decision: accept|reject, reason? (required to reject) } ·
+             *     tag payload may carry `ifMatch` (customer version).
+             *     Every mutation is idempotent by mutationId; the same id with a different payload is rejected with IDEMPOTENCY_MISMATCH.
              */
             payload: {
                 [key: string]: unknown;
@@ -2457,6 +2566,8 @@ export interface components {
         SyncPushRequest: {
             deviceId: string;
             lastPullCursor?: string;
+            /** @description Mutations still queued on the device after this batch; shown in sync health (1.5.0) */
+            pendingCount?: number;
             mutations: components["schemas"]["SyncMutation"][];
         };
         SyncPushResponse: {
@@ -2473,6 +2584,10 @@ export interface components {
                     message?: components["schemas"]["I18nText"];
                 };
                 error?: components["schemas"]["Problem"];
+                /** @description Only on rejected: true means a transient server failure, keep the item queued (1.5.0) */
+                retryable?: boolean;
+                receiptNo?: string;
+                eventId?: string;
             }[];
         };
         SyncChange: {
@@ -2515,6 +2630,34 @@ export interface components {
             userId?: string;
             /** Format: date-time */
             receivedAt?: string;
+        };
+        SyncBootstrapResponse: {
+            items?: {
+                entity?: string;
+                /** @enum {string} */
+                op?: "upsert";
+                id?: string;
+                /** @description Same shape as SyncChange.data for the entity */
+                data?: {
+                    [key: string]: unknown;
+                };
+            }[];
+            nextCursor?: string | null;
+            /** @description Only on the final page: use it for the first GET /sync/pull */
+            pullCursor?: string;
+            permissions?: {
+                version?: number;
+                keys?: string[];
+            };
+            flags?: {
+                [key: string]: boolean;
+            };
+            settings?: {
+                [key: string]: unknown;
+            };
+            cash?: components["schemas"]["CashPosition"];
+            /** Format: date-time */
+            serverTime?: string;
         };
         SyncPullResponse: {
             changes?: components["schemas"]["SyncChange"][];
@@ -3776,12 +3919,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description OK. Plain array, newest first, max 200 (declared in 1.4.0) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LocationProposal"][];
+                };
             };
         };
     };
@@ -4619,7 +4764,14 @@ export interface operations {
                 branchId?: components["parameters"]["BranchId"];
                 userId?: string;
                 customerId?: string;
+                /** @description One Dhaka business day; wins over from/to */
                 date?: string;
+                /** @description Inclusive Dhaka day (1.4.0) */
+                from?: string;
+                /** @description Inclusive Dhaka day (1.4.0) */
+                to?: string;
+                /** @description Visit outcome (1.4.0) */
+                outcome?: string;
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -4634,7 +4786,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["VisitListItem"][];
+                        nextCursor?: string | null;
+                    };
+                };
             };
         };
     };
@@ -4933,7 +5090,14 @@ export interface operations {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
                 ownerId?: string;
+                /** @description Documented in 1.4.0 */
+                customerId?: string;
+                /** @description Promised date; wins over from/to */
                 date?: string;
+                /** @description Promised date from, inclusive (1.4.0) */
+                from?: string;
+                /** @description Promised date to, inclusive (1.4.0) */
+                to?: string;
                 status?: components["schemas"]["PromiseStatus"];
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
@@ -4949,7 +5113,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["PromiseListItem"][];
+                        nextCursor?: string | null;
+                    };
+                };
             };
         };
     };
@@ -5102,7 +5271,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        month?: string;
+                        items?: components["schemas"]["AttendanceSummaryRow"][];
+                    };
+                };
             };
         };
     };
@@ -5140,19 +5314,26 @@ export interface operations {
     };
     listLeave: {
         parameters: {
-            query?: never;
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                status?: "pending" | "approved" | "rejected";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description OK. Staff see their own; attendance.manage sees its branches. Newest first, max 300, no cursor (1.4.0) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["LeaveRequest"][];
+                    };
+                };
             };
         };
     };
@@ -5264,6 +5445,13 @@ export interface operations {
                     appVersion?: string;
                     pendingPoints?: number;
                     pendingMutations?: number;
+                    /**
+                     * @description Plugin actually running on the device (1.5.0)
+                     * @enum {string}
+                     */
+                    trackingProvider?: "free" | "paid";
+                    /** @description true when the setting asked for paid but the app fell back to free (1.5.0) */
+                    trackingProviderFallback?: boolean;
                 };
             };
         };
@@ -5362,6 +5550,7 @@ export interface operations {
         parameters: {
             query?: {
                 cursor?: components["parameters"]["Cursor"];
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -5369,12 +5558,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paged snapshot of the whole scope; final page returns pullCursor */
+            /** @description Paged snapshot of the whole scope; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SyncBootstrapResponse"];
+                };
             };
         };
     };
@@ -5503,12 +5694,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description OK (declared in 1.4.0; server implementation pending) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["Broadcast"][];
+                        nextCursor?: string | null;
+                    };
+                };
             };
         };
     };

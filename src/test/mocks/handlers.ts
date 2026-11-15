@@ -249,6 +249,70 @@ export const handlers = [
     return HttpResponse.json({ temporaryPassword: temp });
   })),
 
+  // ---------- promises & visits ----------
+  http.get(`${BASE}/promises`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'promise.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const g = (k: string) => url.searchParams.get(k);
+    const date = g('date');
+    const from = date ?? g('from');
+    const to = date ?? g('to');
+    const all = db.promises
+      .filter((p) => sc.includes(p.branchId))
+      .map((p) => p.row)
+      .filter((p) => (!from || p.promisedDate >= from) && (!to || p.promisedDate <= to))
+      .filter((p) => !g('status') || p.status === g('status'))
+      .filter((p) => !g('ownerId') || p.ownerId === g('ownerId'))
+      .filter((p) => !g('customerId') || p.customerId === g('customerId'))
+      .sort((a, b) => (a.promisedDate === b.promisedDate ? (a.id! < b.id! ? -1 : 1) : a.promisedDate < b.promisedDate ? -1 : 1));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  http.post(`${BASE}/promises/:id/cancel`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'promise.create');
+    if (deny) return deny;
+    const b = (await request.json()) as { reason: string };
+    if (!b.reason || b.reason.length < 5) return problem(400, 'VALIDATION_FAILED', 'Reason required');
+    const p = db.promises.find((x) => x.row.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Promise not found');
+    if (p.row.status !== 'open') return problem(409, 'PROMISE_NOT_OPEN', 'Only an open promise can be cancelled');
+    p.row.status = 'cancelled';
+    const c = db.customerById(p.row.customerId);
+    if (c && c.item.openPromise?.id === p.row.id) {
+      c.item.openPromise = null;
+      c.detail.openPromise = null;
+      c.item.badges = c.item.badges?.filter((x) => x !== 'promised_today');
+      c.detail.badges = c.item.badges;
+    }
+    db.addAudit({ actor: actor(ctx.user), action: 'promise.cancel', entity: 'promise', entityId: p.row.id, branchId: p.branchId, before: { status: 'open' }, after: { status: 'cancelled' }, reason: b.reason });
+    return HttpResponse.json({});
+  })),
+  http.get(`${BASE}/visits`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'visit.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const g = (k: string) => url.searchParams.get(k);
+    const date = g('date');
+    const from = date ?? g('from');
+    const to = date ?? g('to');
+    const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const all = db.visits
+      .filter((v) => sc.includes(v.branchId))
+      .map((v) => v.row)
+      .filter((v) => (!from || day(v.checkInAt) >= from) && (!to || day(v.checkInAt) <= to))
+      .filter((v) => !g('outcome') || v.outcome === g('outcome'))
+      .filter((v) => !g('userId') || v.userId === g('userId'))
+      .filter((v) => !g('customerId') || v.customerId === g('customerId'));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  http.get(`${BASE}/media/:id/url`, authed(({ params }) => {
+    // a generated placeholder image as a data: URL (no external host, CSP-safe)
+    const hue = [...params.id!].reduce((s, ch) => (s + ch.charCodeAt(0)) % 360, 0);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720"><rect width="960" height="720" fill="hsl(${hue} 30% 82%)"/><rect x="330" y="300" width="300" height="240" fill="hsl(${hue} 25% 62%)"/><path d="M300 310 480 170 660 310Z" fill="hsl(${hue} 35% 42%)"/><rect x="440" y="400" width="80" height="140" fill="hsl(${hue} 30% 30%)"/></svg>`;
+    return HttpResponse.json({ url: `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`, expiresAt: new Date(Date.now() + 300_000).toISOString() });
+  })),
   // ---------- areas & handovers ----------
   http.get(`${BASE}/areas`, authed(({ ctx, url }) => HttpResponse.json(db.areas.filter((a) => scope(ctx, url).includes(a.branchId!))))),
   http.get(`${BASE}/handovers`, authed(({ ctx, url }) => {

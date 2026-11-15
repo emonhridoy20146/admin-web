@@ -558,3 +558,70 @@ branches.forEach((b, bi) => {
   mk(bStaff[1]!, bStaff[2]!, 'rejected', 24 * 12, 'Cover during training week.');
   mk(bStaff[4]!, bStaff[0]!, 'expired', 24 * 20, 'Temporary cover for sick leave.');
 });
+
+// ---------- promises & visits (own small generator so the main seeded sequence is untouched) ----------
+let lcg = 20261115;
+const r2 = () => ((lcg = (lcg * 1664525 + 1013904223) >>> 0), lcg / 4294967296);
+const i2 = (a: number, b: number) => a + Math.floor(r2() * (b - a + 1));
+const p2 = <T,>(arr: readonly T[]): T => arr[Math.floor(r2() * arr.length)]!;
+
+export interface MockPromise { row: S['PromiseListItem']; branchId: string }
+export const promises: MockPromise[] = [];
+const NOTES = ['বেতন পেলে দেবেন', 'ধান বিক্রির পর দেবেন', 'Will pay after remittance arrives', 'ছেলে টাকা পাঠালে দেবেন', ''];
+for (const c of customers) {
+  const ref = { id: c.item.id, name: c.item.name, code: c.item.code };
+  const owner = { id: c.item.assignee?.id, name: c.item.assignee?.name };
+  if (c.item.openPromise) promises.push({ branchId: c.branchId, row: { ...c.item.openPromise, note: p2(NOTES) || undefined, customer: ref, owner } });
+  if ((c.item.daysOverdue ?? 0) > 0 && r2() < 0.45) {
+    const n = i2(1, 2);
+    for (let k = 0; k < n; k++) {
+      const daysAgo = i2(1, 30);
+      const amount = Math.round(i2(200000, 1200000) / 10000) * 10000;
+      const status = p2(['kept', 'kept', 'partially_kept', 'broken', 'broken', 'superseded', 'cancelled'] as const);
+      const date = now().minus({ days: daysAgo });
+      promises.push({
+        branchId: c.branchId,
+        row: {
+          id: oid('6760'), clientId: crypto.randomUUID(), customerId: c.item.id!, erpPlanId: c.detail.plans?.[0]?.erpPlanId, promisedDate: date.toISODate()!, promisedAmountPoisha: amount,
+          note: p2(NOTES) || undefined, status, ownerId: owner.id, paidTowardsPoisha: status === 'kept' ? amount : status === 'partially_kept' ? Math.round((amount * i2(20, 70)) / 100 / 5000) * 5000 : 0,
+          createdAt: isoAt(date.minus({ days: i2(2, 9) })), customer: ref, owner,
+        },
+      });
+    }
+  }
+}
+// a few open promises already past their date (within grace) so "late" shows up
+promises.filter((p) => p.row.status === 'open' && p.row.promisedDate > T).slice(0, 6).forEach((p, i) => (p.row.promisedDate = now().minus({ days: 1 + (i % 2) }).toISODate()!));
+
+export interface MockVisit { row: S['VisitListItem']; branchId: string }
+export const visits: MockVisit[] = [];
+const OUTCOMES = ['paid', 'paid', 'partial_paid', 'promised', 'promised', 'not_home', 'not_home', 'refused', 'shifted_address', 'other', 'product_returned_request'] as const;
+for (let d = 0; d < 30; d++) {
+  for (const s of staff.filter((x) => x.active)) {
+    const mine = customers.filter((c) => c.item.assignee?.id === s.id);
+    if (!mine.length) continue;
+    const n = d === 0 ? i2(3, 7) : i2(2, 6);
+    for (let k = 0; k < n; k++) {
+      const c = p2(mine);
+      const at = now().startOf('day').minus({ days: d }).plus({ hours: 9, minutes: i2(0, 8 * 60) });
+      if (at > now()) continue;
+      const mock = r2() < 0.012;
+      const noGeo = !mock && r2() < 0.03;
+      const far = !mock && !noGeo && r2() < 0.05;
+      const dist = far ? i2(320, 1500) : i2(3, 160);
+      const ongoing = d === 0 && k === 0 && at > now().minus({ minutes: 25 });
+      visits.push({
+        branchId: c.branchId,
+        row: {
+          id: oid('6765'), clientId: crypto.randomUUID(), customerId: c.item.id!, userId: s.id, checkInAt: isoAt(at), checkOutAt: ongoing ? null : isoAt(at.plus({ minutes: i2(2, 22) })),
+          outcome: p2(OUTCOMES), geo: noGeo ? null : { lat: (c.item.location?.lat ?? 22.7) + dist / 111_000, lng: c.item.location?.lng ?? 90.36, accuracyM: i2(4, 38), mock, fixAt: isoAt(at) },
+          geoUnavailableReason: noGeo ? p2(['permission_denied', 'location_off', 'timeout', 'no_fix'] as const) : undefined,
+          photoMediaIds: r2() < 0.35 ? Array.from({ length: i2(1, 3) }, () => oid('6768')) : [], source: r2() < 0.3 ? 'suggested' : 'manual',
+          distanceToPinM: noGeo || c.item.location?.status !== 'ok' ? null : dist, flags: [...(mock ? ['mock_location'] : []), ...(far ? ['far_from_pin'] : [])],
+          customer: { id: c.item.id, name: c.item.name, code: c.item.code }, user: { id: s.id, name: s.name?.en },
+        },
+      });
+    }
+  }
+}
+visits.sort((a, b) => (a.row.checkInAt < b.row.checkInAt ? 1 : -1));

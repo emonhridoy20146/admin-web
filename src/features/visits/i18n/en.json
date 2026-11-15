@@ -1,0 +1,70 @@
+{
+  "title": "Visits",
+  "subtitle": "Which customers staff went to, what happened, and whether the location matched.",
+  "range": {
+    "label": "Period",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days"
+  },
+  "allOutcomes": "All outcomes",
+  "clearStaff": "Show all staff",
+  "onlyStaff": "Only this staff member's visits",
+  "outcome": {
+    "paid": "Paid",
+    "partial_paid": "Paid in part",
+    "promised": "Promised",
+    "not_home": "Not at home",
+    "refused": "Refused to pay",
+    "shifted_address": "Moved address",
+    "customer_dead": "Customer deceased",
+    "product_returned_request": "Wants to return product",
+    "other": "Other"
+  },
+  "col": {
+    "customer": "Customer",
+    "outcome": "Outcome",
+    "user": "Staff",
+    "time": "Check-in",
+    "duration": "Duration",
+    "geo": "Location",
+    "photos": "Photos"
+  },
+  "geo": {
+    "ok": "Near pin",
+    "far": "Far from pin",
+    "mock": "Mock GPS",
+    "none": "No location"
+  },
+  "geoReason": {
+    "permission_denied": "Permission denied",
+    "location_off": "Location was off",
+    "timeout": "Timed out",
+    "no_fix": "No GPS signal"
+  },
+  "metres": "{{n}} m",
+  "ongoing": "Ongoing",
+  "checkIn": "Check-in",
+  "checkOut": "Check-out",
+  "accuracy": "Accuracy",
+  "source": "Started by",
+  "sourceOf": {
+    "manual": "Staff",
+    "suggested": "App suggestion"
+  },
+  "day": "Date",
+  "mockHint": "The phone's location was faked during this visit. Verify with the staff member.",
+  "noPhotos": "No photos",
+  "openCustomer": "Open customer",
+  "empty": "No visits in this period",
+  "emptyBody": "Try another period or outcome.",
+  "photo": {
+    "title": "Photo {{n}} / {{total}}",
+    "open": "Open photo {{n}}",
+    "alt": "Visit photo {{n}}",
+    "prev": "Previous",
+    "next": "Next",
+    "failed": "The photo could not be loaded"
+  }
+}
