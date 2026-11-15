@@ -1,0 +1,46 @@
+{
+  "title": "Audit log",
+  "subtitle": "Who changed what, when and why. Entries cannot be edited or deleted.",
+  "range": { "today": "Today", "7d": "Last 7 days", "30d": "Last 30 days", "all": "All time" },
+  "allActions": "All actions",
+  "allEntities": "All records",
+  "entityFilter": "Only {{entity}} {{id}}",
+  "clear": "Clear",
+  "col": { "at": "When", "actor": "Who", "action": "What", "entity": "Record", "reason": "Reason" },
+  "noReason": "No reason recorded",
+  "emptyTitle": "No audit entries",
+  "emptyBody": "Nothing matches these filters.",
+  "detail": {
+    "title": "Audit entry",
+    "changes": "Changes",
+    "noChanges": "No field changes recorded.",
+    "field": "Field",
+    "before": "Before",
+    "after": "After",
+    "meta": "Request",
+    "requestId": "Request ID",
+    "ip": "IP address",
+    "device": "Device",
+    "branch": "Branch",
+    "copy": "Copy request ID",
+    "copied": "Copied"
+  },
+  "kind": { "added": "Added", "removed": "Removed", "changed": "Changed", "same": "Unchanged" },
+  "groups": {
+    "user": "Users", "rbac": "Permissions", "settings": "Settings", "flag": "Feature flags", "collection": "Collections", "deposit": "Deposits",
+    "tag": "Tags", "handover": "Handovers", "auth": "Sign-in", "location": "Locations"
+  },
+  "actions": {
+    "user.create": "Created a user", "user.update": "Edited a user", "user.deactivate": "Deactivated a user", "user.activate": "Reactivated a user", "user.reset_password": "Reset a password",
+    "rbac.override.set": "Changed a user's permissions", "rbac.override.branch": "Changed branch permissions",
+    "settings.update": "Changed settings", "flag.set": "Changed a feature flag",
+    "collection.void": "Voided a collection", "collection.resolve": "Resolved a conflict",
+    "deposit.verify": "Verified a deposit", "deposit.reject": "Rejected a deposit",
+    "tag.set": "Tagged a customer", "tag.remove": "Removed a tag",
+    "handover.create": "Created a handover", "auth.login": "Signed in", "location.proposal.approve": "Approved a pin correction"
+  },
+  "entities": {
+    "user": "User", "branch": "Branch", "settings": "Settings", "feature_flag": "Feature flag", "collection": "Collection", "deposit": "Deposit",
+    "customer": "Customer", "handover": "Handover", "session": "Session"
+  }
+}

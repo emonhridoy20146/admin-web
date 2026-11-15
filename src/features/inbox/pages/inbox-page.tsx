@@ -45,7 +45,7 @@ export function InboxPage() {
               className={`h-8 rounded-sm px-3 text-sm font-medium transition-colors [@media(pointer:coarse)]:h-10 ${status === s ? 'bg-primary-subtle text-primary-subtle-fg' : 'text-fg-secondary hover:text-fg'}`}
             >
               {t(s)}
-              {s === 'open' && counts.open != null && <span className="tabular ms-1.5 text-xs opacity-70">{formatNumber(counts.open)}</span>}
+              {s === 'open' && counts.open != null && <span className="tabular ms-1.5 text-xs">{formatNumber(counts.open)}</span>}
             </button>
           ))}
         </div>

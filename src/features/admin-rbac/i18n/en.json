@@ -1,0 +1,83 @@
+{
+  "title": "Permissions",
+  "subtitle": "What each role can do, with branch and individual exceptions. Every change needs a reason and is audited.",
+  "tabs": {
+    "roles": "Role defaults",
+    "branch": "Branch overrides",
+    "user": "One user"
+  },
+  "rolesHint": "Defaults come from the master catalog and apply everywhere unless a branch or user override says otherwise.",
+  "col": {
+    "permission": "Permission",
+    "default": "Role default",
+    "override": "Override",
+    "effective": "Result",
+    "source": "Comes from"
+  },
+  "reserved": "Reserved",
+  "reservedHint": "Reserved for a future module; cannot be granted.",
+  "effect": {
+    "inherit": "Inherit",
+    "allow": "Allow",
+    "deny": "Deny"
+  },
+  "allowed": "Allowed",
+  "denied": "Denied",
+  "source": {
+    "role": "Role",
+    "branch": "Branch",
+    "user": "User",
+    "super_admin": "Super admin",
+    "reserved": "Reserved"
+  },
+  "branch": "Branch",
+  "role": "Role",
+  "affects": "Affects {{n}} active users",
+  "affectsNone": "No active users have this role here yet",
+  "probeGap": "Current branch overrides are read through one user of this role. With no such user, only role defaults are shown.",
+  "bulk": {
+    "label": "Set all in module",
+    "allow": "Allow all",
+    "deny": "Deny all",
+    "inherit": "Reset to inherit"
+  },
+  "staged_one": "{{n}} unsaved change",
+  "staged_other": "{{n}} unsaved changes",
+  "discard": "Discard",
+  "review": "Review & save",
+  "saveTitle": "Save {{n}} permission changes?",
+  "saveTitleUser": "Save {{n}} permission changes for {{name}}?",
+  "saveConfirm": "Save changes",
+  "saved": "Permissions saved",
+  "scopeBranch": "{{role}} in {{branch}}",
+  "pickUser": "Find a user",
+  "pickUserHint": "Search by name, phone or employee code to see their effective permissions and set individual exceptions.",
+  "searchUser": "Name, phone, code…",
+  "changeUser": "Change user",
+  "superAdminNote": "Super admins have every permission except reserved ones. Overrides do not apply.",
+  "noResults": "No users found",
+  "modules": {
+    "users": "Users",
+    "rbac": "Permissions",
+    "branches": "Branches",
+    "settings": "Settings",
+    "flags": "Feature flags",
+    "devices": "Devices",
+    "customers": "Customers",
+    "tags": "Bad-customer tags",
+    "collections": "Collections",
+    "cash": "Cash",
+    "assignments": "Assignments",
+    "handovers": "Handovers",
+    "visits": "Visits",
+    "notes": "Notes",
+    "promises": "Promises",
+    "attendance": "Attendance",
+    "location": "Location",
+    "reports": "Reports",
+    "notifications": "Notifications",
+    "audit": "Audit",
+    "inbox": "Inbox",
+    "microfinance": "Microfinance"
+  }
+}

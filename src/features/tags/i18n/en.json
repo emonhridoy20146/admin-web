@@ -1,0 +1,33 @@
+{
+  "tab": "Bad-customer tag",
+  "current": "Current tag",
+  "none": "Not tagged",
+  "tagged": "Tagged as bad customer",
+  "setBy": "Set by {{name}} · {{time}}",
+  "tagAction": "Tag as bad",
+  "untagAction": "Remove tag",
+  "tagTitle": "Tag {{name}} as a bad customer",
+  "untagTitle": "Remove the tag from {{name}}",
+  "tagDesc": "Field staff and managers will see this tag on the customer and on the map.",
+  "untagDesc": "The previous tag stays in the history below.",
+  "severity": "Severity",
+  "sev": { "watch": "Watch", "bad": "Bad", "legal": "Legal action" },
+  "codes": {
+    "plan_ended_unpaid": "Plan ended, balance unpaid",
+    "repeated_broken_promise": "Repeated broken promises",
+    "absconded": "Customer absconded",
+    "refused_to_pay": "Refuses to pay",
+    "fraud_suspected": "Fraud suspected",
+    "cleared": "Balance cleared",
+    "mistake": "Tagged by mistake",
+    "other": "Other"
+  },
+  "done": "Tag updated",
+  "history": "Tag history",
+  "noHistory": "No tag changes yet.",
+  "from": "From",
+  "to": "To",
+  "source": { "web": "Web", "app": "App", "system": "System" },
+  "noPermission": "You can see the tag but not change it.",
+  "cleared": "This customer has cleared the balance. Review whether the tag should stay."
+}

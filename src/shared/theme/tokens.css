@@ -58,7 +58,7 @@
   --border-strong: var(--neutral-300);
   --fg: var(--neutral-900);
   --fg-secondary: var(--neutral-600);
-  --fg-tertiary: var(--neutral-500);
+  --fg-tertiary: #646e80; /* neutral-500 darkened for 4.5:1 on surface-subtle (axe) */
   --fg-disabled: var(--neutral-400);
   --primary: var(--brand-600);
   --primary-hover: var(--brand-700);

@@ -373,7 +373,7 @@ export const deposits: (S['Deposit'] & { userName?: string })[] = [];
 export const cashPositions: S['CashPosition'][] = staff.filter((s) => s.active).map((s) => {
   const todayCash = collections.filter((c) => c.collector?.id === s.id && c.method === 'cash' && c.recordedAt! >= isoAt(now().startOf('day')) && c.status !== 'voided').reduce((a, c) => a + c.amountPoisha!, 0);
   const todayMobile = collections.filter((c) => c.collector?.id === s.id && c.method !== 'cash' && c.recordedAt! >= isoAt(now().startOf('day'))).reduce((a, c) => a + c.amountPoisha!, 0);
-  const carried = chance(0.3) ? Math.round(int(300000, 3500000) / 10000) * 10000 : 0;
+  const carried = chance(0.12) ? Math.round(int(300000, 3500000) / 10000) * 10000 : 0;
   const onHand = todayCash + carried;
   const limit = s.cashLimitPoisha ?? 5_000_000;
   return {
@@ -400,12 +400,25 @@ staff.filter((s) => s.active).forEach((s, i) => {
     });
     if (status === 'pending') {
       const pos = cashPositions.find((p) => p.userId === s.id);
-      if (pos) pos.pendingDepositsPoisha = (pos.pendingDepositsPoisha ?? 0) + amt;
+      if (pos) {
+        // cash stays on hand until the deposit is verified
+        pos.pendingDepositsPoisha = (pos.pendingDepositsPoisha ?? 0) + amt;
+        pos.onHandPoisha = (pos.onHandPoisha ?? 0) + amt;
+        pos.oldestUndepositedAt ??= deposits[deposits.length - 1]!.depositedAt;
+        pos.state = pos.onHandPoisha >= pos.limitPoisha! ? 'exceeded' : pos.onHandPoisha >= pos.limitPoisha! * 0.8 ? 'warning' : 'ok';
+      }
     }
   }
 });
 deposits.forEach((d) => {
   if (d.depositedAt! > isoAt(now())) d.depositedAt = isoAt(now().minus({ minutes: int(20, 90) }));
+  if (d.verifiedAt) {
+    const v = DateTime.fromISO(d.depositedAt!).plus({ minutes: int(15, 90) });
+    d.verifiedAt = isoAt(v > now() ? now().minus({ minutes: 5 }) : v);
+  }
+});
+cashPositions.forEach((p) => {
+  if (p.oldestUndepositedAt && p.oldestUndepositedAt > isoAt(now())) p.oldestUndepositedAt = isoAt(now().minus({ minutes: int(60, 180) }));
 });
 
 // ---------- inbox ----------
@@ -477,7 +490,7 @@ export function effective(u: MockUser) {
 export const settings: Record<string, unknown> = {
   'duty.shiftStart': '09:00', 'duty.shiftEnd': '18:00', 'duty.weeklyOff': [5], 'duty.lateGraceMin': 15, 'duty.maxBreakMin': 60,
   'cash.limitPoisha': 5_000_000, 'cash.limitMode': 'warn', 'cash.warnAtRatio': 0.8,
-  'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
+  'location.trackingProvider': 'free', 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
   'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
   'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieAtWorkIn': false, 'app.minVersion': '1.0.0',
   'map.tileProvider': 'protomaps-bd',

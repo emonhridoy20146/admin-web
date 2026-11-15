@@ -1,0 +1,46 @@
+{
+  "title": "অডিট লগ",
+  "subtitle": "কে, কখন, কী বদলেছেন এবং কেন। এন্ট্রি সম্পাদনা বা মোছা যায় না।",
+  "range": { "today": "আজ", "7d": "গত ৭ দিন", "30d": "গত ৩০ দিন", "all": "সব সময়" },
+  "allActions": "সব কাজ",
+  "allEntities": "সব রেকর্ড",
+  "entityFilter": "শুধু {{entity}} {{id}}",
+  "clear": "মুছুন",
+  "col": { "at": "কখন", "actor": "কে", "action": "কী", "entity": "রেকর্ড", "reason": "কারণ" },
+  "noReason": "কারণ লেখা নেই",
+  "emptyTitle": "কোনো অডিট এন্ট্রি নেই",
+  "emptyBody": "এই ফিল্টারে কিছু মেলেনি।",
+  "detail": {
+    "title": "অডিট এন্ট্রি",
+    "changes": "পরিবর্তন",
+    "noChanges": "কোনো ঘরের পরিবর্তন রেকর্ড নেই।",
+    "field": "ঘর",
+    "before": "আগে",
+    "after": "পরে",
+    "meta": "অনুরোধ",
+    "requestId": "রিকোয়েস্ট আইডি",
+    "ip": "আইপি ঠিকানা",
+    "device": "ডিভাইস",
+    "branch": "শাখা",
+    "copy": "রিকোয়েস্ট আইডি কপি",
+    "copied": "কপি হয়েছে"
+  },
+  "kind": { "added": "যোগ", "removed": "বাদ", "changed": "বদল", "same": "অপরিবর্তিত" },
+  "groups": {
+    "user": "ব্যবহারকারী", "rbac": "অনুমতি", "settings": "সেটিংস", "flag": "ফিচার ফ্ল্যাগ", "collection": "আদায়", "deposit": "জমা",
+    "tag": "ট্যাগ", "handover": "হস্তান্তর", "auth": "লগইন", "location": "লোকেশন"
+  },
+  "actions": {
+    "user.create": "ব্যবহারকারী তৈরি", "user.update": "ব্যবহারকারী সম্পাদনা", "user.deactivate": "ব্যবহারকারী নিষ্ক্রিয়", "user.activate": "ব্যবহারকারী পুনরায় সক্রিয়", "user.reset_password": "পাসওয়ার্ড রিসেট",
+    "rbac.override.set": "ব্যবহারকারীর অনুমতি বদল", "rbac.override.branch": "শাখার অনুমতি বদল",
+    "settings.update": "সেটিংস বদল", "flag.set": "ফিচার ফ্ল্যাগ বদল",
+    "collection.void": "আদায় বাতিল", "collection.resolve": "কনফ্লিক্ট সমাধান",
+    "deposit.verify": "জমা যাচাই", "deposit.reject": "জমা বাতিল",
+    "tag.set": "গ্রাহক ট্যাগ", "tag.remove": "ট্যাগ সরানো",
+    "handover.create": "হস্তান্তর তৈরি", "auth.login": "লগইন", "location.proposal.approve": "পিন সংশোধন অনুমোদন"
+  },
+  "entities": {
+    "user": "ব্যবহারকারী", "branch": "শাখা", "settings": "সেটিংস", "feature_flag": "ফিচার ফ্ল্যাগ", "collection": "আদায়", "deposit": "জমা",
+    "customer": "গ্রাহক", "handover": "হস্তান্তর", "session": "সেশন"
+  }
+}

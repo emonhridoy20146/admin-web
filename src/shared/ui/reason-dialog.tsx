@@ -40,15 +40,19 @@ export function ReasonDialog({
   const [touched, setTouched] = useState(false);
   const key = useRef<string>('');
 
+  const firstCode = codes?.[0]?.[0] ?? '';
+  // Reset only when the dialog opens. Callers often pass `codes` inline, so it must not be a dependency
+  // (a new array each render would wipe what the user is typing).
   useEffect(() => {
     if (open) {
       key.current = crypto.randomUUID();
-      setCode(codes?.[0]?.[0] ?? '');
+      setCode(firstCode);
       setText('');
       setError(null);
       setTouched(false);
     }
-  }, [open, codes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const tooShort = text.trim().length < minLength;
   const submit = async () => {

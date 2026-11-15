@@ -1,0 +1,69 @@
+{
+  "title": "হাতে নগদ",
+  "subtitle": "জমা দিয়ে যাচাই না হওয়া পর্যন্ত প্রত্যেক আদায়কারীর হাতে থাকা নগদ।",
+  "kpi": {
+    "onHand": "কর্মীদের হাতে নগদ",
+    "holders": "{{n}} জন কর্মীর হাতে নগদ",
+    "overLimit": "সীমা ছাড়িয়েছে",
+    "nearLimit": "{{n}} জন সীমার কাছাকাছি",
+    "pending": "যাচাই বাকি জমা",
+    "pendingSub": "{{amount}} যাচাইয়ের অপেক্ষায়",
+    "oldest": "সবচেয়ে পুরনো নগদ",
+    "oldestSub": "{{at}} থেকে",
+    "none": "নেই"
+  },
+  "positions": "আদায়কারী",
+  "positionsHint": "সীমা ছাড়ানোরা আগে। সীমা প্রত্যেক আদায়কারীর জন্য আলাদা।",
+  "col": {
+    "user": "আদায়কারী",
+    "onHand": "হাতে আছে",
+    "limit": "সীমার ব্যবহার",
+    "state": "অবস্থা",
+    "oldest": "হাতে আছে যখন থেকে",
+    "pendingDeposits": "জমা বাকি যাচাই",
+    "today": "আজকের আদায়",
+    "depositor": "জমাদাতা",
+    "amount": "পরিমাণ",
+    "destination": "যেখানে জমা",
+    "reference": "রেফারেন্স",
+    "depositedAt": "জমার সময়",
+    "status": "অবস্থা",
+    "decidedAt": "সিদ্ধান্তের সময়"
+  },
+  "todaySplit": "নগদ {{cash}} · মোবাইল {{mobile}}",
+  "carriedOver": "আগের দিনের",
+  "ofLimit": "সীমা {{limit}}",
+  "deposits": "জমা",
+  "depositsHint": "নগদ গুনে বা ব্যাংক স্লিপ দেখে তবেই যাচাই করুন।",
+  "depositStatus": {
+    "pending": "যাচাই বাকি",
+    "verified": "যাচাইকৃত",
+    "rejected": "প্রত্যাখ্যাত"
+  },
+  "destination": {
+    "branch_cashier": "শাখা ক্যাশিয়ার",
+    "bank": "ব্যাংক",
+    "manager": "ম্যানেজার"
+  },
+  "verify": "যাচাই",
+  "reject": "প্রত্যাখ্যান",
+  "verifyTitle": "{{name}}-এর {{amount}} যাচাই করবেন?",
+  "verifyDesc": "নিশ্চিত করুন যে ঠিক এই পরিমাণ টাকা পেয়েছেন। আদায়কারীর হাতের নগদ {{amount}} কমবে। অডিট লগে রেকর্ড থাকবে।",
+  "verifyConfirm": "হ্যাঁ, {{amount}} যাচাই করুন",
+  "verified": "জমা যাচাই হয়েছে",
+  "rejectTitle": "{{name}}-এর {{amount}} জমা প্রত্যাখ্যান করবেন?",
+  "rejectDesc": "টাকাটা আদায়কারীর হাতের নগদেই থেকে যাবে। কী ভুল তা লিখুন যাতে তিনি আবার জমা দিতে পারেন।",
+  "rejectConfirm": "জমা প্রত্যাখ্যান করুন",
+  "rejected": "জমা প্রত্যাখ্যাত হয়েছে",
+  "rejectCodes": {
+    "amount_mismatch": "পরিমাণ মেলেনি",
+    "slip_missing": "স্লিপ নেই বা পড়া যায় না",
+    "not_received": "টাকা পাওয়া যায়নি",
+    "other": "অন্যান্য"
+  },
+  "rejectReason": "কারণ: {{reason}}",
+  "emptyPending": "যাচাই করার কিছু নেই",
+  "emptyPendingBody": "আদায়কারীদের নতুন জমা এখানে আসবে।",
+  "emptyDeposits": "কোনো জমা নেই",
+  "emptyPositions": "কারো হাতে নগদ নেই"
+}

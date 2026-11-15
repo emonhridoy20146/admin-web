@@ -67,6 +67,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const online = useOnline();
   const pathname = usePathname();
+  const router = useRouter();
   useMe();
   useBranchSync();
   useEffect(() => setMobileOpen(false), [pathname]);
@@ -92,13 +93,13 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
         gTimer = setTimeout(() => (g = false), 900);
       } else if (g) {
         const map: Record<string, string> = { i: '/inbox/', c: '/customers/', o: '/', l: '/collections/', h: '/cash/' };
-        if (map[e.key]) window.location.assign(map[e.key]!);
+        if (map[e.key]) router.push(map[e.key]!); // client-side: keeps state, no full reload
         g = false;
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [router]);
 
   return (
     <div className="min-h-dvh bg-bg">

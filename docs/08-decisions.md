@@ -12,6 +12,14 @@ System-wide ADRs (ADR-001…023) and open decisions (OD-01…24) are in `field-a
 - **Alternatives rejected:** query-param pages (`/customers/view?id=`) — works everywhere but uglier; hash routing — breaks deep links in some tools.
 - **Consequences:** README documents rewrite rules for Cloudflare Pages (`_redirects`), Nginx and S3/CloudFront; fallback to query-param variant if a host cannot rewrite.
 
+**Amendment (2026-11-15):** App Router `[id]` with `output: 'export'` fails for unknown ids and `_`-prefixed folders are private, so the one page lives at `/customers/view/` and reads the id from the pathname (fallback `?id=`). Hosts rewrite `/customers/<id>/` and `/customers/<id>/index.txt` to it; `next.config.ts` adds the same rewrite in dev only. Reference implementation: `scripts/serve-static.mjs`.
+
+### ADR-W09 CSP with script hashes for the static export · accepted
+Next.js static export writes inline bootstrap scripts. Instead of `'unsafe-inline'`, hosting sends `script-src 'self' 'sha256-…'` with the hashes of each HTML file's inline scripts (computed at deploy; `scripts/serve-static.mjs` shows how).
+
+### ADR-W10 Mock mode keeps a session marker in sessionStorage · accepted
+Only with `NEXT_PUBLIC_API_MOCK=1`: the MSW mock stores the signed-in demo user id (never a token or PII) under `fos.mock.session` to stand in for the HttpOnly refresh cookie across reloads. Production builds never write it.
+
 ### ADR-W03 shadcn/ui + Radix + Tailwind 4 · accepted
 - **Reason:** accessible primitives, code owned in repo (no version lock-in), token-driven theming, premium look with little effort, AI agents know it well.
 - **Alternatives rejected:** MUI (heavier, Material look on admin conflicts with desired calm style, theming more complex); Ant Design (dense but dated look, large bundle, less control); Mantine (good, but less ecosystem momentum for tables/charts patterns).

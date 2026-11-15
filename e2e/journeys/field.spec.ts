@@ -1,0 +1,102 @@
+import { expect, test } from '@playwright/test';
+import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
+import tagsBn from '../../src/features/tags/i18n/bn.json' with { type: 'json' };
+import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
+import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
+import type { Page } from '@playwright/test';
+import { confirmWithReason, login, nav } from '../fixtures';
+
+async function toggleChip(page: Page, name: string) {
+  await page.getByRole('button', { name, exact: true, pressed: false }).click();
+  await expect(page.getByRole('button', { name, exact: true, pressed: true })).toBeVisible();
+}
+
+/** Waits for real rows (not skeletons), then opens the first one in the drawer. */
+async function openFirstRow(page: Page) {
+  await expect(page.locator('tbody tr a').first()).toBeVisible();
+  await page.locator('tbody tr').first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+}
+
+test('W-E3 customers: filter, sort, drawer and deep link restore the same state', async ({ page }) => {
+  await login(page);
+  await nav(page, custBn.title);
+  await toggleChip(page, custBn.filters.overdue);
+  await toggleChip(page, custBn.filters.bad_suggested);
+  await page.getByRole('combobox').filter({ hasText: custBn.sort['-daysOverdue'] }).selectOption('-totalOutstanding');
+  await expect(page).toHaveURL(/filter=overdue(%2C|,)bad_suggested/);
+  await expect(page).toHaveURL(/sort=-totalOutstanding/);
+  const firstRow = page.locator('tbody tr').first();
+  await expect(firstRow).toBeVisible();
+  const name = (await firstRow.locator('a').first().innerText()).trim();
+  await firstRow.click();
+  const drawer = page.getByRole('dialog');
+  await expect(drawer).toContainText(name);
+  await expect(page).toHaveURL(/drawer=customer%3A|drawer=customer:/);
+
+  // copy-paste the URL: a fresh load must open the same filters, sort and drawer
+  const deepLink = page.url();
+  await page.goto(deepLink);
+  await expect(page.getByRole('dialog')).toContainText(name);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: custBn.filters.overdue, exact: true, pressed: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: custBn.filters.bad_suggested, exact: true, pressed: true })).toBeVisible();
+});
+
+test('W-E4 tag a customer with a reason; history shows the previous value', async ({ page }) => {
+  await login(page);
+  await nav(page, custBn.title);
+  await toggleChip(page, custBn.filters.bad_suggested);
+  await openFirstRow(page);
+  await page.getByRole('dialog').getByRole('link', { name: custBn.openFull }).click();
+  await page.getByRole('tab', { name: tagsBn.tab }).click();
+  await page.getByRole('button', { name: tagsBn.tagAction }).click();
+  await confirmWithReason(page, 'Plan ended four months ago and the customer refuses to pay.', tagsBn.tagAction);
+  await expect(page.getByText(tagsBn.tagged).first()).toBeVisible();
+  // history keeps the previous value ("no tag") next to the new one, with the reason
+  const panel = page.getByRole('tabpanel');
+  await expect(panel).toContainText(tagsBn.history);
+  await expect(panel).toContainText(tagsBn.none);
+  await expect(panel).toContainText('Plan ended four months ago');
+});
+
+test('W-E4 viewer cannot tag', async ({ page }) => {
+  await login(page, 'viewer');
+  await nav(page, custBn.title);
+  await openFirstRow(page);
+  await page.getByRole('dialog').getByRole('link', { name: custBn.openFull }).click();
+  await page.getByRole('tab', { name: tagsBn.tab }).click();
+  await expect(page.getByText(tagsBn.noPermission)).toBeVisible();
+  await expect(page.getByRole('button', { name: tagsBn.tagAction })).toHaveCount(0);
+});
+
+test('W-E5 resolve a conflict to a plan; a double click resolves it once', async ({ page }) => {
+  await login(page);
+  await nav(page, colBn.conflicts);
+  const cards = page.locator('main [aria-label="' + colBn.fieldRecord + '"]');
+  await expect(cards.first()).toBeVisible();
+  const before = await cards.count();
+  await page.getByRole('button', { name: colBn.resolve }).first().click();
+  await confirmWithReason(page, 'Customer confirmed the payment on the phone.', /সমাধান/, { double: true });
+  await expect(page.getByText(colBn.resolved).first()).toBeVisible();
+  await expect(cards).toHaveCount(before - 1);
+});
+
+test('W-E6 verify and reject deposits; the pending queue updates', async ({ page }) => {
+  await login(page);
+  await nav(page, cashBn.title);
+  const queue = page.locator('#deposits ul > li');
+  await expect(queue.first()).toBeVisible();
+  const before = await queue.count();
+
+  await queue.first().getByRole('button', { name: cashBn.verify, exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /যাচাই করুন/ }).click();
+  await expect(page.getByText(cashBn.verified).first()).toBeVisible();
+  await expect(queue).toHaveCount(before - 1);
+
+  await queue.first().getByRole('button', { name: cashBn.reject, exact: true }).click();
+  await confirmWithReason(page, 'Slip amount does not match the cash counted.', cashBn.rejectConfirm);
+  await expect(queue).toHaveCount(before - 2);
+  await page.getByRole('button', { name: cashBn.depositStatus.rejected, exact: true }).click();
+  await expect(page.locator('#deposits tbody tr').first()).toContainText(/Slip amount|কারণ/);
+});

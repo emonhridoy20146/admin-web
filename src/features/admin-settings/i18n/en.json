@@ -1,0 +1,180 @@
+{
+  "title": "Settings",
+  "subtitle": "Organisation-wide rules. Every save needs a reason and is recorded in the audit log.",
+  "sections": {
+    "duty": {
+      "title": "Duty hours",
+      "desc": "When staff are on duty. Location is only collected inside these hours."
+    },
+    "cash": {
+      "title": "Cash on hand",
+      "desc": "How much cash a collector may hold before depositing."
+    },
+    "collections": {
+      "title": "Collections",
+      "desc": "Checks applied to money recorded in the field."
+    },
+    "tags": {
+      "title": "Bad-customer tags",
+      "desc": "Who may tag customers and whether a manager must approve."
+    },
+    "promises": {
+      "title": "Promises to pay",
+      "desc": "Limits for promise dates staff can record."
+    },
+    "location": {
+      "title": "Location",
+      "desc": "Duty-hour tracking frequency, accuracy and how long points are kept."
+    },
+    "attendance": {
+      "title": "Attendance",
+      "desc": "Proof required when staff start work."
+    },
+    "app": {
+      "title": "Staff app",
+      "desc": "Older app versions are asked to update before they can sync."
+    },
+    "other": {
+      "title": "Other settings",
+      "desc": "Read-only here; managed by the system team."
+    }
+  },
+  "fields": {
+    "duty.shiftStart": {
+      "label": "Shift starts",
+      "help": ""
+    },
+    "duty.shiftEnd": {
+      "label": "Shift ends",
+      "help": ""
+    },
+    "duty.weeklyOff": {
+      "label": "Weekly days off",
+      "help": "No duty, no tracking on these days."
+    },
+    "duty.lateGraceMin": {
+      "label": "Late after",
+      "help": "Minutes after shift start before work-in counts as late."
+    },
+    "duty.maxBreakMin": {
+      "label": "Longest break",
+      "help": "Total break minutes per day before it is flagged."
+    },
+    "cash.limitPoisha": {
+      "label": "Default cash limit",
+      "help": "Used for collectors without their own limit."
+    },
+    "cash.limitMode": {
+      "label": "When over the limit",
+      "help": ""
+    },
+    "cash.warnAtRatio": {
+      "label": "Warn at",
+      "help": "Percent of the limit at which the collector and manager are warned."
+    },
+    "collections.farFromPinM": {
+      "label": "Far from pin",
+      "help": "Collections recorded further than this from the customer's pin are flagged."
+    },
+    "collections.photoRequiredAbovePoisha": {
+      "label": "Receipt photo above",
+      "help": "0 means a photo is never required."
+    },
+    "tags.staffCanSet": {
+      "label": "Field staff can tag",
+      "help": "If off, only managers tag customers."
+    },
+    "tags.approvalMode": {
+      "label": "Manager approval",
+      "help": "Tags by staff wait for a manager before they apply."
+    },
+    "promises.maxHorizonDays": {
+      "label": "Furthest promise date",
+      "help": ""
+    },
+    "promises.graceDays": {
+      "label": "Grace before broken",
+      "help": "Days after the promise date before it is marked broken."
+    },
+    "location.retentionDays": {
+      "label": "Keep location points",
+      "help": "Older points are deleted automatically."
+    },
+    "location.trackDuringBreak": {
+      "label": "Track during breaks",
+      "help": ""
+    },
+    "location.maxAccuracyM": {
+      "label": "Ignore fixes worse than",
+      "help": ""
+    },
+    "location.fastSec": {
+      "label": "Interval while moving",
+      "help": ""
+    },
+    "location.slowSec": {
+      "label": "Interval while walking",
+      "help": ""
+    },
+    "location.stillSec": {
+      "label": "Interval while still",
+      "help": ""
+    },
+    "attendance.selfieAtWorkIn": {
+      "label": "Selfie at work-in",
+      "help": ""
+    },
+    "app.minVersion": {
+      "label": "Minimum app version",
+      "help": "Format 1.2.0"
+    },
+    "location.trackingProvider": {
+      "label": "Tracking engine",
+      "help": "Background location library the staff app uses. Switch to the paid engine once its licence is bought; apps pick it up on their next settings refresh."
+    }
+  },
+  "units": {
+    "min": "min",
+    "sec": "sec",
+    "days": "days",
+    "m": "m",
+    "pct": "%",
+    "taka": "৳"
+  },
+  "enum": {
+    "warn": "Warn only",
+    "block": "Block new cash collections",
+    "free": "Free (open source)",
+    "paid": "Paid (licensed)"
+  },
+  "weekdays": [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ],
+  "errors": {
+    "int": "Whole number only.",
+    "range": "Out of the allowed range.",
+    "money": "Whole taka only.",
+    "ratio": "Between 1 and 100.",
+    "time": "Use 24-hour HH:MM.",
+    "version": "Use the form 1.2.0.",
+    "required": "Required.",
+    "shiftOrder": "Must be after the shift start.",
+    "slowFast": "Must be at least the moving interval."
+  },
+  "changed_one": "{{n}} unsaved change",
+  "changed_other": "{{n}} unsaved changes",
+  "discard": "Discard",
+  "review": "Review & save",
+  "saveTitle": "Save {{n}} setting changes?",
+  "saveConfirm": "Save settings",
+  "saved": "Settings saved",
+  "fixErrors": "Fix the highlighted fields first.",
+  "on": "On",
+  "off": "Off"
+}

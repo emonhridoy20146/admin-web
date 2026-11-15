@@ -95,7 +95,7 @@ function trim1(n: number) {
 
 function dt(iso: string | Date, p: FormatPrefs) {
   const d = typeof iso === 'string' ? DateTime.fromISO(iso, { zone: DHAKA }) : DateTime.fromJSDate(iso);
-  return d.setZone(DHAKA).reconfigure({ locale: p.locale === 'bn' ? 'bn-BD' : 'en-GB', numberingSystem: p.bnDigits ? 'beng' : 'latn' });
+  return d.setZone(DHAKA).reconfigure({ locale: p.locale === 'bn' ? 'bn-BD' : 'en-US', numberingSystem: p.bnDigits ? 'beng' : 'latn' });
 }
 
 /** 15 Nov 2026 / ১৫ নভেম্বর ২০২৬. Accepts ISO date-time (UTC) or business date YYYY-MM-DD (Dhaka). */
@@ -123,17 +123,21 @@ export function formatWeekday(iso: string, opts: Partial<FormatPrefs> = {}): str
 export function formatRelative(iso: string | Date, opts: Partial<FormatPrefs> & { now?: Date } = {}): string {
   const p = { ...prefs, ...opts };
   const base = opts.now ? DateTime.fromJSDate(opts.now) : DateTime.now();
-  const r = dt(iso, p).toRelative({ base: base.reconfigure({ locale: p.locale === 'bn' ? 'bn-BD' : 'en-GB' }), style: 'long' }) ?? '';
+  const r = dt(iso, p).toRelative({ base: base.reconfigure({ locale: p.locale === 'bn' ? 'bn-BD' : 'en-US' }), style: 'long' }) ?? '';
   return p.bnDigits ? toBnDigits(r) : r.replace(/[০-৯]/g, (c) => String(BN_DIGITS.indexOf(c)));
 }
 
-/** Minutes → "১ ঘ ২০ মি" / "1h 20m" */
+/** Minutes → "১ ঘ ২০ মি" / "1h 20m"; ≥ 24 h → "২ দিন ৫ ঘ" / "2d 5h" */
 export function formatDuration(min: number, opts: Partial<FormatPrefs> = {}): string {
   const p = { ...prefs, ...opts };
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
-  const [hu, mu] = p.locale === 'bn' ? ['ঘ', 'মি'] : ['h', 'm'];
-  const s = h ? `${h}${p.locale === 'bn' ? ' ' : ''}${hu} ${m}${p.locale === 'bn' ? ' ' : ''}${mu}` : `${m}${p.locale === 'bn' ? ' ' : ''}${mu}`;
+  const bn = p.locale === 'bn';
+  const sp = bn ? ' ' : '';
+  const [du, hu, mu] = bn ? ['দিন', 'ঘ', 'মি'] : ['d', 'h', 'm'];
+  const total = Math.max(0, Math.round(min));
+  const d = Math.floor(total / 1440);
+  const h = Math.floor((total % 1440) / 60);
+  const m = total % 60;
+  const s = d ? `${d}${sp}${du}${h ? ` ${h}${sp}${hu}` : ''}` : h ? `${h}${sp}${hu} ${m}${sp}${mu}` : `${m}${sp}${mu}`;
   return digits(s, p);
 }
 

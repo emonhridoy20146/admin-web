@@ -7,6 +7,7 @@ import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as PopoverP from '@radix-ui/react-popover';
 import { Check, Minus } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { formatNumber } from '../lib/format';
 
 export function Switch({ className, ...p }: SwitchP.SwitchProps) {
   return (
@@ -129,4 +130,24 @@ export function Avatar({ name, className }: { name: string; className?: string }
 
 export function Kbd({ children }: { children: React.ReactNode }) {
   return <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-xs border border-line bg-surface-subtle px-1 font-mono text-[11px] text-fg-tertiary">{children}</kbd>;
+}
+
+/** Segmented control (single choice, few options). Labels and counts come from the caller. */
+export function Segmented<V extends string>({ value, options, onChange, label, className }: { value: V; options: { value: V; label: React.ReactNode; count?: number }[]; onChange: (v: V) => void; label: string; className?: string }) {
+  return (
+    <div className={cn('inline-flex w-fit max-w-full overflow-x-auto rounded-md border border-line bg-surface p-0.5 shadow-e1', className)} role="group" aria-label={label}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn('inline-flex h-8 items-center gap-1.5 rounded-sm px-3 text-sm font-medium whitespace-nowrap [@media(pointer:coarse)]:h-10', value === o.value ? 'bg-primary-subtle text-primary-subtle-fg' : 'text-fg-secondary hover:text-fg')}
+        >
+          {o.label}
+          {o.count != null && o.count > 0 && <span className="tabular rounded-full bg-surface-subtle px-1.5 text-xs text-fg-secondary">{formatNumber(o.count)}</span>}
+        </button>
+      ))}
+    </div>
+  );
 }

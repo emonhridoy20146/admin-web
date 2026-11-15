@@ -1,0 +1,69 @@
+{
+  "title": "Cash on hand",
+  "subtitle": "Cash each collector is holding until it is deposited and verified.",
+  "kpi": {
+    "onHand": "Cash with staff",
+    "holders": "{{n}} staff holding cash",
+    "overLimit": "Over the limit",
+    "nearLimit": "{{n}} near the limit",
+    "pending": "Deposits to verify",
+    "pendingSub": "{{amount}} awaiting verification",
+    "oldest": "Oldest cash held",
+    "oldestSub": "Since {{at}}",
+    "none": "None"
+  },
+  "positions": "Collectors",
+  "positionsHint": "Over-limit first. The limit is set per collector.",
+  "col": {
+    "user": "Collector",
+    "onHand": "On hand",
+    "limit": "Use of limit",
+    "state": "State",
+    "oldest": "Held since",
+    "pendingDeposits": "Deposit pending",
+    "today": "Collected today",
+    "depositor": "Deposited by",
+    "amount": "Amount",
+    "destination": "Deposited to",
+    "reference": "Reference",
+    "depositedAt": "Deposited",
+    "status": "Status",
+    "decidedAt": "Decided"
+  },
+  "todaySplit": "Cash {{cash}} · mobile {{mobile}}",
+  "carriedOver": "From a previous day",
+  "ofLimit": "Limit {{limit}}",
+  "deposits": "Deposits",
+  "depositsHint": "Verify only after you have counted the cash or seen the bank slip.",
+  "depositStatus": {
+    "pending": "To verify",
+    "verified": "Verified",
+    "rejected": "Rejected"
+  },
+  "destination": {
+    "branch_cashier": "Branch cashier",
+    "bank": "Bank",
+    "manager": "Manager"
+  },
+  "verify": "Verify",
+  "reject": "Reject",
+  "verifyTitle": "Verify {{amount}} from {{name}}?",
+  "verifyDesc": "Confirm that you received exactly this amount. The collector's cash on hand goes down by {{amount}}. This is recorded in the audit log.",
+  "verifyConfirm": "Yes, verify {{amount}}",
+  "verified": "Deposit verified",
+  "rejectTitle": "Reject {{amount}} from {{name}}?",
+  "rejectDesc": "The money stays on the collector's cash on hand. Tell them what is wrong so they can deposit again.",
+  "rejectConfirm": "Reject deposit",
+  "rejected": "Deposit rejected",
+  "rejectCodes": {
+    "amount_mismatch": "Amount does not match",
+    "slip_missing": "Slip missing or unreadable",
+    "not_received": "Money not received",
+    "other": "Other"
+  },
+  "rejectReason": "Reason: {{reason}}",
+  "emptyPending": "Nothing to verify",
+  "emptyPendingBody": "New deposits from collectors will appear here.",
+  "emptyDeposits": "No deposits",
+  "emptyPositions": "No collectors hold cash"
+}

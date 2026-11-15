@@ -9,8 +9,16 @@ import { shellManifest } from '@/features/shell';
 import { dashboardManifest } from '@/features/dashboard';
 import { inboxManifest } from '@/features/inbox';
 import { customersManifest } from '@/features/customers';
+import { tagsManifest } from '@/features/tags';
+import { collectionsManifest } from '@/features/collections';
+import { cashManifest } from '@/features/cash';
+import { adminUsersManifest } from '@/features/admin-users';
+import { adminRbacManifest } from '@/features/admin-rbac';
+import { adminFlagsManifest } from '@/features/admin-flags';
+import { adminSettingsManifest } from '@/features/admin-settings';
+import { auditManifest } from '@/features/audit';
 
-export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest];
+export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, adminUsersManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, auditManifest];
 
 registerFeatures(features);
 

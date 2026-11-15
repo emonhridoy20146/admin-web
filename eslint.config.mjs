@@ -3,8 +3,8 @@ import boundaries from 'eslint-plugin-boundaries';
 
 const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 
-export default [
-  { ignores: ['.next/**', 'out/**', 'node_modules/**', 'public/mockServiceWorker.js', 'src/shared/api/schema.d.ts', 'e2e/.results/**', 'playwright-report/**', 'test-results/**'] },
+const config = [
+  { ignores: ['.next/**', 'out/**', 'node_modules/**', 'next-env.d.ts', 'public/mockServiceWorker.js', 'src/shared/api/schema.d.ts', 'e2e/.results/**', 'playwright-report/**', 'test-results/**'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     files: ['src/**/*.{ts,tsx}'],
@@ -49,3 +49,5 @@ export default [
     },
   },
 ];
+
+export default config;

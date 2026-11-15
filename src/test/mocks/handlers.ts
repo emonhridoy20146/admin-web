@@ -420,7 +420,8 @@ export const handlers = [
     const sc = scope(ctx, url);
     const all = db.collections.filter((c) => (c.status === 'conflict' || c.status === 'posting_failed') && sc.includes(db.collectionBranch(c) ?? '')).sort((a, b) => (a.receivedAt! < b.receivedAt! ? -1 : 1));
     const p = page(all, url);
-    return HttpResponse.json({ items: p.items, nextCursor: p.nextCursor });
+    const items = p.items.map((c) => ({ ...c, cashOnHand: db.cashPositions.find((x) => x.userId === c.collector?.id) }));
+    return HttpResponse.json({ items, nextCursor: p.nextCursor });
   })),
   http.get(`${BASE}/collections/:id`, authed(({ params }) => {
     const c = db.collections.find((x) => x.id === params.id);
@@ -611,6 +612,14 @@ export const handlers = [
     if (action) all = all.filter((a) => a.action?.startsWith(action));
     if (entity) all = all.filter((a) => a.entity === entity);
     if (actorId) all = all.filter((a) => a.actor?.id === actorId);
+    const entityId = sp.get('entityId');
+    const from = sp.get('from');
+    const to = sp.get('to');
+    if (entityId) all = all.filter((a) => a.entityId === entityId);
+    if (from) all = all.filter((a) => a.at! >= from);
+    if (to) all = all.filter((a) => a.at! <= to);
+    const sc = scope(ctx, url);
+    all = all.filter((a) => !a.branchId || sc.includes(a.branchId));
     const p = page(all, url);
     return HttpResponse.json({ items: p.items, nextCursor: p.nextCursor });
   })),

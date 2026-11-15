@@ -275,7 +275,7 @@ function StaffToday({ className }: { className?: string }) {
                         </Link>
                       </td>
                       <td className="hidden w-[38%] px-3 py-2.5 sm:table-cell">
-                        <div className="relative h-1.5 rounded-full bg-surface-hover" aria-label={formatPercent(pct)}>
+                        <div className="relative h-1.5 rounded-full bg-surface-hover" role="img" aria-label={formatPercent(pct)}>
                           <div className={cn('h-full rounded-full', pct >= 1 ? 'bg-success' : 'bg-primary')} style={{ width: `${Math.min(100, (total / max) * 100)}%` }} />
                           {r.targetPoisha ? <span className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-fg-tertiary" style={{ left: `${(r.targetPoisha / max) * 100}%` }} aria-hidden /> : null}
                         </div>

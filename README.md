@@ -13,11 +13,31 @@ pnpm gen:api                  # types from field-api openapi.yaml (path or pinne
 pnpm dev                      # http://localhost:3000 (against local field-api or Prism mock on :4010)
 pnpm dev:mock                 # MSW in-browser mock, no backend needed
 pnpm build                    # static export to ./out
-pnpm test · pnpm e2e -- --trace off
+pnpm build:mock && pnpm serve # static export with the mock API, served with prod rewrites + CSP on :4000
+pnpm test                     # unit (vitest)
+pnpm e2e -- --trace off       # Playwright journeys + axe against the mock static export (run build:mock first)
+pnpm lint && pnpm typecheck && pnpm check:permissions && pnpm check:i18n
+pnpm new:feature <name>       # scaffold a feature module
 ```
 
+### Demo (mock mode)
+`pnpm dev:mock`, then sign in with `admin`, `manager`, `viewer` or `newmanager` (forced password change). Password for all: `Demo@2026`. Demo data is generated in the browser and resets on reload; nothing leaves the machine.
+
 ### Hosting rewrites (dynamic routes, ADR-W02)
-Cloudflare Pages `_redirects`: `/customers/*  /customers/_/index.html  200` (same for `/staff/*`, `/collections/*`, `/handovers/*`). Nginx: `try_files $uri $uri/ /customers/_/index.html;` per prefix.
+One static page serves every customer id: `/customers/view/` (ADR-W02, amended). Hosts must rewrite both the HTML and the RSC payload:
+
+- Cloudflare Pages `_redirects`:
+  ```
+  /customers/view/*        /customers/view/:splat      200
+  /customers/:id/          /customers/view/            200
+  /customers/:id/index.txt /customers/view/index.txt   200
+  ```
+- Nginx: `location ~ ^/customers/(?!view/)[^/]+/(index\.txt)?$ { try_files /customers/view/$1 /customers/view/index.html; }`
+
+`scripts/serve-static.mjs` implements the same rules and is the reference.
+
+### Content-Security-Policy
+Next.js static export emits small inline bootstrap scripts. Do not use `'unsafe-inline'`: list their sha256 hashes in `script-src` (per HTML file). `scripts/serve-static.mjs` computes them and shows the full header (`curl -I`). Add the API, tile and storage origins to `connect-src`/`img-src`.
 
 ## Environment variables (names only)
 | Name | Purpose |
