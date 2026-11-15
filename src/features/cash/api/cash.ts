@@ -17,20 +17,15 @@ export function useCashPositions() {
   });
 }
 
-/**
- * Contract gap (reported): GET /cash/deposits declares no response schema. Read as the standard list envelope
- * ({ items: Deposit[], nextCursor }); Deposit itself is typed by the contract.
- */
 export function useDeposits(status: DepositStatus | undefined, cursor?: string, limit = 25) {
   const branchId = useBranchId();
   const query = { branchId, status, cursor, limit };
   return useQuery({
     queryKey: ['cash', 'deposits', query],
-    queryFn: async () =>
-      (await unwrap(api.GET('/cash/deposits', { params: { query } }))) as unknown as {
-        items: Deposit[];
-        nextCursor: string | null;
-      },
+    queryFn: async () => {
+      const r = await unwrap(api.GET('/cash/deposits', { params: { query } }));
+      return { items: r.items ?? [], nextCursor: r.nextCursor ?? null };
+    },
     placeholderData: keepPreviousData,
   });
 }

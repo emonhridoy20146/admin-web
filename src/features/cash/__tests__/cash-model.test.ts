@@ -62,5 +62,6 @@ describe('cash model', () => {
   it('joins the depositor name from positions', () => {
     expect(depositUserName({ userId: 'b' }, [p('b', 0, 1, 'ok')])).toBe('B');
     expect(depositUserName({ userId: 'x' }, undefined)).toBeUndefined();
+    expect(depositUserName({ userId: 'b', userName: 'From deposit' }, [p('b', 0, 1, 'ok')])).toBe('From deposit');
   });
 });

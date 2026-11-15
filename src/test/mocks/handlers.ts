@@ -260,6 +260,20 @@ export const handlers = [
     if (!u) return problem(404, 'NOT_FOUND', 'User not found');
     return HttpResponse.json(db.effective(u));
   })),
+  http.get(`${BASE}/rbac/overrides/branch/:branchId`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'rbac.view');
+    if (deny) return deny;
+    const items = Object.entries(db.branchOverrides[params.branchId!] ?? {}).flatMap(([role, keys]) =>
+      Object.entries(keys ?? {}).map(([key, effect]) => ({ role: role as db.Role, key, effect })),
+    );
+    return HttpResponse.json({ branchId: params.branchId, items });
+  })),
+  http.get(`${BASE}/rbac/overrides/user/:userId`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'rbac.view');
+    if (deny) return deny;
+    const items = Object.entries(db.userOverrides[params.userId!] ?? {}).map(([key, effect]) => ({ key, effect }));
+    return HttpResponse.json({ userId: params.userId, items });
+  })),
   http.put(`${BASE}/rbac/overrides/branch/:branchId`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'rbac.manage');
     if (deny) return deny;
@@ -301,6 +315,14 @@ export const handlers = [
     Object.assign(db.settings, b.changes);
     db.addAudit({ actor: actor(ctx.user), action: 'settings.update', entity: 'settings', entityId: 'global', before, after: b.changes, reason: b.reason });
     return HttpResponse.json({});
+  })),
+  http.get(`${BASE}/feature-flags/effective`, authed(({ url, ctx }) => {
+    const deny = need(ctx, 'flag.manage');
+    if (deny) return deny;
+    const branchId = url.searchParams.get('branchId');
+    if (!branchId) return problem(400, 'VALIDATION_FAILED', 'branchId is required');
+    const flags = Object.fromEntries(db.flags.map((f) => [f.key!, f.branchOverrides?.find((o) => o.branchId === branchId)?.enabled ?? !!f.defaultEnabled]));
+    return HttpResponse.json({ branchId, flags });
   })),
   http.get(`${BASE}/feature-flags`, authed(() => HttpResponse.json(db.flags))),
   http.put(`${BASE}/feature-flags/:key`, authed(async ({ request, params, ctx }) => {

@@ -26,18 +26,14 @@ export function useCollection(id: string | null) {
   });
 }
 
-/**
- * Contract gap (reported): GET /collections/conflicts declares no response schema. We read it with the same
- * envelope as GET /collections ({ items: Collection[], nextCursor }) — types still come from the contract.
- */
 export function useConflicts() {
   const branchId = useBranchId();
   return useQuery({
     queryKey: ['collections', 'conflicts', branchId],
-    queryFn: async () =>
-      (await unwrap(
-        api.GET('/collections/conflicts', { params: { query: { branchId, limit: 100 } } }),
-      )) as unknown as { items: Collection[]; nextCursor: string | null },
+    queryFn: async () => {
+      const r = await unwrap(api.GET('/collections/conflicts', { params: { query: { branchId, limit: 100 } } }));
+      return { items: r.items ?? [], nextCursor: r.nextCursor ?? null };
+    },
     staleTime: 0,
   });
 }

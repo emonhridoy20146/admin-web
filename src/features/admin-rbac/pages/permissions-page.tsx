@@ -17,8 +17,8 @@ import { Avatar, Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/pr
 import { Input, Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
-import { useCatalog, useEffective, useRoleHolders, useSetBranchOverrides, useSetUserOverrides, useUserPick, useUserSearch, type PermissionDef, type Role } from '../api/rbac';
-import { currentOverrides, groupByModule, ROLES, stageModule, toChanges, type Effect, type ModuleGroup } from '../model/matrix';
+import { useBranchOverrides, useCatalog, useEffective, useRoleHolders, useSetBranchOverrides, useSetUserOverrides, useUserPick, useUserSearch, type PermissionDef, type Role } from '../api/rbac';
+import { currentOverrides, groupByModule, overridesForRole, ROLES, stageModule, toChanges, type Effect, type ModuleGroup } from '../model/matrix';
 import { Allowed, OverrideTable, StagedBar } from '../components/override-table';
 
 const TABS = ['roles', 'branch', 'user'] as const;
@@ -113,11 +113,9 @@ function BranchOverrides({ groups, catalog }: { groups: ModuleGroup[]; catalog: 
   const branchId = url.get('b') || globalBranch || branches.data?.[0]?.id || '';
   const role = oneOf(url.get('role'), ['branch_manager', 'field_staff', 'viewer'] as const, 'field_staff');
   const holders = useRoleHolders(branchId, role);
-  // Contract gap (reported): no GET for branch overrides. Probe through one active holder of this role in this branch.
   const holderList = holders.data?.items ?? [];
-  const probe = holderList.find((u) => u.branchIds?.length === 1 && u.branchIds[0] === branchId) ?? holderList[0];
-  const effective = useEffective(probe?.id);
-  const current = useMemo(() => currentOverrides(effective.data, 'branch'), [effective.data]);
+  const effective = useBranchOverrides(branchId || undefined);
+  const current = useMemo(() => overridesForRole(effective.data?.items, role), [effective.data, role]);
   const [staged, setStaged] = useStaged(`${branchId}:${role}`);
   const save = useSetBranchOverrides();
   const [open, setOpen] = useState(false);
@@ -145,7 +143,6 @@ function BranchOverrides({ groups, catalog }: { groups: ModuleGroup[]; catalog: 
           {holders.isLoading ? <Skeleton className="h-4 w-32" /> : holderList.length ? t('affects', { n: formatNumber(holderList.length) }) : t('affectsNone')}
         </span>
       </div>
-      {!probe && !holders.isLoading && <p className="mb-3 flex items-start gap-2 rounded-sm bg-info-bg px-3 py-2 text-sm text-info"><Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t('probeGap')}</p>}
       {effective.error ? <ErrorBanner error={effective.error} onRetry={() => effective.refetch()} /> : null}
       <OverrideTable
         groups={groups}

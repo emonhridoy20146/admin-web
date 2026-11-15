@@ -34,7 +34,6 @@
   "role": "Role",
   "affects": "Affects {{n}} active users",
   "affectsNone": "No active users have this role here yet",
-  "probeGap": "Current branch overrides are read through one user of this role. With no such user, only role defaults are shown.",
   "bulk": {
     "label": "Set all in module",
     "allow": "Allow all",

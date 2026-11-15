@@ -8,7 +8,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Repo, CI (lint, boundaries, typecheck, unit, Playwright, axe, Lighthouse), tokens.css, fonts | NFR-W-* | ◐ all local checks run; CI workflow and Lighthouse not yet added |
 | Auth: login, change password, refresh, idle timeout | FR-AUTH-001..004, FR-W-002 | ☑ (W-E2 journey not yet automated) |
 | Shell: header, sidebar, branch switcher, feature registry, `<Can>` | FR-W-001, FR-W-003 | ☑ |
-| Users & roles, Permissions matrix, Settings, Flags, Audit | FR-USER-*, FR-RBAC-*, FR-SET-*, FR-FLAG-*, FR-AUD-003, FR-W-009 | ☑ (branch-override read is a workaround, see gaps) |
+| Users & roles, Permissions matrix, Settings, Flags, Audit | FR-USER-*, FR-RBAC-*, FR-SET-*, FR-FLAG-*, FR-AUD-003, FR-W-009 | ☑ |
 | Shared UI kit: DataTable, Drawer, ReasonDialog, StatusBadge, MoneyText, KpiCard, EmptyState | FR-W-004/005/008 | ☑ |
 **Acceptance:** W-E1, W-E2, W-E8, W-E9, W-E14 green; axe clean; shell JS ≤ 250 KB gzip.
 
@@ -37,13 +37,15 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 ## Status notes (2026-11-15)
 - Verified: lint (incl. boundaries), typecheck, 44 unit tests, 16 Playwright journeys incl. axe on 12 pages, `check:permissions`, `check:i18n`, static export served with rewrites + hashed CSP.
 - Bundle: first-load JS is 203–258 KB (Next's report); the 250 KB budget is exceeded on `/admin/users` and `/admin/audit`. Next step: lazy-load page components from the registry.
+- Contract 1.3.0 adopted (2026-11-15): typed list envelopes, branch/user override GET, per-branch effective flags, `Deposit.userName`.
 - Contract 1.2.0 adopted (2026-11-15): `location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, `no_location` flag, contact attempts.
 - Next: customers map, promises, visits, staff, attendance, assignments, handovers, devices, system health.
 
 ## Contract gaps reported to field-api
-1. No response schema: `GET /collections/conflicts`, `GET /cash/deposits`, `GET /tags/review-queue`, `GET /notifications` (read as `{items, nextCursor}`).
-2. No `GET /rbac/overrides/branch/{branchId}`: the matrix reads current branch overrides through one user of that role (`/rbac/users/{id}/effective`, source = branch). Empty when no such user.
-3. `/auth/me` flags are resolved for the user, not per branch: a super admin switching branch cannot see a branch-level flag OFF.
-4. `Deposit` has no depositor name (joined from cash positions).
-5. Person names (`assignee.name`, `collector.name`, `userName`, audit `actor.name`) are plain strings, not I18nText.
-6. Master catalog has 46 permission keys; docs say 50.
+All answered in contract 1.3.0 (2026-11-15):
+1. Response schemas added for `GET /collections/conflicts`, `/cash/deposits`, `/notifications` (review-queue since 1.1.0). Casts removed.
+2. `GET /rbac/overrides/branch/{branchId}` and `/rbac/overrides/user/{userId}` added. The branch tab now reads the real list (workaround removed).
+3. `GET /feature-flags/effective?branchId=` added. The shell uses it for a super admin viewing one branch.
+4. `Deposit.userName` added and used (cash positions remain the fallback).
+5. Person names stay plain strings in v1 (changing would break clients). Accepted.
+6. "50 keys" was a miscount in the spec text; the catalog table (46 keys) is the source of truth. Closed.

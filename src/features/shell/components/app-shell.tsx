@@ -21,7 +21,7 @@ import { Header } from './header';
 import { IdleWatcher } from './idle-watcher';
 import { CommandPalette } from './command-palette';
 import { useBranchSync } from './branch-switcher';
-import { useMe } from '../api/queries';
+import { useBranchFlags, useMe } from '../api/queries';
 
 const GROUPS: NavGroup[] = ['top', 'field', 'people', 'insights', 'admin'];
 
@@ -69,6 +69,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   useMe();
+  useBranchFlags();
   useBranchSync();
   useEffect(() => setMobileOpen(false), [pathname]);
 

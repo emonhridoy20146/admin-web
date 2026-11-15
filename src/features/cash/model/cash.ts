@@ -49,10 +49,10 @@ export function summarize(list: CashPosition[]): CashSummary {
   return s;
 }
 
-/** Contract gap: Deposit has no user name; join it from the cash positions of the same branch. */
+/** Depositor name: `Deposit.userName` (contract 1.3.0), else joined from the cash positions of the same branch. */
 export function depositUserName(
-  d: Pick<Deposit, 'userId'>,
+  d: Pick<Deposit, 'userId' | 'userName'>,
   positions: CashPosition[] | undefined,
 ): string | undefined {
-  return positions?.find((p) => p.userId === d.userId)?.userName;
+  return d.userName || positions?.find((p) => p.userId === d.userId)?.userName;
 }

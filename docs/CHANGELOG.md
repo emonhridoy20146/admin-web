@@ -1,7 +1,11 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.2.0** (synced from field-api branch `build/phase-0-1`; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.3.0** (1.2.0 then 1.3.0, synced from field-api branch `build/phase-0-1`; types regenerated with `pnpm gen:api`).
+### Changed
+- Permissions → branch tab reads current exceptions from `GET /rbac/overrides/branch/{branchId}` (1.3.0) instead of probing through one user; the "read through one user" notice is gone.
+- A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
+- Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
 - Customers: installment column, overdue amount under outstanding (list, drawer, detail), area name from the assignment area (address stays as tooltip/detail).
 - Customer detail: "Contact attempts" card (FR-M-014) listing calls/SMS logged by staff with outcome, duration and phone slot; phone numbers are never shown from this feed.

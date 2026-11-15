@@ -17,6 +17,9 @@ interface SessionState {
   user: User | null;
   permissions: Set<string>;
   flags: Record<string, boolean>;
+  /** Effective flags of the branch a super admin is viewing (contract 1.3.0); null = use `flags`. */
+  branchFlags: Record<string, boolean> | null;
+  setBranchFlags: (f: Record<string, boolean> | null) => void;
   setFromLogin: (r: LoginResponse) => void;
   setMe: (me: { user?: User; permissions?: string[]; flags?: Record<string, boolean> }) => void;
   clear: () => void;
@@ -29,6 +32,8 @@ export const useSession = create<SessionState>((set) => ({
   user: null,
   permissions: new Set(),
   flags: {},
+  branchFlags: null,
+  setBranchFlags: (f) => set({ branchFlags: f }),
   setFromLogin: (r) =>
     set({
       status: 'authenticated',
@@ -44,7 +49,7 @@ export const useSession = create<SessionState>((set) => ({
       permissions: me.permissions ? new Set(me.permissions) : s.permissions,
       flags: me.flags ?? s.flags,
     })),
-  clear: () => set({ status: 'anonymous', accessToken: null, expiresAt: null, user: null, permissions: new Set(), flags: {} }),
+  clear: () => set({ status: 'anonymous', accessToken: null, expiresAt: null, user: null, permissions: new Set(), flags: {}, branchFlags: null }),
 }));
 
 export function can(key: string | undefined): boolean {
@@ -58,5 +63,5 @@ export function useCan(key: string | undefined): boolean {
 
 export function useFlag(flag: string | undefined): boolean {
   // Feature flags default OFF (fixed decision): a missing key means disabled.
-  return useSession((s) => (flag ? s.flags[flag] === true : true));
+  return useSession((s) => (flag ? (s.branchFlags ?? s.flags)[flag] === true : true));
 }

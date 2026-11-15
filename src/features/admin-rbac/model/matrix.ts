@@ -1,4 +1,4 @@
-import type { Effective, OverrideChange, PermissionDef, Role } from '../api/rbac';
+import type { Effective, OverrideChange, OverrideEntry, PermissionDef, Role } from '../api/rbac';
 
 export type Effect = 'inherit' | 'allow' | 'deny';
 export const ROLES = ['super_admin', 'branch_manager', 'field_staff', 'viewer'] as const satisfies readonly Role[];
@@ -26,6 +26,13 @@ export function groupByModule(catalog: PermissionDef[]): ModuleGroup[] {
 export function currentOverrides(effective: Effective[] | undefined, level: 'user' | 'branch'): Record<string, Effect> {
   const out: Record<string, Effect> = {};
   for (const e of effective ?? []) if (e.key && e.source === level) out[e.key] = e.allowed ? 'allow' : 'deny';
+  return out;
+}
+
+/** Current override effects of one role from the branch overrides list (contract 1.3.0). */
+export function overridesForRole(items: OverrideEntry[] | undefined, role: string): Record<string, Effect> {
+  const out: Record<string, Effect> = {};
+  for (const e of items ?? []) if (e.key && e.effect && e.role === role) out[e.key] = e.effect;
   return out;
 }
 

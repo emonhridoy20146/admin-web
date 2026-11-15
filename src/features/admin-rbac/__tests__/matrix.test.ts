@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PermissionDef } from '../api/rbac';
-import { currentOverrides, groupByModule, resolve, stageModule, toChanges } from '../model/matrix';
+import { overridesForRole, currentOverrides, groupByModule, resolve, stageModule, toChanges } from '../model/matrix';
 
 const catalog: PermissionDef[] = [
   { key: 'tag.view', module: 'tags', defaults: { branch_manager: true } },
@@ -22,6 +22,15 @@ describe('permissions matrix model', () => {
     ];
     expect(currentOverrides(eff, 'user')).toEqual({ 'tag.set': 'deny' });
     expect(currentOverrides(eff, 'branch')).toEqual({ 'cash.view': 'allow' });
+  });
+
+  it('reads one role from the branch overrides list', () => {
+    const items = [
+      { role: 'field_staff' as const, key: 'tag.set', effect: 'allow' as const },
+      { role: 'viewer' as const, key: 'cash.view', effect: 'deny' as const },
+    ];
+    expect(overridesForRole(items, 'field_staff')).toEqual({ 'tag.set': 'allow' });
+    expect(overridesForRole(undefined, 'viewer')).toEqual({});
   });
 
   it('resolves an effect over an inherited value', () => {

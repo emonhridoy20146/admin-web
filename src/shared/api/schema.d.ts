@@ -366,7 +366,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description Current exceptions of a branch for all roles. Added in 1.3.0. */
+        get: operations["getBranchOverrides"];
         put: operations["setBranchOverrides"];
         post?: never;
         delete?: never;
@@ -382,7 +383,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description Added in 1.3.0. */
+        get: operations["getUserOverrides"];
         put: operations["setUserOverrides"];
         post?: never;
         delete?: never;
@@ -421,6 +423,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateSettings"];
+        trace?: never;
+    };
+    "/feature-flags/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Effective flag values for one branch (override, else default). Lets a super admin see a branch-level OFF. Added in 1.3.0. */
+        get: operations["effectiveFlagsForBranch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/feature-flags": {
@@ -1127,6 +1146,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Author only, within 15 minutes of creation (FR-NOTE-001). Added in 1.3.0. */
+        patch: operations["editNote"];
+        trace?: never;
+    };
     "/customers/{id}/contact-attempts": {
         parameters: {
             query?: never;
@@ -1830,6 +1866,17 @@ export interface components {
             };
             reserved?: boolean;
         };
+        /** @description Added in 1.3.0 */
+        OverrideEntry: {
+            role?: components["schemas"]["Role"];
+            key?: string;
+            /** @enum {string} */
+            effect?: "allow" | "deny";
+            reason?: string;
+            setBy?: string;
+            /** Format: date-time */
+            setAt?: string | null;
+        };
         OverrideChange: {
             key: string;
             /** @enum {string} */
@@ -2178,6 +2225,8 @@ export interface components {
         Deposit: components["schemas"]["DepositCreate"] & {
             id?: string;
             userId?: string;
+            /** @description Depositor display name (1.3.0) */
+            userName?: string;
             /** @enum {string} */
             status?: "pending" | "verified" | "rejected";
             verifiedBy?: string;
@@ -3201,6 +3250,31 @@ export interface operations {
             };
         };
     };
+    getBranchOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                branchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        branchId?: string;
+                        items?: components["schemas"]["OverrideEntry"][];
+                    };
+                };
+            };
+        };
+    };
     setBranchOverrides: {
         parameters: {
             query?: never;
@@ -3226,6 +3300,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getUserOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        userId?: string;
+                        items?: components["schemas"]["OverrideEntry"][];
+                    };
+                };
             };
         };
     };
@@ -3325,6 +3424,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    effectiveFlagsForBranch: {
+        parameters: {
+            query: {
+                branchId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        branchId?: string;
+                        flags?: {
+                            [key: string]: boolean;
+                        };
+                    };
+                };
             };
         };
     };
@@ -3886,7 +4012,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["Collection"][];
+                        nextCursor?: string | null;
+                    };
+                };
             };
         };
     };
@@ -4068,7 +4199,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["Deposit"][];
+                        nextCursor?: string | null;
+                    };
+                };
             };
         };
     };
@@ -4706,6 +4842,35 @@ export interface operations {
             };
         };
     };
+    editNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    text: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Note"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
     listContactAttempts: {
         parameters: {
             query?: never;
@@ -5279,7 +5444,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: {
+                            [key: string]: unknown;
+                        }[];
+                        nextCursor?: string | null;
+                        unreadCount?: number;
+                    };
+                };
             };
         };
     };

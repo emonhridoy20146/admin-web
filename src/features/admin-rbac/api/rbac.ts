@@ -6,6 +6,7 @@ import type { components, operations } from '@/shared/api/schema';
 export type PermissionDef = components['schemas']['PermissionDef'];
 export type OverrideChange = components['schemas']['OverrideChange'];
 export type Role = components['schemas']['Role'];
+export type OverrideEntry = components['schemas']['OverrideEntry'];
 export type Effective = operations['effectivePermissions']['responses']['200']['content']['application/json'][number];
 
 export function useCatalog() {
@@ -20,7 +21,16 @@ export function useEffective(userId: string | null | undefined) {
   });
 }
 
-/** Users holding a role in a branch: used for "affects N users" and as the probe for current branch overrides. */
+/** Current exceptions of a branch for all roles (contract 1.3.0). */
+export function useBranchOverrides(branchId: string | undefined) {
+  return useQuery({
+    queryKey: ['admin-rbac', 'branch-overrides', branchId],
+    queryFn: () => unwrap(api.GET('/rbac/overrides/branch/{branchId}', { params: { path: { branchId: branchId! } } })),
+    enabled: !!branchId,
+  });
+}
+
+/** Users holding a role in a branch: used for "affects N users". */
 export function useRoleHolders(branchId: string | undefined, role: Role | undefined) {
   return useQuery({
     queryKey: ['admin-rbac', 'holders', branchId, role],

@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
-import { useSession } from '@/shared/auth/session';
+import { useCan, useSession } from '@/shared/auth/session';
+import { useBranchId } from '@/shared/lib/ui-store';
 import { EV, useInvalidateOn } from '@/shared/feature/events';
 
 export function useBranches() {
@@ -31,6 +33,27 @@ export function useMe() {
     refetchInterval: 5 * 60_000,
     enabled: authed,
   });
+}
+
+/**
+ * /auth/me flags are global for a super admin. When one branch is selected, read that branch's effective flags
+ * (contract 1.3.0, needs flag.manage) so a module switched OFF for the branch is hidden while viewing it.
+ */
+export function useBranchFlags() {
+  const authed = useSession((s) => s.status === 'authenticated');
+  const allowed = useCan('flag.manage');
+  const branchId = useBranchId();
+  const enabled = authed && allowed && !!branchId;
+  const q = useQuery({
+    queryKey: ['me', 'branch-flags', branchId],
+    queryFn: () => unwrap(api.GET('/feature-flags/effective', { params: { query: { branchId: branchId! } } })),
+    staleTime: 5 * 60_000,
+    enabled,
+  });
+  const flags = enabled && q.data?.branchId === branchId ? (q.data?.flags ?? null) : null;
+  useEffect(() => {
+    useSession.getState().setBranchFlags(flags);
+  }, [flags]);
 }
 
 export function useSearch(q: string) {
