@@ -7,6 +7,7 @@ Contract pinned: field-api `openapi.yaml` **1.5.0** (1.2.0 → 1.5.0, synced fro
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Staff (FR-RPT-001): per-staff performance for today or this month (collected vs target, collections, visits, promises kept, attendance, field time), branch totals, sort, drawer with method split, assigned areas and jumps to that staff member's collections, visits and attendance.
 - Attendance (FR-ATT): day view (who came, on duty now, late, absent; first in, last out, late, break, duty) sorted problems first, month matrix (staff × days with letter + colour cells, totals per staff), manual correction of one event with a reason (`attendance.manage`).
 - `formatMonth` in shared format helpers.
 - Promises (FR-PRM): list by promised-date window (today, next 7, last 7, last 30 days) and status, paid-so-far, late marker, drawer with progress, cancel an open promise with a reason.

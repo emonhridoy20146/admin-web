@@ -19,7 +19,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Customers list/detail/map, tags, data freshness, pin approvals | ◐ list, detail, tags, freshness done; map and pin approvals next |
 | Collections, Conflicts resolution, Cash & deposits | ☑ (refund proof upload pending) |
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
-| Staff list/detail, Attendance (day grid, month matrix, corrections) | ◐ attendance done (leave approvals are Phase 4); staff list/detail next |
+| Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals are Phase 4; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |
 | Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas/assignments next |
 | Devices, System health (ERP, outbox, sync health) | ☐ |
 | Mobile responsive pass (card lists, 360 px critical tasks) | ☐ |
@@ -35,7 +35,7 @@ Staff performance, branch trends, aging, promise fulfilment, attendance reports,
 Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 
 ## Status notes (2026-11-15)
-- Verified: lint (incl. boundaries), typecheck, 44 unit tests, 16 Playwright journeys incl. axe on 12 pages, `check:permissions`, `check:i18n`, static export served with rewrites + hashed CSP.
+- Verified: lint (incl. boundaries), typecheck, 69 unit tests, 21 Playwright journeys incl. axe on 19 pages, `check:permissions`, `check:i18n`, static export served with rewrites + hashed CSP.
 - Bundle: first-load JS is 203–258 KB (Next's report); the 250 KB budget is exceeded on `/admin/users` and `/admin/audit`. Next step: lazy-load page components from the registry.
 - Contract 1.3.0 adopted (2026-11-15): typed list envelopes, branch/user override GET, per-branch effective flags, `Deposit.userName`.
 - Contract 1.2.0 adopted (2026-11-15): `location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, `no_location` flag, contact attempts.

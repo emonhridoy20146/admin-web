@@ -6,6 +6,7 @@ import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import promisesBn from '../../src/features/promises/i18n/bn.json' with { type: 'json' };
 import visitsBn from '../../src/features/visits/i18n/bn.json' with { type: 'json' };
 import attendanceBn from '../../src/features/attendance/i18n/bn.json' with { type: 'json' };
+import staffBn from '../../src/features/staff/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
@@ -185,4 +186,19 @@ test('attendance: day list, correct an entry with a reason, month matrix', async
   await page.getByRole('group', { name: attendanceBn.view.label }).getByRole('button', { name: attendanceBn.view.month }).click();
   await expect(page.getByRole('table')).toContainText(attendanceBn.col.lateMin);
   await expect(page.locator('tbody tr').first()).toBeVisible();
+});
+
+test('staff: performance list, month view, drawer and jump to the staff member\'s visits', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, staffBn.title);
+  await expect(page.locator('tbody tr button').first()).toBeVisible();
+  await page.getByRole('group', { name: staffBn.period.label }).getByRole('button', { name: staffBn.period.monthly }).click();
+  await expect(page).toHaveURL(/period=monthly/);
+  await expect(page.getByRole('columnheader', { name: staffBn.col.days })).toBeVisible();
+  await page.locator('tbody tr button').first().click();
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText(staffBn.byMethod)).toBeVisible();
+  await drawer.getByRole('link', { name: staffBn.link.visits }).click();
+  await expect(page).toHaveURL(/\/visits\/\?userId=/);
+  await expect(page.getByRole('button', { name: visitsBn.clearStaff })).toBeVisible();
 });

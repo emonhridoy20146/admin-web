@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { login } from '../fixtures';
 
-const PAGES = ['/', '/handovers/', '/promises/', '/visits/', '/attendance/', '/attendance/?view=month', '/inbox/', '/customers/', '/collections/', '/collections/conflicts/', '/cash/', '/admin/users/', '/admin/permissions/', '/admin/settings/', '/admin/flags/', '/admin/audit/'];
+const PAGES = ['/', '/handovers/', '/promises/', '/visits/', '/attendance/', '/staff/', '/attendance/?view=month', '/inbox/', '/customers/', '/collections/', '/collections/conflicts/', '/cash/', '/admin/users/', '/admin/permissions/', '/admin/settings/', '/admin/flags/', '/admin/audit/'];
 
 test('login page has no serious axe violations', async ({ page }) => {
   await page.goto('/login/');

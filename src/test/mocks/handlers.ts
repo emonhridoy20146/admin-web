@@ -772,13 +772,29 @@ export const handlers = [
   })),
   http.get(`${BASE}/reports/staff-performance`, authed(({ ctx, url }) => {
     const sc = scope(ctx, url);
-    const startToday = db.now().startOf('day').toUTC().toISO()!;
+    const monthly = url.searchParams.get('period') === 'monthly';
+    const date = url.searchParams.get('date') ?? db.today();
+    const from = monthly ? `${date.slice(0, 7)}-01` : date;
+    const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const dates: string[] = [];
+    for (let d = from; d <= date; d = new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)) dates.push(d);
     const rows: S['StaffPerformanceRow'][] = db.staff.filter((s) => s.active && sc.includes(s.branchIds?.[0] ?? '')).map((s) => {
-      const mine = db.collections.filter((c) => c.collector?.id === s.id && c.recordedAt! >= startToday && c.status !== 'voided');
+      const mine = db.collections.filter((c) => c.collector?.id === s.id && c.status !== 'voided' && day(c.recordedAt!) >= from && day(c.recordedAt!) <= date);
       const byMethod: Record<string, number> = {};
       mine.forEach((c) => (byMethod[c.method!] = (byMethod[c.method!] ?? 0) + c.amountPoisha!));
       const total = mine.reduce((a, c) => a + c.amountPoisha!, 0);
-      return { userId: s.id, name: s.name?.en, period: db.today(), visits: Math.round(mine.length * 1.6), uniqueCustomers: mine.length, collectionsCount: mine.length, collectedPoisha: { total, ...byMethod }, targetPoisha: 2_500_000, promisesDue: 3, promisesKept: 2, promiseFulfilmentRate: 0.66, presentDays: 1, lateDays: 0, lateMin: 0, breakMin: 35, fieldMin: 320, distanceKm: 28.4 };
+      const vis = db.visits.filter((v) => v.row.userId === s.id && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date);
+      const prom = db.promises.filter((p) => p.row.ownerId === s.id && p.row.promisedDate >= from && p.row.promisedDate <= date);
+      const kept = prom.filter((p) => p.row.status === 'kept' || p.row.status === 'partially_kept').length;
+      const att = dates.map((d) => db.attendanceDay(s, d));
+      const worked = att.filter((a) => a.firstIn);
+      return {
+        userId: s.id, name: s.name?.en, period: monthly ? date.slice(0, 7) : date, visits: vis.length, uniqueCustomers: new Set(vis.map((v) => v.row.customerId)).size,
+        collectionsCount: mine.length, collectedPoisha: { total, ...byMethod }, targetPoisha: monthly ? 60_000_000 : 2_500_000, promisesDue: prom.length, promisesKept: kept,
+        promiseFulfilmentRate: prom.length ? kept / prom.length : undefined, presentDays: worked.length, lateDays: att.filter((a) => (a.lateMin ?? 0) > 0).length,
+        lateMin: att.reduce((a, d) => a + (d.lateMin ?? 0), 0), breakMin: att.reduce((a, d) => a + (d.breakMin ?? 0), 0),
+        fieldMin: Math.round(att.reduce((a, d) => a + (d.dutyMin ?? 0), 0) * 0.72), distanceKm: Math.round(worked.length * 21.5 * 10) / 10,
+      };
     });
     rows.sort((a, b) => (b.collectedPoisha?.total ?? 0) - (a.collectedPoisha?.total ?? 0));
     return HttpResponse.json(rows);

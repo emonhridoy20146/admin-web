@@ -21,8 +21,9 @@ import { handoversManifest } from '@/features/handovers';
 import { promisesManifest } from '@/features/promises';
 import { visitsManifest } from '@/features/visits';
 import { attendanceManifest } from '@/features/attendance';
+import { staffManifest } from '@/features/staff';
 
-export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, handoversManifest, attendanceManifest, adminUsersManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, auditManifest];
+export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, handoversManifest, staffManifest, attendanceManifest, adminUsersManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, auditManifest];
 
 registerFeatures(features);
 

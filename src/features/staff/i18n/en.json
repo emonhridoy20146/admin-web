@@ -1,0 +1,53 @@
+{
+  "title": "Staff",
+  "subtitle": "What each field staff member collected today or this month, how many customers they reached and how close they are to target.",
+  "period": {
+    "label": "Period",
+    "daily": "Today",
+    "monthly": "This month"
+  },
+  "sort": {
+    "label": "Sort",
+    "collected": "By collected",
+    "visits": "By visits",
+    "promises": "By promises kept",
+    "name": "By name"
+  },
+  "kpi": {
+    "collected": "Total collected",
+    "visits": "Total visits",
+    "collections": "{{n}} collections",
+    "promises": "Promises kept",
+    "staff": "Active staff"
+  },
+  "col": {
+    "staff": "Staff",
+    "collected": "Collected",
+    "target": "Target",
+    "count": "Collections",
+    "visits": "Visits",
+    "promises": "Promises",
+    "days": "Days present",
+    "late": "Late",
+    "field": "Field time"
+  },
+  "ofTarget": "{{pct}} of target",
+  "targetLine": "{{pct}} of the {{target}} target",
+  "targetMet": "Target met",
+  "unique": "{{n}} customers",
+  "keptOf": "{{kept}} of {{due}}",
+  "lateDays": "{{n}} late days",
+  "km": "{{n}} km",
+  "break": "Break",
+  "byMethod": "By payment method",
+  "noCollections": "No collections in this period",
+  "areas": "Assigned areas",
+  "noAreas": "No areas assigned",
+  "jump": "See more",
+  "link": {
+    "collections": "Collections by this staff member",
+    "visits": "Visits by this staff member",
+    "attendance": "Attendance this month"
+  },
+  "empty": "No active field staff in this branch"
+}
