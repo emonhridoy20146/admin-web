@@ -17,8 +17,9 @@ import { adminRbacManifest } from '@/features/admin-rbac';
 import { adminFlagsManifest } from '@/features/admin-flags';
 import { adminSettingsManifest } from '@/features/admin-settings';
 import { auditManifest } from '@/features/audit';
+import { handoversManifest } from '@/features/handovers';
 
-export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, adminUsersManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, auditManifest];
+export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, handoversManifest, adminUsersManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, auditManifest];
 
 registerFeatures(features);
 

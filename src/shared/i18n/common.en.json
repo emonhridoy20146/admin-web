@@ -64,7 +64,12 @@
     "due": "Due",
     "upcoming": "Upcoming",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "pending_acceptance": "Awaiting acceptance",
+    "accepted": "Accepted",
+    "cancelled": "Cancelled",
+    "expired": "Expired",
+    "reverted": "Reverted"
   },
   "severity": {
     "critical": "Critical",

@@ -64,7 +64,12 @@
     "due": "পাওনা",
     "upcoming": "আসন্ন",
     "active": "সক্রিয়",
-    "inactive": "নিষ্ক্রিয়"
+    "inactive": "নিষ্ক্রিয়",
+    "pending_acceptance": "গ্রহণের অপেক্ষায়",
+    "accepted": "গৃহীত",
+    "cancelled": "বাতিল",
+    "expired": "মেয়াদোত্তীর্ণ",
+    "reverted": "ফেরত গেছে"
   },
   "severity": {
     "critical": "জরুরি",

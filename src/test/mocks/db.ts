@@ -526,3 +526,35 @@ for (let i = 0; i < 70; i++) {
 audit.sort((a, b) => (a.at! < b.at! ? 1 : -1));
 
 export const erpStatus: S['ErpStatus'] = { mode: 'live', lastSuccessAt: isoAt(now().minus({ minutes: 3 })), lagSec: 180, consecutiveFailures: 0, circuit: 'closed', outboxPending: collections.filter((c) => c.status === 'posting' || c.status === 'received').length, outboxFailed: collections.filter((c) => c.status === 'posting_failed').length };
+
+// ---------- handovers (seeded without the RNG so earlier data stays identical) ----------
+export const handovers: S['Handover'][] = [];
+export function handoverSummary(areaIds: string[]): NonNullable<S['Handover']['summary']> {
+  const list = customers.filter((c) => areaIds.includes(c.areaId));
+  return {
+    customers: list.length,
+    outstandingPoisha: list.reduce((s, c) => s + (c.item.totalOutstandingPoisha ?? 0), 0),
+    overdue: list.filter((c) => (c.item.daysOverdue ?? 0) > 0).length,
+    openPromises: list.filter((c) => c.item.openPromise).length,
+    openConflicts: collections.filter((c) => c.status === 'conflict' && list.some((x) => x.item.id === c.customer?.id)).length,
+  };
+}
+branches.forEach((b, bi) => {
+  const bStaff = staff.filter((s) => s.branchIds?.[0] === b.id && s.active);
+  const held = (u: MockUser) => areas.filter((a) => a.assignees?.includes(u.id!)).map((a) => a.id!);
+  const mgr = managers[bi]!;
+  const mk = (from: MockUser, to: MockUser, status: S['HandoverStatus'], hoursAgo: number, reason: string, extra: Partial<S['Handover']> = {}) => {
+    const areaIds = held(from).slice(0, 1);
+    if (!areaIds.length) return;
+    const created = now().minus({ hours: hoursAgo });
+    handovers.push({
+      id: oid('6770'), fromUserId: from.id!, toUserId: to.id!, areaIds, customerIds: [], reason, effectiveDate: created.toISODate()!, status,
+      createdBy: mgr.id, createdAt: isoAt(created), expiresAt: isoAt(created.plus({ hours: 72 })), summary: handoverSummary(areaIds), ...extra,
+    });
+  };
+  mk(bStaff[0]!, bStaff[1]!, 'pending_acceptance', 5, 'দুই সপ্তাহের ছুটি, এই সময়ে এলাকা দেখবেন।', { endDate: now().plus({ days: 14 }).toISODate()! });
+  mk(bStaff[2]!, bStaff[4]!, 'pending_acceptance', 55, 'Moved to a nearer area after relocation.');
+  mk(bStaff[3]!, bStaff[5]!, 'accepted', 24 * 6, 'Workload balancing after new joiner.');
+  mk(bStaff[1]!, bStaff[2]!, 'rejected', 24 * 12, 'Cover during training week.');
+  mk(bStaff[4]!, bStaff[0]!, 'expired', 24 * 20, 'Temporary cover for sick leave.');
+});

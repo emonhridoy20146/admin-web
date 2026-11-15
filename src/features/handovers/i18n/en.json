@@ -1,0 +1,73 @@
+{
+  "title": "Handovers",
+  "subtitle": "Pass one staff member's areas and customers to another. Until the receiver accepts in the app, the original staff member stays responsible.",
+  "new": "New handover",
+  "to": "to",
+  "group": {
+    "pending": "Awaiting acceptance",
+    "accepted": "In force",
+    "closed": "Ended"
+  },
+  "col": {
+    "who": "From → to",
+    "status": "Status",
+    "scope": "Areas",
+    "customers": "Customers",
+    "outstanding": "Total outstanding",
+    "effective": "Effective date",
+    "created": "Created"
+  },
+  "empty": {
+    "pending": "No handovers are waiting",
+    "pendingBody": "Create a handover here when someone goes on leave or changes area.",
+    "accepted": "No handovers in force",
+    "closed": "No past handovers"
+  },
+  "nCustomers": "{{n}} customers",
+  "nDirect": "{{n}} individual customers",
+  "until": "Until {{date}}",
+  "expiresIn": "{{n}} h left",
+  "expires": "Expires",
+  "permanent": "Permanent",
+  "unknownStaff": "Unknown staff",
+  "summary": "What the receiver gets",
+  "stat": {
+    "overdue": "Overdue customers",
+    "openPromises": "Open promises",
+    "openConflicts": "Open conflicts"
+  },
+  "pendingHint": "{{name}} stays responsible until the receiver accepts in the app. It expires if not accepted within 72 hours.",
+  "cashWarning": "Cash on hand is not transferred by a handover. The outgoing staff member must deposit it.",
+  "cancel": "Cancel handover",
+  "keep": "Keep it",
+  "cancelTitle": "Cancel this handover?",
+  "cancelDesc": "The handover of {{n}} customers from {{from}} to {{to}} will be cancelled. The customers stay with {{from}}.",
+  "cancelled": "Handover cancelled",
+  "created": "Handover sent",
+  "form": {
+    "title": "New handover",
+    "desc": "The receiver gets a notification in the app and accepts or rejects.",
+    "from": "Handing over",
+    "to": "Receiving",
+    "pick": "Select",
+    "areas": "Areas to hand over",
+    "areasPickFrom": "Pick the staff member first; their areas appear here.",
+    "areasNone": "This staff member holds no areas.",
+    "preview": "{{areas}} areas, about {{customers}} customers",
+    "effective": "Effective date",
+    "temporary": "Temporary (leave cover)",
+    "temporaryHelp": "When on, customers return to the original staff member automatically on the end date.",
+    "end": "End date",
+    "endHelp": "Responsibility returns automatically after this date.",
+    "reason": "Reason",
+    "submit": "Send handover"
+  },
+  "errors": {
+    "required": "This is required",
+    "same": "Cannot hand over to the same person",
+    "scope": "Pick at least one area",
+    "past": "Use today or a later date",
+    "endBefore": "End date must be after the effective date",
+    "reason": "Write a reason of at least {{min}} characters"
+  }
+}

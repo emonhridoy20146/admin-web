@@ -3,6 +3,8 @@ import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'jso
 import tagsBn from '../../src/features/tags/i18n/bn.json' with { type: 'json' };
 import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
+import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
+import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
 import { confirmWithReason, login, nav } from '../fixtures';
 
@@ -99,4 +101,36 @@ test('W-E6 verify and reject deposits; the pending queue updates', async ({ page
   await expect(queue).toHaveCount(before - 2);
   await page.getByRole('button', { name: cashBn.depositStatus.rejected, exact: true }).click();
   await expect(page.locator('#deposits tbody tr').first()).toContainText(/Slip amount|কারণ/);
+});
+
+test('W-E7 create a temporary handover, see it pending, then cancel it', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, handoversBn.title);
+  await expect(page.locator('tbody tr button').first()).toBeVisible();
+  const before = await page.locator('tbody tr').count();
+  await page.getByRole('button', { name: handoversBn.new }).click();
+  const d = page.getByRole('dialog');
+  // empty submit shows errors and keeps the dialog
+  await d.getByRole('button', { name: handoversBn.form.submit }).click();
+  await expect(d.getByText(handoversBn.errors.required).first()).toBeVisible();
+  // pick a giver who has no pending handover yet (the 7th staff) and the 8th as receiver
+  await d.getByLabel(handoversBn.form.from).selectOption({ index: 7 });
+  await expect(d.getByRole('checkbox').first()).toBeChecked();
+  await d.getByLabel(handoversBn.form.to).selectOption({ index: 7 });
+  await d.getByRole('switch').click();
+  const end = new Date(Date.now() + 10 * 86400_000).toISOString().slice(0, 10);
+  await d.getByLabel(handoversBn.form.end).fill(end);
+  await d.getByLabel(handoversBn.form.reason).fill('দশ দিনের ছুটির জন্য সাময়িক কভার');
+  await d.getByRole('button', { name: handoversBn.form.submit }).click();
+  await expect(d).toBeHidden();
+  await expect(page.locator('tbody tr')).toHaveCount(before + 1);
+  // open the new one (newest first) and cancel
+  await page.locator('tbody tr').first().getByRole('button').first().click();
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText(handoversBn.cashWarning)).toBeVisible();
+  await drawer.getByRole('button', { name: handoversBn.cancel }).click();
+  await page.getByRole('dialog', { name: handoversBn.cancelTitle }).getByRole('button', { name: handoversBn.cancel }).click();
+  await expect(page.locator('tbody tr')).toHaveCount(before);
+  await page.getByRole('group', { name: handoversBn.col.status }).getByRole('button', { name: handoversBn.group.closed }).click();
+  await expect(page.getByText(commonBn.status.cancelled).first()).toBeVisible();
 });

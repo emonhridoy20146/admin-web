@@ -249,6 +249,42 @@ export const handlers = [
     return HttpResponse.json({ temporaryPassword: temp });
   })),
 
+  // ---------- areas & handovers ----------
+  http.get(`${BASE}/areas`, authed(({ ctx, url }) => HttpResponse.json(db.areas.filter((a) => scope(ctx, url).includes(a.branchId!))))),
+  http.get(`${BASE}/handovers`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'handover.create');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const status = url.searchParams.get('status');
+    return HttpResponse.json(db.handovers.filter((h) => sc.some((b) => db.userById(h.fromUserId)?.branchIds?.includes(b))).filter((h) => !status || h.status === status));
+  })),
+  http.post(`${BASE}/handovers`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'handover.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['HandoverCreate'];
+    if (!b.reason || b.reason.length < 10) return problem(400, 'VALIDATION_FAILED', 'Reason must be at least 10 characters');
+    if (b.fromUserId === b.toUserId) return problem(400, 'VALIDATION_FAILED', 'Cannot hand over to the same user');
+    if (!b.areaIds?.length && !b.customerIds?.length) return problem(400, 'VALIDATION_FAILED', 'Pick at least one area or customer');
+    if (db.handovers.some((h) => h.status === 'pending_acceptance' && h.fromUserId === b.fromUserId && h.areaIds?.some((a) => b.areaIds?.includes(a))))
+      return problem(409, 'HANDOVER_PENDING', 'A pending handover already covers one of these areas');
+    const h: S['Handover'] = {
+      ...b, id: db.oid('6770'), status: 'pending_acceptance', createdBy: ctx.user.id, createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 72 * 3600_000).toISOString(), summary: db.handoverSummary(b.areaIds ?? []),
+    };
+    db.handovers.unshift(h);
+    db.addAudit({ actor: actor(ctx.user), action: 'handover.create', entity: 'handover', entityId: h.id, branchId: db.userById(b.fromUserId)?.branchIds?.[0], before: {}, after: { from: db.userById(b.fromUserId)?.employeeCode, to: db.userById(b.toUserId)?.employeeCode, customers: h.summary?.customers }, reason: b.reason });
+    return HttpResponse.json(h, { status: 201 });
+  })),
+  http.post(`${BASE}/handovers/:id/cancel`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'handover.create');
+    if (deny) return deny;
+    const h = db.handovers.find((x) => x.id === params.id);
+    if (!h) return problem(404, 'NOT_FOUND', 'Handover not found');
+    if (h.status !== 'pending_acceptance') return problem(409, 'HANDOVER_NOT_PENDING', 'Only a pending handover can be cancelled');
+    h.status = 'cancelled';
+    db.addAudit({ actor: actor(ctx.user), action: 'handover.cancel', entity: 'handover', entityId: h.id, before: { status: 'pending_acceptance' }, after: { status: 'cancelled' }, reason: '' });
+    return HttpResponse.json({});
+  })),
   // ---------- rbac ----------
   http.get(`${BASE}/rbac/permissions`, authed(() =>
     HttpResponse.json(db.catalog.map((p) => ({ key: p.key, module: p.module, description: { en: p.description, bn: p.description }, defaults: Object.fromEntries(Object.entries(p.defaults).map(([r, v]) => [r, !!v])), reserved: p.reserved }))),

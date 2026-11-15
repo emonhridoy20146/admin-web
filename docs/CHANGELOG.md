@@ -7,6 +7,7 @@ Contract pinned: field-api `openapi.yaml` **1.3.0** (1.2.0 then 1.3.0, synced fr
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Handovers (FR-HO-001/004/005/006): list by state (awaiting acceptance, in force, ended) with nav badge, detail drawer with the receiver summary, new handover dialog (from, to, areas, effective date, temporary cover with end date, reason, cash warning), cancel a pending handover; ⌘K "New handover"; journey W-E7 and axe.
 - Customers: installment column, overdue amount under outstanding (list, drawer, detail), area name from the assignment area (address stays as tooltip/detail).
 - Customer detail: "Contact attempts" card (FR-M-014) listing calls/SMS logged by staff with outcome, duration and phone slot; phone numbers are never shown from this feed.
 - Collections: `no_location` flag badge, and the drawer says "No location" instead of a blank distance.

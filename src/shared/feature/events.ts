@@ -34,4 +34,5 @@ export const EV = {
   inboxChanged: 'inbox.changed',
   permissionsChanged: 'rbac.changed',
   flagsChanged: 'flags.changed',
+  handoverChanged: 'handover.changed',
 } as const;
