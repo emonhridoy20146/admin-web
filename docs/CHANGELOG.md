@@ -7,6 +7,8 @@ Contract pinned: field-api `openapi.yaml` **1.5.0** (1.2.0 → 1.5.0, synced fro
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Attendance (FR-ATT): day view (who came, on duty now, late, absent; first in, last out, late, break, duty) sorted problems first, month matrix (staff × days with letter + colour cells, totals per staff), manual correction of one event with a reason (`attendance.manage`).
+- `formatMonth` in shared format helpers.
 - Promises (FR-PRM): list by promised-date window (today, next 7, last 7, last 30 days) and status, paid-so-far, late marker, drawer with progress, cancel an open promise with a reason.
 - Visits (FR-VIS): list by period, outcome and staff member, one location verdict per visit (near pin, far, mock GPS, no location with the reason), duration, drawer and photo lightbox through presigned URLs.
 - Handovers (FR-HO-001/004/005/006): list by state (awaiting acceptance, in force, ended) with nav badge, detail drawer with the receiver summary, new handover dialog (from, to, areas, effective date, temporary cover with end date, reason, cash warning), cancel a pending handover; ⌘K "New handover"; journey W-E7 and axe.

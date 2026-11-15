@@ -114,6 +114,12 @@ export function formatDateTime(iso: string | Date, opts: Partial<FormatPrefs> = 
   return dt(iso, p).toFormat('d MMM yyyy, h:mm a');
 }
 
+/** "নভেম্বর ২০২৬" / "November 2026" from a YYYY-MM month. */
+export function formatMonth(month: string, opts: Partial<FormatPrefs> = {}): string {
+  const p = { ...prefs, ...opts };
+  return dt(`${month}-01`, p).toFormat('LLLL yyyy');
+}
+
 export function formatWeekday(iso: string, opts: Partial<FormatPrefs> = {}): string {
   const p = { ...prefs, ...opts };
   return dt(iso, p).toFormat('ccc');

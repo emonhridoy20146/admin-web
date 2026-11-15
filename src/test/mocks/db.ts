@@ -625,3 +625,49 @@ for (let d = 0; d < 30; d++) {
   }
 }
 visits.sort((a, b) => (a.row.checkInAt < b.row.checkInAt ? 1 : -1));
+
+// ---------- attendance (pure function of user + date, plus manager corrections) ----------
+export const attendanceCorrections = new Map<string, { type: string; at: string }[]>();
+function hash(s: string): number {
+  let h = 2166136261;
+  for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h;
+}
+export function attendanceDay(u: MockUser, date: string): S['AttendanceDay'] {
+  const d = DateTime.fromISO(date, { zone: 'Asia/Dhaka' });
+  const base = { userId: u.id, businessDate: date, lateMin: 0, breakMin: 0, dutyMin: 0, breaks: [], autoClosed: false, corrected: false, flags: [] };
+  if (d.weekday === 5) return { ...base, status: 'weekly_off', firstIn: null, lastOut: null };
+  const h = hash(`${u.id}:${date}`);
+  const isToday = date === T;
+  const corr = attendanceCorrections.get(`${u.id}:${date}`);
+  const roll = h % 100;
+  let status: S['AttendanceDay']['status'] = roll < 4 ? 'absent' : roll < 7 ? 'leave' : roll < 20 ? 'late' : 'present';
+  if (corr?.some((c) => c.type === 'work_in') && (status === 'absent' || status === 'leave')) status = 'present';
+  if (status === 'absent' || status === 'leave') return { ...base, status: isToday && status === 'absent' ? 'not_started' : status, firstIn: null, lastOut: null };
+  const lateMin = status === 'late' ? 16 + ((h >> 8) % 70) : 0;
+  let inAt = d.set({ hour: 9, minute: 0 }).plus({ minutes: status === 'late' ? lateMin : -((h >> 4) % 14) });
+  let outAt = d.set({ hour: 18, minute: 0 }).plus({ minutes: (h >> 12) % 35 });
+  const cin = corr?.findLast((c) => c.type === 'work_in');
+  const cout = corr?.findLast((c) => c.type === 'work_out');
+  if (cin) inAt = DateTime.fromISO(cin.at, { zone: 'Asia/Dhaka' });
+  if (cout) outAt = DateTime.fromISO(cout.at, { zone: 'Asia/Dhaka' });
+  const late = Math.max(0, Math.round(inAt.diff(d.set({ hour: 9, minute: 15 }), 'minutes').minutes)) > 0 ? Math.max(0, Math.round(inAt.diff(d.set({ hour: 9, minute: 0 }), 'minutes').minutes)) : 0;
+  const breakMin = 25 + ((h >> 16) % 50);
+  const bStart = d.set({ hour: 13, minute: (h >> 20) % 30 });
+  if (isToday) {
+    const n = now();
+    if (inAt > n) return { ...base, status: 'not_started', firstIn: null, lastOut: null, corrected: !!corr };
+    const onBreak = n > bStart && n < bStart.plus({ minutes: breakMin });
+    const done = n > outAt;
+    const br = n > bStart ? [{ start: isoAt(bStart), end: onBreak ? null : isoAt(bStart.plus({ minutes: breakMin })) }] : [];
+    const worked = Math.round((done ? outAt : n).diff(inAt, 'minutes').minutes);
+    const brk = n > bStart ? Math.min(breakMin, Math.round(n.diff(bStart, 'minutes').minutes)) : 0;
+    return { ...base, status: done ? 'off_duty' : onBreak ? 'on_break' : 'on_duty', firstIn: isoAt(inAt), lastOut: done ? isoAt(outAt) : null, lateMin: late, breakMin: brk, dutyMin: Math.max(0, worked - brk), breaks: br, corrected: !!corr };
+  }
+  const autoClosed = !cout && h % 37 === 0;
+  return {
+    ...base, status: late > 0 ? 'late' : 'present', firstIn: isoAt(inAt), lastOut: isoAt(outAt), lateMin: late, breakMin,
+    dutyMin: Math.max(0, Math.round(outAt.diff(inAt, 'minutes').minutes) - breakMin), breaks: [{ start: isoAt(bStart), end: isoAt(bStart.plus({ minutes: breakMin })) }],
+    autoClosed, corrected: !!corr, flags: breakMin > 60 ? ['over_break'] : [],
+  };
+}

@@ -1,0 +1,85 @@
+{
+  "title": "Attendance",
+  "subtitle": "Who came to work and when, who was late and who did not come.",
+  "view": {
+    "label": "View",
+    "day": "Day",
+    "month": "Month"
+  },
+  "date": "Date",
+  "today": "Today",
+  "prevDay": "Previous day",
+  "nextDay": "Next day",
+  "prevMonth": "Previous month",
+  "nextMonth": "Next month",
+  "kpi": {
+    "worked": "Came to work",
+    "onDuty": "On duty now",
+    "onDutySub": "Including staff on break",
+    "late": "Came late",
+    "absent": "Absent",
+    "notStarted": "{{n}} have not started yet"
+  },
+  "status": {
+    "not_started": "Not started",
+    "on_duty": "On duty",
+    "on_break": "On break",
+    "off_duty": "Off duty",
+    "present": "Present",
+    "late": "Late",
+    "absent": "Absent",
+    "leave": "Leave",
+    "holiday": "Holiday",
+    "weekly_off": "Weekly off"
+  },
+  "short": {
+    "not_started": "?",
+    "on_duty": "P",
+    "on_break": "B",
+    "off_duty": "P",
+    "present": "P",
+    "late": "L",
+    "absent": "A",
+    "leave": "Lv",
+    "holiday": "H",
+    "weekly_off": "W"
+  },
+  "col": {
+    "staff": "Staff",
+    "status": "Status",
+    "in": "First in",
+    "out": "Last out",
+    "late": "Late",
+    "break": "Break",
+    "duty": "Duty",
+    "action": "Correct",
+    "lateMin": "Total late"
+  },
+  "corrected": "Corrected",
+  "autoClosed": "Auto-closed",
+  "lateBy": "{{d}} late",
+  "correct": "Correct",
+  "correctFor": "Correct attendance of {{name}}",
+  "empty": "No field staff in this branch",
+  "event": {
+    "work_in": "Work start",
+    "break_start": "Break start",
+    "break_end": "Break end",
+    "work_out": "Work end"
+  },
+  "correction": {
+    "title": "Correct attendance",
+    "desc": "{{name}}, {{date}}. The earlier record stays in the audit log.",
+    "type": "Event",
+    "time": "Time",
+    "reason": "Reason",
+    "reasonHelp": "For example: phone was off, no network.",
+    "save": "Save correction",
+    "saved": "Attendance corrected"
+  },
+  "errors": {
+    "time": "Enter a valid time",
+    "future": "The time cannot be in the future",
+    "reason": "Write a reason of at least {{min}} characters"
+  }
+}

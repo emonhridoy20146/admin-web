@@ -19,7 +19,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Customers list/detail/map, tags, data freshness, pin approvals | ◐ list, detail, tags, freshness done; map and pin approvals next |
 | Collections, Conflicts resolution, Cash & deposits | ☑ (refund proof upload pending) |
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
-| Staff list/detail, Attendance (day grid, month matrix, corrections) | ☐ |
+| Staff list/detail, Attendance (day grid, month matrix, corrections) | ◐ attendance done (leave approvals are Phase 4); staff list/detail next |
 | Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas/assignments next |
 | Devices, System health (ERP, outbox, sync health) | ☐ |
 | Mobile responsive pass (card lists, 360 px critical tasks) | ☐ |

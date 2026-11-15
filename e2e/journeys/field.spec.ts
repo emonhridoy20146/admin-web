@@ -5,6 +5,7 @@ import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'js
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import promisesBn from '../../src/features/promises/i18n/bn.json' with { type: 'json' };
 import visitsBn from '../../src/features/visits/i18n/bn.json' with { type: 'json' };
+import attendanceBn from '../../src/features/attendance/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
@@ -164,4 +165,24 @@ test('visits: filter by outcome, open a visit with photos and view one', async (
   await row.getByRole('button').first().click();
   await page.getByRole('dialog').getByRole('button', { name: /ছবি .* খুলুন/ }).first().click();
   await expect(page.getByRole('img', { name: /ভিজিটের ছবি/ })).toBeVisible();
+});
+
+test('attendance: day list, correct an entry with a reason, month matrix', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, attendanceBn.title);
+  await page.getByRole('button', { name: attendanceBn.prevDay }).click();
+  await expect(page).toHaveURL(/date=\d{4}-\d{2}-\d{2}/);
+  await expect(page.locator('tbody tr').first().getByRole('button', { name: new RegExp(attendanceBn.correct) })).toBeVisible();
+  await page.locator('tbody tr').first().getByRole('button', { name: new RegExp(attendanceBn.correct) }).click();
+  const d = page.getByRole('dialog');
+  await d.getByRole('button', { name: attendanceBn.correction.save }).click();
+  await expect(d.getByText(attendanceBn.errors.time)).toBeVisible();
+  await d.getByLabel(attendanceBn.correction.time).fill('09:05');
+  await d.getByLabel(attendanceBn.correction.reason).fill('ফোন বন্ধ ছিল, অফিসে এসে জানিয়েছেন');
+  await d.getByRole('button', { name: attendanceBn.correction.save }).click();
+  await expect(d).toBeHidden();
+  await expect(page.getByText(attendanceBn.correction.saved)).toBeVisible();
+  await page.getByRole('group', { name: attendanceBn.view.label }).getByRole('button', { name: attendanceBn.view.month }).click();
+  await expect(page.getByRole('table')).toContainText(attendanceBn.col.lateMin);
+  await expect(page.locator('tbody tr').first()).toBeVisible();
 });

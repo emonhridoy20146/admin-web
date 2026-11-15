@@ -249,6 +249,55 @@ export const handlers = [
     return HttpResponse.json({ temporaryPassword: temp });
   })),
 
+  // ---------- attendance ----------
+  http.get(`${BASE}/attendance/days`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'attendance.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    const userId = url.searchParams.get('userId');
+    if (!from || !to) return problem(400, 'VALIDATION_FAILED', 'from and to are required');
+    const end = to > db.today() ? db.today() : to;
+    const out: S['AttendanceDay'][] = [];
+    const people = db.staff.filter((s) => s.active && s.branchIds?.some((b) => sc.includes(b))).filter((s) => !userId || s.id === userId);
+    for (let d = from; d <= end; d = new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)) for (const s of people) out.push(db.attendanceDay(s, d));
+    return HttpResponse.json(out);
+  })),
+  http.get(`${BASE}/attendance/summary`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'attendance.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const month = url.searchParams.get('month');
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) return problem(400, 'VALIDATION_FAILED', 'month is required (YYYY-MM)');
+    const [y, m] = month.split('-').map(Number) as [number, number];
+    const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const dates = Array.from({ length: n }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`).filter((d) => d <= db.today());
+    const items = db.staff.filter((s) => s.active && s.branchIds?.some((b) => sc.includes(b))).map((s) => {
+      const days = dates.map((d) => db.attendanceDay(s, d));
+      const count = (...st: string[]) => days.filter((d) => st.includes(d.status!)).length;
+      const sum = (k: 'lateMin' | 'breakMin' | 'dutyMin') => days.reduce((a, d) => a + (d[k] ?? 0), 0);
+      return {
+        userId: s.id, userName: s.name?.en, present: count('present', 'on_duty', 'on_break', 'off_duty', 'late'), late: days.filter((d) => (d.lateMin ?? 0) > 0).length, absent: count('absent'),
+        leave: count('leave'), holiday: count('holiday'), weeklyOff: count('weekly_off'), lateMin: sum('lateMin'), breakMin: sum('breakMin'), dutyMin: sum('dutyMin'), overBreakDays: days.filter((d) => (d.breakMin ?? 0) > 60).length,
+      };
+    });
+    return HttpResponse.json({ month, items });
+  })),
+  http.post(`${BASE}/attendance/corrections`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'attendance.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as { userId: string; businessDate: string; type: string; at: string; reason: string };
+    if (!b.reason || b.reason.length < 10) return problem(400, 'VALIDATION_FAILED', 'Reason must be at least 10 characters');
+    const u = db.userById(b.userId);
+    if (!u) return problem(404, 'NOT_FOUND', 'User not found');
+    const before = db.attendanceDay(u, b.businessDate);
+    const key = `${b.userId}:${b.businessDate}`;
+    db.attendanceCorrections.set(key, [...(db.attendanceCorrections.get(key) ?? []), { type: b.type, at: b.at }]);
+    const after = db.attendanceDay(u, b.businessDate);
+    db.addAudit({ actor: actor(ctx.user), action: 'attendance.correct', entity: 'attendance_day', entityId: key, branchId: u.branchIds?.[0], before: { status: before.status, firstIn: before.firstIn, lastOut: before.lastOut }, after: { status: after.status, firstIn: after.firstIn, lastOut: after.lastOut, type: b.type }, reason: b.reason });
+    return HttpResponse.json({}, { status: 201 });
+  })),
   // ---------- promises & visits ----------
   http.get(`${BASE}/promises`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'promise.view');
