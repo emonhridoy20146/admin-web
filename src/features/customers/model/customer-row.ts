@@ -11,6 +11,12 @@ export interface CustomerRowVM {
   altName: string;
   phone: string;
   address: string;
+  /** Assignment area name (1.2.0); falls back to the address when the customer is in no area */
+  areaName: string | null;
+  /** ERP installment amount, null when plans differ or are unknown */
+  installmentPoisha: number | null;
+  /** ERP overdue amount (part of outstanding, never added to it) */
+  overduePoisha: number;
   assigneeName: string | null;
   outstandingPoisha: number;
   pendingFieldPoisha: number;
@@ -46,6 +52,9 @@ export function toCustomerRow(c: CustomerListItem, locale: Locale): CustomerRowV
     altName: locale === 'bn' ? en : bn,
     phone: c.phone ?? '',
     address: c.address ?? '',
+    areaName: c.areaName ? (locale === 'bn' ? c.areaName.bn || c.areaName.en : c.areaName.en || c.areaName.bn) || null : null,
+    installmentPoisha: c.installmentPoisha ?? null,
+    overduePoisha: c.overduePoisha ?? 0,
     assigneeName: c.assignee?.name ?? null,
     outstandingPoisha: c.totalOutstandingPoisha ?? 0,
     pendingFieldPoisha: c.pendingFieldPoisha ?? 0,

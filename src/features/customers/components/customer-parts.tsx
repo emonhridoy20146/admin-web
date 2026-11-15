@@ -33,9 +33,25 @@ export function CustomerTitle({ c, size = 'md' }: { c: CustomerDetail; size?: 'm
 export function CustomerFigures({ c, className }: { c: CustomerDetail; className?: string }) {
   const { t } = useTranslation('customers');
   const items = [
-    { label: t('outstanding'), value: <MoneyText poisha={c.totalOutstandingPoisha ?? 0} className="text-lg font-semibold" />, emphasis: (c.daysOverdue ?? 0) > 0 },
+    {
+      label: t('outstanding'),
+      value: (
+        <>
+          <MoneyText poisha={c.totalOutstandingPoisha ?? 0} className="text-lg font-semibold" />
+          {(c.overduePoisha ?? 0) > 0 && <span className="block text-xs text-st-overdue">{t('overdueAmount', { amount: formatMoney(c.overduePoisha ?? 0) })}</span>}
+        </>
+      ),
+      emphasis: (c.daysOverdue ?? 0) > 0 },
     { label: t('col.daysOverdue'), value: (c.daysOverdue ?? 0) > 0 ? <span className="text-lg font-semibold text-st-overdue">{t('days', { n: formatNumber(c.daysOverdue ?? 0) })}</span> : <span className="text-lg font-semibold text-fg-tertiary">—</span> },
-    { label: t('col.nextDue'), value: <span className="text-lg font-semibold">{c.nextDueDate ? formatDate(c.nextDueDate, { withYear: false }) : '—'}</span> },
+    {
+      label: t('col.nextDue'),
+      value: (
+        <>
+          <span className="text-lg font-semibold">{c.nextDueDate ? formatDate(c.nextDueDate, { withYear: false }) : '—'}</span>
+          {c.installmentPoisha != null && <span className="block text-xs text-fg-tertiary">{t('installmentOf', { amount: formatMoney(c.installmentPoisha) })}</span>}
+        </>
+      ),
+    },
     { label: t('col.pending'), value: (c.pendingFieldPoisha ?? 0) > 0 ? <MoneyText poisha={c.pendingFieldPoisha ?? 0} pending className="text-lg font-semibold" /> : <span className="text-lg font-semibold text-fg-tertiary">—</span> },
   ];
   return (
@@ -92,6 +108,7 @@ export function PendingCallout({ c }: { c: CustomerDetail }) {
 
 export function ContactCard({ c }: { c: CustomerDetail }) {
   const { t } = useTranslation('customers');
+  const locale = useUi((s) => s.locale);
   const hasLoc = c.location?.status === 'ok' && c.location.lat != null;
   return (
     <dl className="space-y-3 text-base">
@@ -103,6 +120,7 @@ export function ContactCard({ c }: { c: CustomerDetail }) {
         </span>
       </Item>
       <Item icon={MapPin} label={t('address')}>
+        {c.areaName && <span className="block font-medium" lang={locale}>{pickText(c.areaName, locale)}</span>}
         <span>{c.address}</span>
         <span className={cn('mt-0.5 block text-xs', hasLoc ? 'text-fg-tertiary' : 'text-warning')}>
           {hasLoc ? `${c.location!.lat!.toFixed(5)}, ${c.location!.lng!.toFixed(5)}` : t('locationMissing')}

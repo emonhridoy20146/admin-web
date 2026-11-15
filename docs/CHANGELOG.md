@@ -1,5 +1,13 @@
 # Changelog — admin-web
 
+## [Unreleased]
+Contract pinned: field-api `openapi.yaml` **1.2.0** (synced from field-api branch `build/phase-0-1`; types regenerated with `pnpm gen:api`).
+### Added
+- Customers: installment column, overdue amount under outstanding (list, drawer, detail), area name from the assignment area (address stays as tooltip/detail).
+- Customer detail: "Contact attempts" card (FR-M-014) listing calls/SMS logged by staff with outcome, duration and phone slot; phone numbers are never shown from this feed.
+- Collections: `no_location` flag badge, and the drawer says "No location" instead of a blank distance.
+- Settings: `location.providerConfig` is shown read-only under "Other" (non-secret engine options; the paid licence key lives in the app build).
+
 ## [0.1.0] — 2026-11-15
 Contract pinned: field-api `openapi.yaml` **1.0.0-spec** (types in `src/shared/api/schema.d.ts` via `pnpm gen:api`). 1.2.0 is published by field-api; adoption is the next step (see 09-progress).
 ### Added

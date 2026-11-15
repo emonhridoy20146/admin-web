@@ -233,6 +233,8 @@ branches.forEach((b, bi) => {
       id, erpCustomerId, code: `${b.code}-${erpCustomerId.slice(2)}`, name, phone: phone(),
       address: `${pick(VILLAGES)}: ${area.name?.en}, ${b.name?.en}`,
       location: missingLoc ? { lat: null, lng: null, status: 'missing', source: 'erp' } : { lat, lng, status: 'ok', source: 'erp' },
+      areaName: area.name, installmentPoisha: plans.length === 1 ? (plans[0]!.schedule?.[0]?.amountPoisha ?? null) : null,
+      overduePoisha: overdueSeq.reduce((s, x) => s + Math.max(0, (x.amountPoisha ?? 0) - (x.paidPoisha ?? 0)), 0),
       distanceM: null, totalOutstandingPoisha: outstanding, nextDueDate: nextDue, daysOverdue, badges, tag, openPromise,
       lastVisitAt: chance(0.8) ? isoAt(now().minus({ hours: int(2, 24 * 25) })) : null, pendingFieldPoisha: 0,
       assignee: { id: assignee.id, name: assignee.name?.en }, erpFetchedAt: fetched,
@@ -265,6 +267,7 @@ branches.forEach((b, bi) => {
   c.item.totalOutstandingPoisha = 0;
   c.item.badges = ['tagged_bad', 'paid_up'];
   c.item.daysOverdue = 0;
+  c.item.overduePoisha = 0;
   c.detail.plans?.forEach((p) => {
     p.paidPoisha = p.totalPayablePoisha;
     p.outstandingPoisha = 0;
@@ -273,7 +276,7 @@ branches.forEach((b, bi) => {
     p.schedule?.forEach((s) => ((s.paidPoisha = s.amountPoisha), (s.status = 'paid')));
   });
   c.detail.badSuggestion = null;
-  Object.assign(c.detail, { ...c.item, ...c.detail, totalOutstandingPoisha: 0, badges: c.item.badges, daysOverdue: 0 });
+  Object.assign(c.detail, { ...c.item, ...c.detail, totalOutstandingPoisha: 0, overduePoisha: 0, badges: c.item.badges, daysOverdue: 0 });
 }
 export const customerById = (id: string) => customers.find((c) => c.item.id === id);
 
@@ -319,6 +322,8 @@ for (let d = 7; d >= 0; d--) {
       if (chance(0.04)) flags.push('far_from_pin');
       if (chance(0.01)) flags.push('mock_location');
       if (d > 0 && chance(0.03)) flags.push('late_sync');
+      // 1.2.0: recorded without a GPS fix (derived from the running count so the seeded sequence is unchanged)
+      if (!flags.length && collections.length % 41 === 17) flags.push('no_location');
       collections.push({
         id: oid('6750'), clientId: crypto.randomUUID(),
         customer: { id: c.item.id, name: c.item.name, code: c.item.code },
@@ -326,7 +331,7 @@ for (let d = 7; d >= 0; d--) {
         amountPoisha: amount, method, transactionRef: method === 'cash' ? null : `${method.slice(0, 2).toUpperCase()}${int(1e8, 9e8)}`,
         receiptNo: `${br.code}-${s.employeeCode}-${at.toFormat('yyMMdd')}-${String(receiptSeq++ % 10000).padStart(4, '0')}`,
         erpReceiptNo: status === 'posted' ? `R-${int(80000, 99999)}` : null, recordedAt: isoAt(at), receivedAt: isoAt(at.plus({ minutes: int(1, d > 0 && flags.includes('late_sync') ? 900 : 40) })),
-        status, conflict: null, resolution: null, flags, distanceToPinM: flags.includes('far_from_pin') ? int(320, 1400) : int(4, 180), cashOnHand: undefined,
+        status, conflict: null, resolution: null, flags, distanceToPinM: flags.includes('no_location') ? (int(4, 180), null) : flags.includes('far_from_pin') ? int(320, 1400) : int(4, 180), cashOnHand: undefined,
       });
     }
   }
@@ -490,7 +495,7 @@ export function effective(u: MockUser) {
 export const settings: Record<string, unknown> = {
   'duty.shiftStart': '09:00', 'duty.shiftEnd': '18:00', 'duty.weeklyOff': [5], 'duty.lateGraceMin': 15, 'duty.maxBreakMin': 60,
   'cash.limitPoisha': 5_000_000, 'cash.limitMode': 'warn', 'cash.warnAtRatio': 0.8,
-  'location.trackingProvider': 'free', 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
+  'location.trackingProvider': 'free', 'location.providerConfig': {}, 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
   'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
   'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieAtWorkIn': false, 'app.minVersion': '1.0.0',
   'map.tileProvider': 'protomaps-bd',

@@ -27,6 +27,11 @@ describe('customer row view model', () => {
     expect(toCustomerRow({ ...base, daysOverdue: 0, badges: ['current'] }, 'bn').urgency).toBe(0);
     expect(toCustomerRow({ ...base, badges: ['tagged_bad'] }, 'bn').urgency).toBe(3);
   });
+  it('maps the 1.2.0 area, installment and overdue amount', () => {
+    const r = toCustomerRow({ ...base, areaName: { bn: 'রূপাতলী', en: 'Rupatoli' }, installmentPoisha: 250000, overduePoisha: 500000 }, 'bn');
+    expect(r).toMatchObject({ areaName: 'রূপাতলী', installmentPoisha: 250000, overduePoisha: 500000 });
+    expect(toCustomerRow(base, 'en')).toMatchObject({ areaName: null, installmentPoisha: null, overduePoisha: 0 });
+  });
   it('flags missing location', () => {
     expect(toCustomerRow({ ...base, location: { lat: null, lng: null, status: 'missing' } }, 'bn').hasLocation).toBe(false);
   });

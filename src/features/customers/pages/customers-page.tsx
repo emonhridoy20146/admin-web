@@ -80,6 +80,7 @@ export function CustomersPage() {
       cell: (r) => (
         <span className="inline-flex flex-col items-end">
           <MoneyText poisha={r.outstandingPoisha} className="font-medium" />
+          {r.overduePoisha > 0 && <span className="text-xs text-st-overdue">{t('overdueAmount', { amount: formatMoney(r.overduePoisha) })}</span>}
           {r.pendingFieldPoisha > 0 && <MoneyText poisha={r.pendingFieldPoisha} pending className="text-xs" />}
         </span>
       ),
@@ -93,6 +94,7 @@ export function CustomersPage() {
       mobile: 'meta',
       cell: (r) => (r.daysOverdue > 0 ? <span className={cn('font-medium', r.daysOverdue > 30 ? 'text-st-overdue' : 'text-fg')}>{t('days', { n: formatNumber(r.daysOverdue) })}</span> : <span className="text-fg-tertiary">—</span>),
     },
+    { id: 'installment', header: t('col.installment'), align: 'end', priority: 4, cell: (r) => (r.installmentPoisha != null ? <MoneyText poisha={r.installmentPoisha} /> : <span className="text-fg-tertiary">—</span>) },
     { id: 'nextDue', header: t('col.nextDue'), priority: 3, mobile: 'meta', cell: (r) => (r.nextDue ? formatDate(r.nextDue, { withYear: false }) : <span className="text-fg-tertiary">—</span>) },
     {
       id: 'promise',
@@ -122,7 +124,7 @@ export function CustomersPage() {
       cell: (r) => (
         <span className="inline-flex max-w-[220px] items-center gap-1 truncate text-fg-secondary">
           {!r.hasLocation && <MapPinOff className="size-3.5 shrink-0 text-warning" aria-label={t('locationMissing')} />}
-          <span className="truncate">{r.address}</span>
+          <span className="truncate" title={r.address}>{r.areaName ?? r.address}</span>
         </span>
       ),
     },

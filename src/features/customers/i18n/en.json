@@ -22,7 +22,7 @@
   "col": {
     "customer": "Customer",
     "phone": "Phone",
-    "area": "Address",
+    "area": "Area",
     "assignee": "Assigned to",
     "outstanding": "Outstanding",
     "daysOverdue": "Days overdue",
@@ -30,7 +30,8 @@
     "status": "Status",
     "lastVisit": "Last visit",
     "promise": "Open promise",
-    "pending": "Pending in ERP"
+    "pending": "Pending in ERP",
+    "installment": "Installment"
   },
   "days": "{{n}} d",
   "never": "Never",
@@ -100,5 +101,27 @@
     "watch": "Watch",
     "bad": "Bad",
     "legal": "Legal action"
+  },
+  "overdueAmount": "Overdue {{amount}}",
+  "installmentOf": "Installment {{amount}}",
+  "attempts": {
+    "title": "Contact attempts",
+    "empty": "No calls or SMS logged.",
+    "more": "Show all ({{n}})",
+    "less": "Show less",
+    "channel": {
+      "call": "Call",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
+    },
+    "outcome": {
+      "connected": "Connected",
+      "no_answer": "No answer",
+      "busy": "Busy",
+      "switched_off": "Switched off",
+      "wrong_number": "Wrong number",
+      "sent": "Sent"
+    },
+    "phoneN": "Phone {{n}}"
   }
 }

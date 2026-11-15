@@ -22,7 +22,7 @@
   "col": {
     "customer": "গ্রাহক",
     "phone": "ফোন",
-    "area": "ঠিকানা",
+    "area": "এলাকা",
     "assignee": "দায়িত্বে",
     "outstanding": "বকেয়া",
     "daysOverdue": "বকেয়া দিন",
@@ -30,7 +30,8 @@
     "status": "অবস্থা",
     "lastVisit": "শেষ ভিজিট",
     "promise": "খোলা প্রতিশ্রুতি",
-    "pending": "ERP-তে অপেক্ষমাণ"
+    "pending": "ERP-তে অপেক্ষমাণ",
+    "installment": "কিস্তি"
   },
   "days": "{{n}} দিন",
   "never": "কখনো না",
@@ -100,5 +101,27 @@
     "watch": "নজরে রাখুন",
     "bad": "খারাপ",
     "legal": "আইনি ব্যবস্থা"
+  },
+  "overdueAmount": "খেলাপি {{amount}}",
+  "installmentOf": "কিস্তি {{amount}}",
+  "attempts": {
+    "title": "যোগাযোগের চেষ্টা",
+    "empty": "কোনো কল বা SMS রেকর্ড নেই।",
+    "more": "সব দেখুন ({{n}})",
+    "less": "কম দেখুন",
+    "channel": {
+      "call": "কল",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
+    },
+    "outcome": {
+      "connected": "কথা হয়েছে",
+      "no_answer": "ধরেননি",
+      "busy": "ব্যস্ত",
+      "switched_off": "ফোন বন্ধ",
+      "wrong_number": "ভুল নম্বর",
+      "sent": "পাঠানো হয়েছে"
+    },
+    "phoneN": "ফোন {{n}}"
   }
 }

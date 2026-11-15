@@ -78,7 +78,8 @@
     "clock_skew": "ঘড়ির অমিল",
     "late_sync": "দেরিতে সিঙ্ক",
     "duplicate_txn_ref": "একই লেনদেন নম্বর",
-    "not_in_scope_at_record_time": "এলাকার বাইরে"
+    "not_in_scope_at_record_time": "এলাকার বাইরে",
+    "no_location": "লোকেশন ছাড়া"
   },
   "method": {
     "cash": "নগদ",

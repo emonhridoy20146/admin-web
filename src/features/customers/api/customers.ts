@@ -6,6 +6,7 @@ import type { components, operations } from '@/shared/api/schema';
 
 export type CustomerListItem = components['schemas']['CustomerListItem'];
 export type CustomerDetail = components['schemas']['CustomerDetail'];
+export type ContactAttempt = components['schemas']['ContactAttempt'];
 export type CustomerQuery = NonNullable<operations['listCustomers']['parameters']['query']>;
 
 export function useCustomers(params: Omit<CustomerQuery, 'branchId'>) {
@@ -48,5 +49,14 @@ export function useRefreshCustomer(id: string) {
       qc.setQueryData(['customers', 'detail', id], data);
       void qc.invalidateQueries({ queryKey: ['customers', 'list'] });
     },
+  });
+}
+
+/** FR-M-014 call/SMS attempts logged from the staff app (contract 1.2.0). Never contains phone numbers. */
+export function useContactAttempts(id: string) {
+  return useQuery({
+    queryKey: ['customers', 'contact-attempts', id],
+    queryFn: () => unwrap(api.GET('/customers/{id}/contact-attempts', { params: { path: { id } } })),
+    staleTime: 60_000,
   });
 }

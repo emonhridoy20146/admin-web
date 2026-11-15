@@ -14,6 +14,7 @@ import { AsOf } from '@/shared/ui/page';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/primitives';
 import { isApiError } from '@/shared/api/problem';
 import { useCustomer, useRefreshCustomer } from '../api/customers';
+import { ContactAttempts } from '../components/contact-attempts';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from '../components/customer-parts';
 import { PaymentsTab } from '../components/payments-tab';
 import { TimelineTab } from '../components/timeline-tab';
@@ -96,10 +97,16 @@ export function CustomerDetailPage() {
                 <div className="space-y-4">
                   {c.plans?.map((p) => <PlanCard key={p.erpPlanId} plan={p} showSchedule />)}
                 </div>
-                <Card className="h-fit p-4">
-                  <h2 className="mb-3 text-sm font-semibold text-fg-secondary">{t('contact')}</h2>
-                  <ContactCard c={c} />
-                </Card>
+                <div className="space-y-4">
+                  <Card className="h-fit p-4">
+                    <h2 className="mb-3 text-sm font-semibold text-fg-secondary">{t('contact')}</h2>
+                    <ContactCard c={c} />
+                  </Card>
+                  <Card className="h-fit p-4">
+                    <h2 className="mb-3 text-sm font-semibold text-fg-secondary">{t('attempts.title')}</h2>
+                    <ContactAttempts customerId={c.id!} />
+                  </Card>
+                </div>
               </div>
             </TabsContent>
             <TabsContent value="payments"><PaymentsTab c={c} /></TabsContent>

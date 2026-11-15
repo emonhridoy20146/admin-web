@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { GitMerge, Receipt, ArrowRight, Ban, MapPin, Clock } from 'lucide-react';
+import { GitMerge, Receipt, ArrowRight, Ban, MapPin, MapPinOff, Clock } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
@@ -452,6 +452,11 @@ function CollectionDrawer({ id, onClose }: { id: string | null; onClose: () => v
                         >
                           <MapPin className="size-3.5" aria-hidden />
                           {t('detail.metres', { n: formatNumber(c.distanceToPinM) })}
+                        </span>
+                      ) : c.flags?.includes('no_location') ? (
+                        <span className="inline-flex items-center gap-1 text-warning">
+                          <MapPinOff className="size-3.5" aria-hidden />
+                          {tc('flags.no_location')}
                         </span>
                       ) : (
                         '—'

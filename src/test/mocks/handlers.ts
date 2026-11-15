@@ -373,6 +373,26 @@ export const handlers = [
     const p = page(items, url, 30);
     return HttpResponse.json({ items: p.items, nextCursor: p.nextCursor });
   })),
+  http.get(`${BASE}/customers/:id/contact-attempts`, authed(({ params }) => {
+    const c = db.customerById(params.id!);
+    if (!c) return problem(404, 'NOT_FOUND', 'Customer not found');
+    // deterministic per customer: derived from the id, no numbers stored (FR-M-014)
+    const seed = [...c.item.id!].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) % 9973, 7);
+    const outcomes = ['connected', 'no_answer', 'busy', 'switched_off', 'connected', 'no_answer'] as const;
+    const n = (c.item.daysOverdue ?? 0) > 0 ? 2 + (seed % 6) : seed % 2;
+    const items: S['ContactAttempt'][] = Array.from({ length: n }, (_, i) => {
+      const sms = (seed + i) % 4 === 3;
+      const outcome = sms ? ('sent' as const) : outcomes[(seed + i * 5) % outcomes.length]!;
+      const at = new Date(Date.now() - (i * 26 + (seed % 9) + 1) * 3600_000).toISOString();
+      return {
+        id: `ca-${c.item.id}-${i}`, clientId: `00000000-0000-4000-8000-${String(seed * 100 + i).padStart(12, '0')}`, customerId: c.item.id!, userId: c.item.assignee?.id,
+        channel: sms ? 'sms' : 'call', phoneIndex: i % 3 === 2 ? 1 : 0, at, receivedAt: at,
+        durationSec: outcome === 'connected' ? 40 + ((seed * (i + 3)) % 400) : null, outcome,
+        note: outcome === 'connected' && i === 0 ? 'সামনের সপ্তাহে দেবেন বলেছেন' : undefined,
+      };
+    });
+    return HttpResponse.json(items);
+  })),
   http.get(`${BASE}/customers/:id/tag-history`, authed(({ params }) => HttpResponse.json(db.customerById(params.id!)?.tagHistory ?? []))),
   http.put(`${BASE}/customers/:id/tag`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'tag.set');

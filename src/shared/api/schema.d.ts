@@ -1127,6 +1127,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customers/{id}/contact-attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listContactAttempts"];
+        put?: never;
+        /** @description Added in 1.2.0 (FR-M-014). Idempotent by clientId. */
+        post: operations["logContactAttempt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/promises": {
         parameters: {
             query?: never;
@@ -1694,6 +1711,11 @@ export interface components {
             /** Format: date-time */
             fixAt?: string;
         };
+        /**
+         * @description Why geo is null (1.2.0)
+         * @enum {string}
+         */
+        GeoUnavailableReason: "permission_denied" | "location_off" | "timeout" | "no_fix";
         TileProvider: {
             /** @example provider-a */
             id?: string;
@@ -1898,6 +1920,11 @@ export interface components {
         };
         TagEvent: {
             id?: string;
+            /**
+             * @description Added in contract 1.1.0
+             * @enum {string}
+             */
+            kind?: "change" | "request" | "review_requested" | "decision";
             previous?: components["schemas"]["Tag"];
             next?: components["schemas"]["Tag"];
             reasonCode?: string;
@@ -1909,8 +1936,36 @@ export interface components {
             };
             /** @enum {string} */
             source?: "web" | "app" | "system";
+            /** @description Added in 1.1.0 */
+            deviceLocation?: {
+                lat?: number;
+                lng?: number;
+                accuracyM?: number;
+            };
+            /** @description For kind=decision: the eventId of the reviewed item. Added in 1.1.0 */
+            approvalOf?: string;
             /** Format: date-time */
             at?: string;
+        };
+        /** @description Added in contract 1.1.0 */
+        TagReviewItem: {
+            eventId?: string;
+            /** @enum {string} */
+            kind?: "approval" | "balance_cleared";
+            customer?: {
+                id?: string;
+                code?: string;
+                name?: components["schemas"]["I18nText"];
+                totalOutstandingPoisha?: number;
+                tag?: components["schemas"]["Tag"];
+            };
+            requested?: components["schemas"]["Tag"];
+            requestedBy?: {
+                id?: string;
+                name?: string;
+            };
+            /** Format: date-time */
+            createdAt?: string;
         };
         CustomerListItem: {
             id?: string;
@@ -1932,6 +1987,12 @@ export interface components {
             lastVisitAt?: string | null;
             /** @description Field collections not yet posted to ERP */
             pendingFieldPoisha?: number;
+            /** @description Amount of the next unpaid schedule line across active plans (ERP cache). Added in 1.2.0 */
+            installmentPoisha?: number | null;
+            /** @description Sum of overdue unpaid schedule amounts (ERP cache). Added in 1.2.0 */
+            overduePoisha?: number;
+            /** @description FOS area the customer falls in. Added in 1.2.0 */
+            areaName?: components["schemas"]["I18nText"] | null;
             assignee?: {
                 id?: string;
                 name?: string;
@@ -2044,7 +2105,9 @@ export interface components {
             recordedAt: string;
             /** Format: date-time */
             deviceTime?: string;
-            geo: components["schemas"]["GeoFix"];
+            /** @description null when no GPS fix could be taken (1.2.0); send geoUnavailableReason */
+            geo: components["schemas"]["GeoFix"] | null;
+            geoUnavailableReason?: components["schemas"]["GeoUnavailableReason"];
             visitClientId?: string;
             photoMediaId?: string;
             note?: string;
@@ -2083,7 +2146,7 @@ export interface components {
                 at?: string;
                 reason?: string;
             } | null;
-            flags?: ("far_from_pin" | "mock_location" | "clock_skew" | "late_sync" | "duplicate_txn_ref" | "not_in_scope_at_record_time")[];
+            flags?: ("far_from_pin" | "mock_location" | "clock_skew" | "late_sync" | "duplicate_txn_ref" | "not_in_scope_at_record_time" | "no_location")[];
             distanceToPinM?: number | null;
             cashOnHand?: components["schemas"]["CashPosition"];
         };
@@ -2189,7 +2252,9 @@ export interface components {
             /** Format: date-time */
             deviceTime?: string;
             outcome: components["schemas"]["VisitOutcome"];
-            geo: components["schemas"]["GeoFix"];
+            /** @description null when no GPS fix could be taken (1.2.0); send geoUnavailableReason */
+            geo: components["schemas"]["GeoFix"] | null;
+            geoUnavailableReason?: components["schemas"]["GeoUnavailableReason"];
             photoMediaIds?: string[];
             /** @enum {string} */
             source?: "manual" | "suggested";
@@ -2324,9 +2389,16 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /** @enum {string} */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt";
             /** @enum {string} */
             op: "create" | "update";
+            /**
+             * @description Same body as the matching REST call (1.2.0 documents the mapping):
+             *     collection → CollectionCreate (+ idempotencyKey) · visit → VisitCreate · note → POST /customers/{id}/notes body (+ customerId) ·
+             *     promise → POST /promises body · deposit → DepositCreate · attendance_event → POST /attendance/events body ·
+             *     tag → PUT /customers/{id}/tag body (+ customerId) · location_proposal → POST /customers/{id}/location-proposals body (+ customerId) ·
+             *     contact_attempt → ContactAttemptCreate
+             */
             payload: {
                 [key: string]: unknown;
             };
@@ -2357,14 +2429,43 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
+            /**
+             * @description Present for op=upsert. Shape per entity (1.2.0 documents the mapping; values unchanged):
+             *     customer → CustomerDetail · collection → Collection · visit → Visit · note → Note · promise → Promise ·
+             *     tag → Tag (with customerId) · handover → Handover · assignment → Assignment · area → Area · deposit → Deposit ·
+             *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
+             *     contact_attempt → ContactAttempt
+             */
             data?: {
                 [key: string]: unknown;
             };
             reason?: string;
+        };
+        /** @description FR-M-014 call/SMS attempt logged by the app (1.2.0) */
+        ContactAttemptCreate: {
+            /** Format: uuid */
+            clientId: string;
+            customerId: string;
+            /** @enum {string} */
+            channel: "call" | "sms" | "whatsapp";
+            /** @description Index into customer phones (never the number itself) */
+            phoneIndex?: number;
+            /** Format: date-time */
+            at: string;
+            durationSec?: number | null;
+            /** @enum {string} */
+            outcome?: "connected" | "no_answer" | "busy" | "switched_off" | "wrong_number" | "sent";
+            note?: string;
+        };
+        ContactAttempt: components["schemas"]["ContactAttemptCreate"] & {
+            id?: string;
+            userId?: string;
+            /** Format: date-time */
+            receivedAt?: string;
         };
         SyncPullResponse: {
             changes?: components["schemas"]["SyncChange"][];
@@ -3378,6 +3479,8 @@ export interface operations {
                 sort?: "distance" | "-daysOverdue" | "name" | "-totalOutstanding" | "nextDueDate";
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Return `total` (capped at 10,000). Added in 1.1.0 */
+                includeTotal?: boolean;
             };
             header?: never;
             path?: never;
@@ -3659,7 +3762,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["TagReviewItem"][];
+                    };
+                };
             };
         };
     };
@@ -4599,6 +4706,63 @@ export interface operations {
             };
         };
     };
+    listContactAttempts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAttempt"][];
+                };
+            };
+        };
+    };
+    logContactAttempt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactAttemptCreate"];
+            };
+        };
+        responses: {
+            /** @description Replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAttempt"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactAttempt"];
+                };
+            };
+        };
+    };
     listPromises: {
         parameters: {
             query?: {
@@ -4691,7 +4855,9 @@ export interface operations {
                     at: string;
                     /** Format: date-time */
                     deviceTime?: string;
-                    geo: components["schemas"]["GeoFix"];
+                    /** @description null when no GPS fix could be taken (1.2.0); send geoUnavailableReason */
+                    geo: components["schemas"]["GeoFix"] | null;
+                    geoUnavailableReason?: components["schemas"]["GeoUnavailableReason"];
                     selfieMediaId?: string;
                 };
             };

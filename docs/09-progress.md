@@ -37,7 +37,8 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 ## Status notes (2026-11-15)
 - Verified: lint (incl. boundaries), typecheck, 44 unit tests, 16 Playwright journeys incl. axe on 12 pages, `check:permissions`, `check:i18n`, static export served with rewrites + hashed CSP.
 - Bundle: first-load JS is 203–258 KB (Next's report); the 250 KB budget is exceeded on `/admin/users` and `/admin/audit`. Next step: lazy-load page components from the registry.
-- Next: adopt contract 1.2.0 (`location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, nullable `geo` + `geoUnavailableReason`, contact attempts), then customers map, promises, visits, staff, attendance, assignments, handovers, devices, system health.
+- Contract 1.2.0 adopted (2026-11-15): `location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, `no_location` flag, contact attempts.
+- Next: customers map, promises, visits, staff, attendance, assignments, handovers, devices, system health.
 
 ## Contract gaps reported to field-api
 1. No response schema: `GET /collections/conflicts`, `GET /cash/deposits`, `GET /tags/review-queue`, `GET /notifications` (read as `{items, nextCursor}`).
