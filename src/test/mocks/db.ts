@@ -791,3 +791,34 @@ export function routeHistory(userId: string, date: string) {
     summary: { distanceKm: Math.round(m / 100) / 10, movingMin: Math.max(0, total - stoppedMin - gapsMin), stoppedMin, stopsCount: stops.length, customerStops: stops.filter((s) => s.customerId).length, gapsMin, mockPoints: mine.filter((v) => v.row.geo?.mock).length },
   };
 }
+
+// ---------- devices & sync health ----------
+const PHONES = [['Samsung Galaxy A15', '14'], ['Xiaomi Redmi 13C', '13'], ['Realme C55', '13'], ['Vivo Y17s', '13'], ['Samsung Galaxy M14', '14'], ['Infinix Hot 40i', '13'], ['Tecno Spark 20', '13']] as const;
+export const devices: S['Device'][] = [];
+staff.forEach((s, i) => {
+  const h = hash(`dev:${s.id}`);
+  const ph = PHONES[h % PHONES.length]!;
+  const idle = !s.active ? 40 : h % 17 === 0 ? 9 : 0;
+  devices.push({
+    id: oid('6770'), deviceId: `and-${(h >>> 0).toString(16).padStart(8, '0')}`, userId: s.id, model: ph[0], androidVersion: ph[1], appVersion: h % 5 === 0 ? '1.0.1' : '1.0.3',
+    boundAt: isoAt(now().minus({ days: 20 + (h % 200) })), lastSeenAt: isoAt(now().minus({ days: idle, minutes: 2 + (h % 55) })), rooted: i === 5, emulator: false, status: s.active ? 'active' : 'unbound',
+  });
+  // a few staff changed phones: the new one waits for a manager
+  if (s.active && (i === 1 || i === 7 || i === 14)) {
+    const np = PHONES[(h + 3) % PHONES.length]!;
+    devices.push({ id: oid('6770'), deviceId: `and-${((h ^ 0x5bd1e995) >>> 0).toString(16).padStart(8, '0')}`, userId: s.id, model: np[0], androidVersion: np[1], appVersion: '1.0.3', boundAt: isoAt(now().minus({ hours: 3 + i })), lastSeenAt: isoAt(now().minus({ minutes: 12 + i })), rooted: i === 7, emulator: false, status: 'pending_approval' });
+  }
+});
+export const deviceBranch = (d: S['Device']) => userById(d.userId)?.branchIds?.[0] ?? '';
+export function syncHealth(branchIds: string[]): S['DeviceSyncState'][] {
+  return devices.filter((d) => d.status === 'active' && branchIds.includes(deviceBranch(d))).map((d) => {
+    const h = hash(`sync:${d.id}`);
+    const stuck = h % 9 === 0;
+    const err = h % 14 === 0;
+    return {
+      userId: d.userId, userName: userName(d.userId), deviceId: d.deviceId, appVersion: d.appVersion,
+      lastPullAt: isoAt(now().minus({ minutes: stuck ? 190 + (h % 300) : 1 + (h % 12) })), lastPushAt: isoAt(now().minus({ minutes: stuck ? 200 + (h % 300) : 2 + (h % 25) })),
+      pendingReported: stuck ? 3 + (h % 9) : err ? 1 : 0, ...(err ? { lastError: 'IDEMPOTENCY_MISMATCH: collection 7f3a… rejected' } : {}),
+    };
+  });
+}

@@ -1,0 +1,55 @@
+{
+  "title": "System health",
+  "subtitle": "Whether the server, the ERP link and the staff phones' sync are working. Refreshes by itself every minute.",
+  "level": {
+    "ok": "OK",
+    "warn": "Needs a look",
+    "bad": "Problem"
+  },
+  "api": {
+    "title": "Server",
+    "status": "Status",
+    "ok": "Running",
+    "degraded": "Partly degraded",
+    "down": "Not responding",
+    "version": "Version",
+    "database": "Database",
+    "erp": "ERP link"
+  },
+  "erp": {
+    "title": "ERP link",
+    "mode": "Mode",
+    "modes": {
+      "live": "Live (posting to the ERP)",
+      "record_only": "Record only (posting to the ERP is off)",
+      "mock": "Mock ERP (testing)"
+    },
+    "lastSuccess": "Last successful contact",
+    "lag": "Data age",
+    "failures": "Failures in a row",
+    "circuit": "Circuit breaker",
+    "circuits": {
+      "closed": "Normal",
+      "open": "Held open (the ERP is not answering)",
+      "half_open": "Probing"
+    },
+    "pending": "Waiting to post",
+    "failed": "Failed to post",
+    "seeFailed": "See the failed collections",
+    "never": "Never"
+  },
+  "sync": {
+    "title": "Phone sync",
+    "summary": "{{bad}} phones have a problem, {{warn}} need a look, {{ok}} are fine. {{pending}} items are held on phones in total.",
+    "staff": "Staff",
+    "state": "State",
+    "pull": "Last pull",
+    "push": "Last push",
+    "pending": "Held on phone",
+    "app": "App",
+    "error": "Last error",
+    "never": "Never",
+    "empty": "No active phones",
+    "unknown": "Unknown staff"
+  }
+}

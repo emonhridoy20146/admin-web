@@ -3,6 +3,8 @@ import rbacBn from '../../src/features/admin-rbac/i18n/bn.json' with { type: 'js
 import flagsBn from '../../src/features/admin-flags/i18n/bn.json' with { type: 'json' };
 import auditBn from '../../src/features/audit/i18n/bn.json' with { type: 'json' };
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
+import devBn from '../../src/features/admin-devices/i18n/bn.json' with { type: 'json' };
+import sysBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import { confirmWithReason, login, nav } from '../fixtures';
@@ -58,4 +60,37 @@ test('create a user shows the temporary password once', async ({ page }) => {
   await d.getByRole('button', { name: usersBn.form.create }).click();
   await expect(page.getByRole('dialog', { name: usersBn.tempTitle })).toBeVisible();
   await expect(page.getByRole('dialog').locator('code')).toHaveText(/^Fos-/);
+});
+
+test('devices: approve a waiting phone, then unbind an active one with a reason', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, devBn.title);
+  const rows = page.locator('tbody tr');
+  await page.getByRole('button', { name: new RegExp(`^${devBn.view.pending_approval}`) }).click();
+  await expect(page).toHaveURL(/view=pending_approval/);
+  await expect(rows.first().getByRole('button', { name: devBn.approve })).toBeVisible();
+  const before = await rows.count();
+  await rows.first().getByRole('button', { name: devBn.approve }).click();
+  await page.getByRole('dialog').getByRole('button', { name: devBn.approve, exact: true }).click();
+  await expect(page.getByText(devBn.approved)).toBeVisible();
+  await expect(rows).toHaveCount(before - 1);
+
+  await page.getByRole('button', { name: new RegExp(`^${devBn.view.active}`) }).click();
+  await expect(page).toHaveURL(/view=active/);
+  await expect(rows.first().getByRole('button', { name: devBn.unbind })).toBeVisible();
+  const active = await rows.count();
+  await rows.first().getByRole('button', { name: devBn.unbind }).click();
+  await confirmWithReason(page, 'ফোন হারিয়ে গেছে, কর্মী জানিয়েছেন', devBn.unbind);
+  await expect(page.getByText(devBn.unbound)).toBeVisible();
+  await expect(rows).toHaveCount(active - 1);
+});
+
+test('system health: server, ERP link and phone sync are shown, problems first', async ({ page }) => {
+  await login(page);
+  await nav(page, sysBn.title);
+  await expect(page.getByText(sysBn.erp.lastSuccess)).toBeVisible();
+  await expect(page.getByText(sysBn.api.database)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: sysBn.sync.title })).toBeVisible();
+  await expect(page.locator('tbody tr').first()).toBeVisible();
+  expect(await page.locator('tbody tr').count()).toBeGreaterThan(5);
 });

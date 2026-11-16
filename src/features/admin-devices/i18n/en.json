@@ -1,0 +1,46 @@
+{
+  "title": "Devices",
+  "subtitle": "Phones bound to staff accounts. A new phone cannot use the app until it is approved.",
+  "view": {
+    "all": "All",
+    "pending_approval": "Waiting for approval",
+    "active": "Active",
+    "unbound": "Unbound"
+  },
+  "status": {
+    "pending_approval": "Waiting",
+    "active": "Active",
+    "unbound": "Unbound"
+  },
+  "risk": {
+    "rooted": "Rooted phone",
+    "emulator": "Emulator"
+  },
+  "col": {
+    "staff": "Staff",
+    "phone": "Phone",
+    "app": "App",
+    "bound": "Bound",
+    "seen": "Last seen",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "android": "Android {{v}}",
+  "unknownStaff": "Unknown staff",
+  "unknownPhone": "Unknown model",
+  "never": "Never",
+  "idle": "Silent for {{n}} days",
+  "empty": "No devices",
+  "emptyBody": "A phone appears here the first time a staff member signs in to the app.",
+  "approve": "Approve",
+  "approveFor": "Approve the phone of {{name}}",
+  "approveTitle": "Approve this phone?",
+  "approveDesc": "{{name}} will be able to use the app from this phone ({{phone}}).",
+  "approveRisk": "This phone is risky: {{risks}}. Such a phone can fake location and time.",
+  "approved": "Phone approved",
+  "unbind": "Unbind",
+  "unbindFor": "Unbind the phone of {{name}}",
+  "unbindTitle": "Unbind this phone?",
+  "unbindDesc": "{{name}} will no longer be able to sign in from this phone ({{phone}}). A new phone will need approval again.",
+  "unbound": "Phone unbound"
+}

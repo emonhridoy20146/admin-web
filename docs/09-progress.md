@@ -43,7 +43,9 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 - Contract 1.2.0 adopted (2026-11-15): `location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, `no_location` flag, contact attempts.
 - Handovers page uses `handover.create` as its route permission: the catalog has no view-only handover key, so viewers do not see the page.
 - Contract 1.4.0/1.5.0 adopted (2026-11-15): typed visit/promise lists with customer and staff refs, from/to/outcome filters.
-- Next: devices, system health, bulk assign; Phase 2 scrubber; Phase 3 reports.
+- Devices (`/admin/devices`) and System health (`/admin/system`) done 2026-11-16.
+- Contract note: `Device` has `userId` only (names are joined from `/users`); `DeviceSyncState.userName` is present.
+- Next: bulk assign, refund proof upload, CI workflow; Phase 2 scrubber; Phase 3 reports.
 
 ## Contract gaps reported to field-api
 All answered in contract 1.3.0 (2026-11-15):

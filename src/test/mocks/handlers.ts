@@ -171,6 +171,42 @@ export const handlers = [
     }),
   ),
   http.get(`${BASE}/system/erp-status`, authed(() => HttpResponse.json({ ...db.erpStatus, lastSuccessAt: new Date(Date.now() - 3 * 60_000).toISOString() }))),
+  http.get(`${BASE}/system/health`, () => HttpResponse.json({ status: 'ok', version: '1.6.0', mongo: 'ok', erp: 'ok' })),
+  http.get(`${BASE}/system/sync-health`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'settings.manage');
+    if (deny) return deny;
+    return HttpResponse.json(db.syncHealth(scope(ctx, url)));
+  })),
+  http.get(`${BASE}/devices`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'device.manage');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const userId = url.searchParams.get('userId');
+    return HttpResponse.json(db.devices.filter((d) => sc.includes(db.deviceBranch(d)) && (!userId || d.userId === userId)));
+  })),
+  http.post(`${BASE}/devices/:id/approve`, authed(({ ctx, params }) => {
+    const deny = need(ctx, 'device.manage');
+    if (deny) return deny;
+    const d = db.devices.find((x) => x.id === params.id);
+    if (!d) return problem(404, 'NOT_FOUND', 'Device not found');
+    if (d.status !== 'pending_approval') return problem(409, 'INVALID_STATE', 'Device is not waiting for approval');
+    // one phone per account: the old one is unbound when the new one is approved
+    db.devices.filter((x) => x.userId === d.userId && x.status === 'active').forEach((x) => (x.status = 'unbound'));
+    d.status = 'active';
+    db.addAudit({ actor: actor(ctx.user), action: 'device.approve', entity: 'device', entityId: d.id, after: { status: 'active' }, reason: '' });
+    return HttpResponse.json({});
+  })),
+  http.post(`${BASE}/devices/:id/unbind`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'device.manage');
+    if (deny) return deny;
+    const b = (await request.json().catch(() => ({}))) as { reason?: string };
+    if (!b.reason || b.reason.trim().length < 5) return problem(422, 'VALIDATION_FAILED', 'reason is required (min 5)');
+    const d = db.devices.find((x) => x.id === params.id);
+    if (!d) return problem(404, 'NOT_FOUND', 'Device not found');
+    d.status = 'unbound';
+    db.addAudit({ actor: actor(ctx.user), action: 'device.unbind', entity: 'device', entityId: d.id, after: { status: 'unbound' }, reason: b.reason });
+    return HttpResponse.json({});
+  })),
   http.get(`${BASE}/branches`, authed(({ ctx, url }) => HttpResponse.json(db.branches.filter((b) => scope(ctx, url).includes(b.id!))))),
 
   // ---------- users ----------
