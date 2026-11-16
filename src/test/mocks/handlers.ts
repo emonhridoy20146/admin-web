@@ -423,6 +423,54 @@ export const handlers = [
   })),
   // ---------- areas & handovers ----------
   http.get(`${BASE}/areas`, authed(({ ctx, url }) => HttpResponse.json(db.areas.filter((a) => scope(ctx, url).includes(a.branchId!))))),
+  http.post(`${BASE}/areas`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'assignment.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as S['Area'];
+    if (db.areas.some((a) => a.code === b.code)) return problem(409, 'AREA_CODE_TAKEN', 'An area with this code already exists');
+    db.areas.push({ ...b, id: db.oid('6738'), customerCount: 0, assignees: [], active: true, version: 1 });
+    return HttpResponse.json({}, { status: 201 });
+  })),
+  http.patch(`${BASE}/areas/:id`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'assignment.manage');
+    if (deny) return deny;
+    const a = db.areas.find((x) => x.id === params.id);
+    if (!a) return problem(404, 'NOT_FOUND', 'Area not found');
+    const m = request.headers.get('If-Match');
+    if (m && m !== `"${a.version}"`) return problem(412, 'VERSION_CONFLICT', 'The area was changed by someone else');
+    const b = (await request.json()) as S['Area'];
+    Object.assign(a, { name: b.name, code: b.code, erpAreaCodes: b.erpAreaCodes, active: b.active, version: (a.version ?? 1) + 1 });
+    return HttpResponse.json({});
+  })),
+  http.get(`${BASE}/assignments`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'assignment.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const userId = url.searchParams.get('userId');
+    const out: S['Assignment'][] = db.areas.filter((a) => sc.includes(a.branchId!)).flatMap((a) => (a.assignees ?? []).map((u) => ({ id: `${a.id}~${u}`, userId: u, type: 'area' as const, areaId: a.id, effectiveFrom: '2026-01-01', effectiveTo: null, source: 'manual' })));
+    return HttpResponse.json(out.filter((x) => !userId || x.userId === userId));
+  })),
+  http.post(`${BASE}/assignments`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'assignment.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as { userId: string; type: string; areaId?: string };
+    const a = db.areas.find((x) => x.id === b.areaId);
+    if (!a) return problem(404, 'NOT_FOUND', 'Area not found');
+    if (a.assignees?.includes(b.userId)) return problem(409, 'ALREADY_ASSIGNED', 'This staff member already holds the area');
+    a.assignees = [...(a.assignees ?? []), b.userId];
+    db.addAudit({ actor: actor(ctx.user), action: 'assignment.create', entity: 'area', entityId: a.id, branchId: a.branchId, before: {}, after: { user: db.userById(b.userId)?.employeeCode, area: a.code }, reason: '' });
+    return HttpResponse.json({}, { status: 201 });
+  })),
+  http.delete(`${BASE}/assignments/:id`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'assignment.manage');
+    if (deny) return deny;
+    const [areaId, userId] = params.id!.split('~');
+    const a = db.areas.find((x) => x.id === areaId);
+    if (!a || !a.assignees?.includes(userId!)) return problem(404, 'NOT_FOUND', 'Assignment not found');
+    a.assignees = a.assignees.filter((u) => u !== userId);
+    db.addAudit({ actor: actor(ctx.user), action: 'assignment.end', entity: 'area', entityId: a.id, branchId: a.branchId, before: { user: db.userById(userId)?.employeeCode, area: a.code }, after: {}, reason: '' });
+    return new HttpResponse(null, { status: 204 });
+  })),
   http.get(`${BASE}/handovers`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'handover.create');
     if (deny) return deny;

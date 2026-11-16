@@ -506,6 +506,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shifts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Partial update of a shift (declared in 1.5.0; the route already existed) */
+        patch: operations["updateShift"];
+        trace?: never;
+    };
     "/customers": {
         parameters: {
             query?: never;
@@ -1635,6 +1652,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description At most 366 days, ending today or earlier. Weeks start on Saturday. (Response schema declared in 1.6.0.) */
         get: operations["branchTrends"];
         put?: never;
         post?: never;
@@ -1651,6 +1669,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description FOS collections of one business date against the field payments the ERP reported (cached copy; see erpFetchedAt). (Response schema declared in 1.6.0.) */
         get: operations["reconciliation"];
         put?: never;
         post?: never;
@@ -1669,6 +1688,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description Async export, built by the worker within about a minute, kept 7 days, visible only to the requester (1.6.0 documents params).
+         *     `params` per type: staff_performance → { period, date, branchId?, userId? } · collections → { from, to, branchId? } (≤ 92 days) ·
+         *     attendance → { from, to, branchId? } (≤ 62 days) · overdue_customers, cash_positions → { branchId? }.
+         *     `format: pdf` and `type: audit` are answered with 422 BUSINESS_RULE (`export_format_unavailable` / `export_type_unavailable`) until they are built.
+         */
         post: operations["createExport"];
         delete?: never;
         options?: never;
@@ -2432,6 +2457,22 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        /** @description Declared in 1.5.0. `data` holds ids for deep links only. */
+        Notification: {
+            id?: string;
+            /** @example promise.due */
+            type?: string;
+            title?: components["schemas"]["I18nText"];
+            body?: components["schemas"]["I18nText"];
+            data?: {
+                [key: string]: string;
+            };
+            read?: boolean;
+            /** Format: date-time */
+            readAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         Broadcast: {
             id?: string;
             title?: components["schemas"]["I18nText"];
@@ -2447,6 +2488,8 @@ export interface components {
             createdAt?: string;
             recipientCount?: number;
             ackCount?: number;
+            /** @description Whether the caller acknowledged it */
+            acked?: boolean;
         };
         AttendanceDay: {
             userId?: string;
@@ -2759,6 +2802,73 @@ export interface components {
             breakMin?: number;
             fieldMin?: number;
             distanceKm?: number;
+        };
+        OverdueBucket: {
+            count?: number;
+            amountPoisha?: number;
+        };
+        /** @description Overdue figures are cached ERP values frozen nightly per branch (today is live); never an official balance. */
+        BranchTrends: {
+            from?: string;
+            to?: string;
+            /** @enum {string} */
+            granularity?: "day" | "week" | "month";
+            collection?: {
+                /** @description YYYY-MM-DD (day, or the Saturday a week starts) or YYYY-MM */
+                period?: string;
+                totalPoisha?: number;
+                cashPoisha?: number;
+                mobilePoisha?: number;
+                count?: number;
+                visits?: number;
+            }[];
+            /** @description One entry per day that has a snapshot (always daily, whatever the granularity) */
+            overdue?: {
+                date?: string;
+                buckets?: {
+                    d1_30?: components["schemas"]["OverdueBucket"];
+                    d31_60?: components["schemas"]["OverdueBucket"];
+                    d61_90?: components["schemas"]["OverdueBucket"];
+                    d90p?: components["schemas"]["OverdueBucket"];
+                };
+                totalOverdue?: components["schemas"]["OverdueBucket"];
+                badSuggested?: number;
+                tagged?: number;
+            }[];
+        };
+        ReconciliationReport: {
+            date?: string;
+            balanced?: boolean;
+            /** @description Oldest ERP copy used; null when the ERP reported no field payment for the day */
+            erpFetchedAt?: string | null;
+            totals?: {
+                fosPostedCount?: number;
+                fosPostedPoisha?: number;
+                fosWaitingCount?: number;
+                fosWaitingPoisha?: number;
+                erpCount?: number;
+                erpPoisha?: number;
+                matchedCount?: number;
+            };
+            mismatches?: {
+                /** @enum {string} */
+                kind?: "not_posted" | "missing_in_erp" | "missing_in_fos" | "amount_differs" | "reversed_in_erp" | "voided_in_fos";
+                collectionId?: string | null;
+                receiptNo?: string | null;
+                erpPaymentId?: string | null;
+                fosAmountPoisha?: number | null;
+                erpAmountPoisha?: number | null;
+                status?: string | null;
+                customer?: {
+                    id?: string;
+                    name?: string;
+                    code?: string;
+                } | null;
+                collector?: {
+                    id?: string;
+                    name?: string;
+                } | null;
+            }[];
         };
         AuditEntry: {
             id?: string;
@@ -3732,6 +3842,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    updateShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Shift"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shift"];
+                };
             };
         };
     };
@@ -5637,9 +5773,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        items?: {
-                            [key: string]: unknown;
-                        }[];
+                        items?: components["schemas"]["Notification"][];
                         nextCursor?: string | null;
                         unreadCount?: number;
                     };
@@ -5732,7 +5866,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
             };
         };
     };
@@ -5934,7 +6070,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BranchTrends"];
+                };
             };
         };
     };
@@ -5955,7 +6093,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReconciliationReport"];
+                };
             };
         };
     };

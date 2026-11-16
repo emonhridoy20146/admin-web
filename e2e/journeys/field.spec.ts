@@ -7,6 +7,7 @@ import promisesBn from '../../src/features/promises/i18n/bn.json' with { type: '
 import visitsBn from '../../src/features/visits/i18n/bn.json' with { type: 'json' };
 import attendanceBn from '../../src/features/attendance/i18n/bn.json' with { type: 'json' };
 import staffBn from '../../src/features/staff/i18n/bn.json' with { type: 'json' };
+import areasBn from '../../src/features/assignments/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
@@ -231,4 +232,42 @@ test('pin approvals: approve one proposal and reject another with a reason', asy
   await cards.first().getByRole('button', { name: new RegExp(`${custBn.pins.reject}$`) }).click();
   await confirmWithReason(page, 'পিন রাস্তার ওপর পড়েছে, বাড়িতে নয়', custBn.pins.reject);
   await expect(cards).toHaveCount(before - 2);
+});
+
+test('areas: assign a staff member, remove an assignee and create an area', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, areasBn.title);
+  const cards = page.locator('main ul.grid > li');
+  await expect(cards.first()).toBeVisible();
+  const before = await cards.count();
+  const card = cards.first();
+  const chips = card.locator('ul > li');
+  const had = await chips.count();
+
+  await card.getByRole('button', { name: new RegExp(areasBn.assign) }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: areasBn.assign, exact: true }).click();
+  await expect(dialog.getByText(areasBn.errors.required)).toBeVisible();
+  await dialog.getByRole('combobox').selectOption({ index: 1 });
+  await dialog.getByRole('button', { name: areasBn.assign, exact: true }).click();
+  await expect(page.getByText(areasBn.assigned)).toBeVisible();
+  await expect(chips).toHaveCount(had + 1);
+
+  await chips.first().getByRole('button').click();
+  await page.getByRole('dialog').getByRole('button', { name: areasBn.remove, exact: true }).click();
+  await expect(page.getByText(areasBn.removed)).toBeVisible();
+  await expect(chips).toHaveCount(had);
+
+  await page.getByRole('button', { name: areasBn.new }).click();
+  const form = page.getByRole('dialog');
+  await form.getByRole('button', { name: areasBn.form.save }).click();
+  await expect(form.getByText(areasBn.errors.required).first()).toBeVisible();
+  await form.getByLabel(areasBn.form.nameBn).fill('নতুন বাজার');
+  await form.getByLabel(areasBn.form.nameEn).fill('Notun Bazar');
+  await form.getByLabel(areasBn.form.code).fill('TST-NB');
+  await form.getByLabel(areasBn.erpCodes).fill('NB1, NB2');
+  await form.getByRole('button', { name: areasBn.form.save }).click();
+  await expect(page.getByText(areasBn.saved)).toBeVisible();
+  await expect(cards).toHaveCount(before + 1);
+  await expect(page.getByRole('heading', { level: 2, name: 'নতুন বাজার' })).toBeVisible();
 });

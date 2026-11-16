@@ -36,4 +36,5 @@ export const EV = {
   flagsChanged: 'flags.changed',
   handoverChanged: 'handover.changed',
   promiseChanged: 'promise.changed',
+  assignmentChanged: 'assignment.changed',
 } as const;

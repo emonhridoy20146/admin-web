@@ -20,7 +20,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Collections, Conflicts resolution, Cash & deposits | ☑ (refund proof upload pending) |
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
 | Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals are Phase 4; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |
-| Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas/assignments next |
+| Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas and area assignments done at `/areas`; bulk customer assign and drawing an area on the map later |
 | Devices, System health (ERP, outbox, sync health) | ☐ |
 | Mobile responsive pass (card lists, 360 px critical tasks) | ☐ |
 **Acceptance:** W-E3…W-E7, W-E13 green; manager completes a full pilot day from a phone; every KPI links to its list.
@@ -41,7 +41,7 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 - Contract 1.2.0 adopted (2026-11-15): `location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, `no_location` flag, contact attempts.
 - Handovers page uses `handover.create` as its route permission: the catalog has no view-only handover key, so viewers do not see the page.
 - Contract 1.4.0/1.5.0 adopted (2026-11-15): typed visit/promise lists with customer and staff refs, from/to/outcome filters.
-- Next: customers map, staff, attendance, assignments, devices, system health.
+- Next: devices, system health, bulk assign, then Phase 2 live location.
 
 ## Contract gaps reported to field-api
 All answered in contract 1.3.0 (2026-11-15):

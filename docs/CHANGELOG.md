@@ -1,12 +1,13 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.5.0** (1.2.0 → 1.5.0, synced from field-api branch `build/phase-0-1`; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.6.0** (1.2.0 → 1.6.0, synced from field-api branch `build/phase-0-1`; types regenerated with `pnpm gen:api`).
 ### Changed
 - Permissions → branch tab reads current exceptions from `GET /rbac/overrides/branch/{branchId}` (1.3.0) instead of probing through one user; the "read through one user" notice is gone.
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Areas & assignments (FR-ASG) at `/areas`: one card per area (customers, ERP area codes, who is assigned), a warning when an active area has nobody with a link to the unassigned customers, assign a staff member, remove an assignee (confirm names the area, the staff member and the customer count; extra warning for the last one), create and edit an area (`If-Match`), deactivate. Gated by `module.assignments` + `assignment.view`; changes need `assignment.manage`.
 - Customer map (FR-CUS-008) at `/map`: Leaflet map with status-coloured pins, clusters when zoomed out, status filters, a text list of the customers in view beside the map (keyboard and screen-reader path), customer drawer. Tiles come from `/meta/app-config`.
 - Pin approvals (FR-CUS-010) at `/pin-approvals`: each proposal shows the current and proposed pin on a small map, distance moved, GPS accuracy, proposer and note; approve (confirm) or reject (reason); nav badge.
 - Shared `shared/map` (MapView, geo helpers, tile provider hook).
