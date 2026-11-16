@@ -460,14 +460,14 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.collections', 'Field collections and conflicts', true], ['module.cash', 'Cash on hand and deposits', true],
   ['module.assignments', 'Areas and assignments', true], ['module.handovers', 'Handovers between staff', true],
   ['module.visits', 'Visits and photos', true], ['module.notes', 'Customer notes', true], ['module.promises', 'Promise-to-pay', true],
-  ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', false],
+  ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
   ['module.search', 'Global search', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
-  key, defaultEnabled: on, branchOverrides: key === 'module.location' ? [{ branchId: branches[0]!.id!, enabled: true }] : [],
+  key, defaultEnabled: on, branchOverrides: key === 'module.location' ? [{ branchId: branches[2]!.id!, enabled: false }] : [],
   description, owner: key === 'module.microfinance' ? 'Legal' : 'Ops', reviewBy: '2027-03-31', lockedReason: key === 'module.microfinance' ? 'Reserved until MF-001 legal review is complete' : undefined,
 }));
 
@@ -696,4 +696,98 @@ export const proposals: MockProposal[] = [];
       },
     });
   });
+}
+
+// ---------- location (pure functions of user + date, built on the mock visits) ----------
+function encodePolyline(points: { lat: number; lng: number }[]): string {
+  let out = '';
+  let pLat = 0;
+  let pLng = 0;
+  const enc = (v: number) => {
+    let n = v < 0 ? ~(v << 1) : v << 1;
+    while (n >= 0x20) {
+      out += String.fromCharCode((0x20 | (n & 0x1f)) + 63);
+      n >>= 5;
+    }
+    out += String.fromCharCode(n + 63);
+  };
+  for (const p of points) {
+    const lat = Math.round(p.lat * 1e5);
+    const lng = Math.round(p.lng * 1e5);
+    enc(lat - pLat);
+    enc(lng - pLng);
+    pLat = lat;
+    pLng = lng;
+  }
+  return out;
+}
+const dayOf = (iso: string) => DateTime.fromISO(iso, { zone: ZONE }).toISODate()!;
+const visitsOn = (userId: string, date: string) => visits.filter((v) => v.row.userId === userId && dayOf(v.row.checkInAt) === date).sort((a, b) => (a.row.checkInAt < b.row.checkInAt ? -1 : 1));
+
+export function latestLocations(branchIds: string[]): S['LatestLocation'][] {
+  return staff.filter((s) => s.active && branchIds.includes(s.branchIds?.[0] ?? '')).map((s) => {
+    const h = hash(`loc:${s.id}`);
+    const b = branches.find((x) => x.id === s.branchIds?.[0])!;
+    const mine = visitsOn(s.id!, T);
+    const last = mine.findLast((v) => v.row.geo)?.row.geo;
+    const roll = h % 100;
+    const ageMin = roll < 62 ? (h >> 8) % 4 : roll < 84 ? 6 + ((h >> 8) % 20) : 40 + ((h >> 8) % 150);
+    const collected = collections.filter((c) => c.collector?.id === s.id && c.status !== 'voided' && dayOf(c.recordedAt!) === T).reduce((a, c) => a + c.amountPoisha!, 0);
+    return {
+      userId: s.id, name: s.name?.en, lat: (last?.lat ?? b.lat! + (((h >> 4) % 400) - 200) / 10_000) + ((h >> 10) % 9) / 100_000, lng: (last?.lng ?? b.lng! + (((h >> 14) % 400) - 200) / 10_000) + ((h >> 6) % 9) / 100_000,
+      accuracyM: 5 + ((h >> 3) % 40), recordedAt: isoAt(now().minus({ minutes: ageMin })), freshness: ageMin < 5 ? 'fresh' : ageMin <= 30 ? 'stale' : 'lost',
+      battery: roll % 7 === 0 ? 0.08 + ((h >> 5) % 10) / 100 : 0.3 + ((h >> 5) % 70) / 100, onBreak: roll % 11 === 0, mock: roll % 13 === 5,
+      activity: (['still', 'walking', 'on_bicycle', 'in_vehicle'] as const)[(h >> 9) % 4], todayVisits: mine.length, todayCollectedPoisha: collected,
+      trackingProvider: settings['location.trackingProvider'] === 'paid' ? 'paid' : 'free', trackingProviderFallback: settings['location.trackingProvider'] === 'paid' && roll % 9 === 0,
+    };
+  });
+}
+
+export function routeHistory(userId: string, date: string) {
+  const u = userById(userId);
+  const b = branches.find((x) => x.id === u?.branchIds?.[0]);
+  const mine = visitsOn(userId, date).filter((v) => v.row.geo);
+  const none = { polyline: '', segments: [], stops: [], events: [], summary: { distanceKm: 0, movingMin: 0, stoppedMin: 0, stopsCount: 0, customerStops: 0, gapsMin: 0, mockPoints: 0 } };
+  if (!u || !b || !mine.length) return none;
+  const h = hash(`route:${userId}:${date}`);
+  const office = { lat: b.lat!, lng: b.lng! };
+  const pts: { lat: number; lng: number }[] = [office];
+  const stops: S['Stop'][] = [];
+  const events: S['TimelineItem'][] = [];
+  let prev = office;
+  mine.forEach((v, i) => {
+    const g = { lat: v.row.geo!.lat!, lng: v.row.geo!.lng! };
+    // two bends between places so the track looks like streets rather than a straight line
+    const k = hash(`${v.row.id}`);
+    pts.push({ lat: prev.lat + (g.lat - prev.lat) * 0.35 + ((k % 9) - 4) / 20_000, lng: prev.lng + (g.lng - prev.lng) * 0.2 + (((k >> 4) % 9) - 4) / 20_000 });
+    pts.push({ lat: prev.lat + (g.lat - prev.lat) * 0.7 + (((k >> 8) % 9) - 4) / 20_000, lng: prev.lng + (g.lng - prev.lng) * 0.85 + (((k >> 12) % 9) - 4) / 20_000 });
+    pts.push(g);
+    const start = DateTime.fromISO(v.row.checkInAt, { zone: ZONE });
+    const end = v.row.checkOutAt ? DateTime.fromISO(v.row.checkOutAt, { zone: ZONE }) : start.plus({ minutes: 6 });
+    stops.push({ start: isoAt(start), end: isoAt(end), dwellMin: Math.max(1, Math.round(end.diff(start, 'minutes').minutes)), lat: g.lat, lng: g.lng, customerId: v.row.customerId, customerName: v.row.customer?.name?.bn ?? null, distanceToPinM: v.row.distanceToPinM ?? null, visitId: null });
+    events.push({ kind: 'visit', at: v.row.checkInAt, actor: { id: u.id, name: u.name?.en }, summary: { bn: `${v.row.customer?.name?.bn ?? ''}: ভিজিট`, en: `Visit: ${v.row.customer?.name?.en ?? ''}` } });
+    if (i === 1) {
+      // a tea stall: a stop that is not at any customer
+      const tea = { lat: g.lat + 0.0021, lng: g.lng - 0.0017 };
+      pts.push(tea);
+      stops.push({ start: isoAt(end.plus({ minutes: 4 })), end: isoAt(end.plus({ minutes: 4 + 9 + (h % 14) })), dwellMin: 9 + (h % 14), lat: tea.lat, lng: tea.lng, customerId: null, customerName: null, distanceToPinM: null, visitId: null });
+      prev = tea;
+    } else prev = g;
+  });
+  const first = DateTime.fromISO(mine[0]!.row.checkInAt, { zone: ZONE });
+  const lastAt = DateTime.fromISO(stops.at(-1)!.end!, { zone: ZONE });
+  const gapMin = h % 3 === 0 ? 0 : 12 + (h % 40);
+  const gapFrom = first.plus({ minutes: 35 });
+  const segments = gapMin && gapFrom.plus({ minutes: gapMin }) < lastAt
+    ? [{ from: isoAt(first.minus({ minutes: 20 })), to: isoAt(gapFrom), kind: 'moving' as const }, { from: isoAt(gapFrom), to: isoAt(gapFrom.plus({ minutes: gapMin })), kind: 'gap' as const }, { from: isoAt(gapFrom.plus({ minutes: gapMin })), to: isoAt(lastAt), kind: 'moving' as const }]
+    : [{ from: isoAt(first.minus({ minutes: 20 })), to: isoAt(lastAt), kind: 'moving' as const }];
+  const gapsMin = segments.filter((s) => s.kind === 'gap').reduce((a, s) => a + Math.round((Date.parse(s.to) - Date.parse(s.from)) / 60_000), 0);
+  let m = 0;
+  for (let i = 1; i < pts.length; i++) m += Math.hypot((pts[i]!.lat - pts[i - 1]!.lat) * 111_000, (pts[i]!.lng - pts[i - 1]!.lng) * 102_000);
+  const stoppedMin = stops.reduce((a, s) => a + (s.dwellMin ?? 0), 0);
+  const total = Math.round(lastAt.diff(first.minus({ minutes: 20 }), 'minutes').minutes);
+  return {
+    polyline: encodePolyline(pts), segments, stops, events,
+    summary: { distanceKm: Math.round(m / 100) / 10, movingMin: Math.max(0, total - stoppedMin - gapsMin), stoppedMin, stopsCount: stops.length, customerStops: stops.filter((s) => s.customerId).length, gapsMin, mockPoints: mine.filter((v) => v.row.geo?.mock).length },
+  };
 }

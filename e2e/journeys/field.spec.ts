@@ -8,12 +8,13 @@ import visitsBn from '../../src/features/visits/i18n/bn.json' with { type: 'json
 import attendanceBn from '../../src/features/attendance/i18n/bn.json' with { type: 'json' };
 import staffBn from '../../src/features/staff/i18n/bn.json' with { type: 'json' };
 import areasBn from '../../src/features/assignments/i18n/bn.json' with { type: 'json' };
+import locBn from '../../src/features/location/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
 import { confirmWithReason, login, nav } from '../fixtures';
 
-async function toggleChip(page: Page, name: string) {
+async function toggleChip(page: Page, name: string | RegExp) {
   await page.getByRole('button', { name, exact: true, pressed: false }).click();
   await expect(page.getByRole('button', { name, exact: true, pressed: true })).toBeVisible();
 }
@@ -270,4 +271,39 @@ test('areas: assign a staff member, remove an assignee and create an area', asyn
   await expect(page.getByText(areasBn.saved)).toBeVisible();
   await expect(cards).toHaveCount(before + 1);
   await expect(page.getByRole('heading', { level: 2, name: 'নতুন বাজার' })).toBeVisible();
+});
+
+test('live map: staff list with freshness, filter, expand one and jump to the route', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, locBn.live.title);
+  const list = page.getByRole('region', { name: locBn.live.list });
+  const rows = list.locator('ul > li');
+  await expect(rows.first()).toBeVisible();
+  const all = await rows.count();
+  expect(all).toBeGreaterThan(3);
+  await expect(page.locator('.leaflet-container')).toBeVisible();
+  await toggleChip(page, new RegExp(`^${locBn.freshness.fresh}`));
+  await expect(page).toHaveURL(/show=fresh/);
+  await expect.poll(() => rows.count()).toBeLessThan(all);
+  await rows.first().getByRole('button').click();
+  await expect(page).toHaveURL(/staff=/);
+  await expect(rows.first().getByText(locBn.live.collectedToday)).toBeVisible();
+  await rows.first().getByRole('link', { name: locBn.live.seeRoute }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(locBn.routes.title);
+  await expect(page).toHaveURL(/user=/);
+});
+
+test('route history: pick a staff member and a day, see summary, stops and select a stop', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, locBn.routes.title);
+  await expect(page.getByText(locBn.routes.pick)).toBeVisible();
+  await page.getByLabel(locBn.routes.staff, { exact: true }).selectOption({ index: 1 });
+  await page.getByRole('button', { name: locBn.routes.prevDay }).click();
+  await expect(page).toHaveURL(/date=\d{4}-\d{2}-\d{2}/);
+  await expect(page.getByText(locBn.routes.distance)).toBeVisible();
+  const stops = page.getByRole('region', { name: locBn.routes.stopsTitle }).locator('ol > li');
+  await expect(stops.first()).toBeVisible();
+  await stops.first().getByRole('button').click();
+  await expect(stops.first().getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.leaflet-container path').first()).toBeAttached();
 });

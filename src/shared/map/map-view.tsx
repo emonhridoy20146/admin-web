@@ -23,6 +23,12 @@ export interface MapCluster extends LatLng {
   label: string;
 }
 
+export interface MapPath {
+  points: LatLng[];
+  /** CSS variable name (design token) for the stroke */
+  token: string;
+}
+
 export interface MapViewState {
   bounds: Bounds;
   zoom: number;
@@ -33,12 +39,14 @@ export interface MapViewState {
  * coloured from design tokens, so no marker images and no extra CSP hosts beyond the tile origin.
  * The map is a visual aid; every page that uses it also lists the same items as text (keyboard / screen reader).
  */
-export function MapView({ center, zoom = 13, markers, clusters, lines, fit, onView, onMarkerClick, onClusterClick, className, label }: {
+export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fit, onView, onMarkerClick, onClusterClick, className, label }: {
   center: LatLng;
   zoom?: number;
   markers?: MapMarker[];
   clusters?: MapCluster[];
   lines?: [LatLng, LatLng][];
+  /** solid tracks (route history) drawn under the markers */
+  paths?: MapPath[];
   /** when it changes, the map fits these bounds */
   fit?: Bounds | null;
   onView?: (v: MapViewState) => void;
@@ -64,6 +72,7 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, fit, onVi
     const lf = L.current;
     if (!lf || !layer.current) return;
     layer.current.clearLayers();
+    for (const p of paths ?? []) if (p.points.length > 1) lf.polyline(p.points.map((q) => [q.lat, q.lng] as [number, number]), { color: token(p.token), weight: 4, opacity: 0.85, lineJoin: 'round' }).addTo(layer.current);
     for (const [a, b] of lines ?? []) lf.polyline([[a.lat, a.lng], [b.lat, b.lng]], { color: token('--fg-secondary'), weight: 2, dashArray: '4 6' }).addTo(layer.current);
     for (const c of clusters ?? []) {
       const size = c.count > 200 ? 46 : c.count > 50 ? 40 : 34;
@@ -117,7 +126,7 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, fit, onVi
 
   useEffect(() => {
     if (ready.current) redraw.current();
-  }, [markers, clusters, lines]);
+  }, [markers, clusters, lines, paths]);
 
   const fitKey = fit ? `${fit.minLat},${fit.minLng},${fit.maxLat},${fit.maxLng}` : '';
   useEffect(() => {

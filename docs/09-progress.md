@@ -28,6 +28,8 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 ## Phase 2 — Location
 Live map (polling, freshness), Route history (polyline, stops, scrubber, events). **Acceptance:** W-E10, W-E11; route day renders < 2 s.
 
+Status (2026-11-16): ◐ Live map at `/live` (30 s polling, freshness filter, mock GPS, low battery, break, tracking engine, link to today's route) and Route history at `/routes` (staff + day, track, numbered stops, gaps, day summary, events) are built against mocks and the live field-api endpoints. Left: time scrubber, field check against real phone data, `Stop.visitId` link when field-api fills it.
+
 ## Phase 3 — Reports
 Staff performance, branch trends, aging, promise fulfilment, attendance reports, exports center, reconciliation, data quality, saved views. **Acceptance:** W-E12; numbers match API; Bangla PDF correct.
 
@@ -41,7 +43,7 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 - Contract 1.2.0 adopted (2026-11-15): `location.trackingProvider`/`providerConfig`, `installmentPoisha`, `overduePoisha`, `areaName`, `no_location` flag, contact attempts.
 - Handovers page uses `handover.create` as its route permission: the catalog has no view-only handover key, so viewers do not see the page.
 - Contract 1.4.0/1.5.0 adopted (2026-11-15): typed visit/promise lists with customer and staff refs, from/to/outcome filters.
-- Next: devices, system health, bulk assign, then Phase 2 live location.
+- Next: devices, system health, bulk assign; Phase 2 scrubber; Phase 3 reports.
 
 ## Contract gaps reported to field-api
 All answered in contract 1.3.0 (2026-11-15):

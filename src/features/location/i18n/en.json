@@ -1,0 +1,79 @@
+{
+  "live": {
+    "title": "Live map",
+    "subtitle": "Last known position of staff on duty. Refreshes by itself every 30 seconds.",
+    "updated": "Updated {{time}}",
+    "list": "Staff positions",
+    "nStaff": "{{n}} staff",
+    "empty": "No positions right now",
+    "emptyBody": "Staff appear here once they start duty.",
+    "noMatch": "Nobody matches this filter",
+    "noPosition": "No position",
+    "mock": "Mock GPS",
+    "onBreak": "On break",
+    "battery": "Battery {{n}}%",
+    "lowBattery": "Low battery",
+    "accuracy": "Accuracy",
+    "accuracyValue": "±{{n}} m",
+    "activity": "Movement",
+    "visitsToday": "Visits today",
+    "collectedToday": "Field collected today",
+    "engine": "Tracking engine",
+    "engineFallback": "Free (paid did not start)",
+    "seeRoute": "See today's route",
+    "showOnMap": "Show {{name}} on the map",
+    "batteryLabel": "Battery"
+  },
+  "freshness": {
+    "fresh": "Live",
+    "stale": "Stale",
+    "lost": "No signal"
+  },
+  "freshnessHelp": {
+    "fresh": "Position received within 5 minutes",
+    "stale": "Position is 5 to 30 minutes old",
+    "lost": "No position for more than 30 minutes"
+  },
+  "activity": {
+    "still": "Standing still",
+    "walking": "Walking",
+    "on_bicycle": "On a bicycle",
+    "in_vehicle": "In a vehicle",
+    "unknown": "Unknown"
+  },
+  "engine": {
+    "free": "Free",
+    "paid": "Paid"
+  },
+  "routes": {
+    "title": "Route history",
+    "subtitle": "The path one staff member took on a day, where they stopped and when no position was received.",
+    "staff": "Staff member",
+    "pickStaff": "Choose staff",
+    "date": "Date",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "pick": "Choose a staff member",
+    "pickBody": "Pick a staff member and a date to see that day's route.",
+    "empty": "No positions recorded on this day",
+    "emptyBody": "The staff member may have been off duty, or tracking was off.",
+    "map": "Route of {{name}}",
+    "distance": "Distance",
+    "km": "{{n}} km",
+    "moving": "Moving",
+    "stopped": "Stopped",
+    "stops": "Stops",
+    "customerStops": "{{n}} at a customer",
+    "gaps": "Without position",
+    "mockPoints": "Mock GPS points",
+    "stopsTitle": "Where they stopped",
+    "noStops": "No stop longer than 5 minutes",
+    "otherPlace": "Other place",
+    "fromPin": "{{n}} m from the pin",
+    "showStop": "Show stop {{n}} on the map",
+    "gapsTitle": "When no position was received",
+    "eventsTitle": "Work that day",
+    "legendCustomer": "Stop at a customer",
+    "legendOther": "Stop elsewhere"
+  }
+}

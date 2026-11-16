@@ -290,6 +290,25 @@ export const handlers = [
     const status = url.searchParams.get('status');
     return HttpResponse.json(db.proposals.filter((p) => sc.includes(p.branchId)).map((p) => p.row).filter((p) => !status || p.status === status).sort((a, b) => (a.createdAt! < b.createdAt! ? 1 : -1)));
   })),
+  // ---------- live location & route history ----------
+  http.get(`${BASE}/location/latest`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'location.view');
+    if (deny) return deny;
+    return HttpResponse.json(db.latestLocations(scope(ctx, url)));
+  })),
+  http.get(`${BASE}/location/history`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'location.history.view');
+    if (deny) return deny;
+    const userId = url.searchParams.get('userId');
+    const date = url.searchParams.get('date');
+    if (!userId || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return problem(400, 'VALIDATION_FAILED', 'userId and date (YYYY-MM-DD) are required');
+    return HttpResponse.json(db.routeHistory(userId, date));
+  })),
+  http.get(`${BASE}/location/stops`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'location.history.view');
+    if (deny) return deny;
+    return HttpResponse.json(db.routeHistory(url.searchParams.get('userId') ?? '', url.searchParams.get('date') ?? '').stops);
+  })),
   http.post(`${BASE}/location-proposals/:id/decision`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'customer.location.approve');
     if (deny) return deny;
