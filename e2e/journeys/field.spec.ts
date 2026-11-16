@@ -9,6 +9,7 @@ import attendanceBn from '../../src/features/attendance/i18n/bn.json' with { typ
 import staffBn from '../../src/features/staff/i18n/bn.json' with { type: 'json' };
 import areasBn from '../../src/features/assignments/i18n/bn.json' with { type: 'json' };
 import locBn from '../../src/features/location/i18n/bn.json' with { type: 'json' };
+import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
@@ -306,4 +307,31 @@ test('route history: pick a staff member and a day, see summary, stops and selec
   await stops.first().getByRole('button').click();
   await expect(stops.first().getByRole('button')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.leaflet-container path').first()).toBeAttached();
+});
+
+test('W-E12 reports: trends by range, reconciliation for a past day, build and download an export', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, repBn.title);
+  await expect(page.getByText(repBn.trends.overdueTotal)).toBeVisible();
+  await expect(page.locator('.recharts-bar-rectangle path').first()).toBeAttached();
+  await page.getByRole('button', { name: repBn.range['7d'], exact: true }).click();
+  await expect(page).toHaveURL(/range=7d/);
+  await page.getByRole('button', { name: commonBn.chart.showTable }).click();
+  await expect(page.locator('tbody tr')).toHaveCount(7);
+
+  await page.getByRole('button', { name: repBn.tabs.reconciliation, exact: true }).click();
+  await expect(page).toHaveURL(/tab=reconciliation/);
+  await page.getByRole('button', { name: repBn.recon.prevDay }).click();
+  await expect(page.getByText(repBn.recon.unbalanced, { exact: true })).toBeVisible();
+  await expect(page.locator('tbody tr').filter({ hasText: repBn.recon.kind.amount_differs })).toHaveCount(1);
+
+  await page.getByRole('button', { name: repBn.tabs.exports, exact: true }).click();
+  await page.getByLabel(repBn.exports.from).fill('2026-01-01');
+  await page.getByRole('button', { name: repBn.exports.create }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'সর্বোচ্চ' })).toBeVisible();
+  await page.getByLabel(repBn.exports.type).selectOption('cash_positions');
+  await page.getByRole('button', { name: repBn.exports.create }).click();
+  const link = page.getByRole('link', { name: new RegExp(repBn.exports.download) });
+  await expect(link).toBeVisible({ timeout: 15_000 });
+  await expect(link).toHaveAttribute('href', /cash_positions\.xlsx$/);
 });

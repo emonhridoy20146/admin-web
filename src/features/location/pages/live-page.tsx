@@ -78,8 +78,8 @@ export function LivePage() {
         actions={
           <div className="flex items-center gap-3">
             <span className="tabular text-sm text-fg-secondary" aria-live="polite">{q.dataUpdatedAt ? t('live.updated', { time: formatTime(new Date(q.dataUpdatedAt)) }) : ''}</span>
-            <Button onClick={() => q.refetch()} loading={q.isFetching && !q.isLoading}>
-              {!(q.isFetching && !q.isLoading) && <RefreshCw className="size-4" aria-hidden />}
+            <Button onClick={() => q.refetch()} aria-busy={q.isFetching}>
+              <RefreshCw className={cn('size-4', q.isFetching && 'animate-spin')} aria-hidden />
               {tc('actions.refresh')}
             </Button>
           </div>

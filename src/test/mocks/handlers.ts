@@ -115,6 +115,8 @@ function recomputeCustomer(c: db.MockCustomer) {
   c.detail.badges = c.item.badges;
 }
 
+const exportJobs = new Map<string, { at: number; type: string; format: string }>();
+
 export const handlers = [
   http.post(`${BASE}/auth/login`, async ({ request }) => {
     await lag();
@@ -961,6 +963,109 @@ export const handlers = [
     rows.sort((a, b) => (b.collectedPoisha?.total ?? 0) - (a.collectedPoisha?.total ?? 0));
     return HttpResponse.json(rows);
   })),
+  http.get(`${BASE}/reports/branch-trends`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'report.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const from = url.searchParams.get('from') ?? '';
+    const to = url.searchParams.get('to') ?? '';
+    const granularity = (url.searchParams.get('granularity') ?? 'day') as 'day' | 'week' | 'month';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to || to > db.today()) return problem(400, 'VALIDATION_FAILED', 'from and to must be dates, ending today or earlier');
+    const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const next = (d: string, n = 1) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+    // weeks start on Saturday
+    const bucket = (d: string) => (granularity === 'month' ? d.slice(0, 7) : granularity === 'week' ? next(d, -((new Date(`${d}T00:00:00Z`).getUTCDay() + 1) % 7)) : d);
+    const rows = new Map<string, { period: string; totalPoisha: number; cashPoisha: number; mobilePoisha: number; count: number; visits: number }>();
+    for (let d = from; d <= to; d = next(d)) if (!rows.has(bucket(d))) rows.set(bucket(d), { period: bucket(d), totalPoisha: 0, cashPoisha: 0, mobilePoisha: 0, count: 0, visits: 0 });
+    for (const c of db.collections) {
+      const d = day(c.recordedAt!);
+      if (c.status === 'voided' || d < from || d > to || !sc.includes(db.collectionBranch(c) ?? '')) continue;
+      const r = rows.get(bucket(d))!;
+      r.totalPoisha += c.amountPoisha!;
+      r.count++;
+      if (c.method === 'cash') r.cashPoisha += c.amountPoisha!;
+      else r.mobilePoisha += c.amountPoisha!;
+    }
+    for (const v of db.visits) {
+      const d = day(v.row.checkInAt);
+      if (d >= from && d <= to && sc.includes(v.branchId)) rows.get(bucket(d))!.visits++;
+    }
+    const base = db.customers.filter((c) => sc.includes(c.branchId) && (c.item.daysOverdue ?? 0) > 0);
+    const snap = (keep: (i: number) => boolean) => {
+      const b = { d1_30: { count: 0, amountPoisha: 0 }, d31_60: { count: 0, amountPoisha: 0 }, d61_90: { count: 0, amountPoisha: 0 }, d90p: { count: 0, amountPoisha: 0 } };
+      base.forEach((c, i) => {
+        if (!keep(i)) return;
+        const days = c.item.daysOverdue ?? 0;
+        const k = days <= 30 ? 'd1_30' : days <= 60 ? 'd31_60' : days <= 90 ? 'd61_90' : 'd90p';
+        b[k].count++;
+        b[k].amountPoisha += c.item.overduePoisha ?? 0;
+      });
+      const all = Object.values(b);
+      return { buckets: b, totalOverdue: { count: all.reduce((a, x) => a + x.count, 0), amountPoisha: all.reduce((a, x) => a + x.amountPoisha, 0) } };
+    };
+    const bad = db.customers.filter((c) => sc.includes(c.branchId) && c.item.badges?.includes('bad_suggested')).length;
+    const tagged = db.customers.filter((c) => sc.includes(c.branchId) && c.item.badges?.includes('tagged_bad')).length;
+    // snapshots exist for the last 20 nights only; older days have none (the UI must cope)
+    const overdue = [];
+    for (let d = from, i = 0; d <= to; d = next(d), i++) {
+      const age = Math.round((Date.parse(to) - Date.parse(d)) / 86_400_000);
+      if (age > 20) continue;
+      overdue.push({ date: d, ...snap((n) => age === 0 || (n * 7 + age) % 23 !== 0), badSuggested: bad, tagged });
+    }
+    return HttpResponse.json({ from, to, granularity, collection: [...rows.values()], overdue });
+  })),
+  http.get(`${BASE}/reports/reconciliation`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'report.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const date = url.searchParams.get('date') ?? '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return problem(400, 'VALIDATION_FAILED', 'date is required');
+    const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const mine = db.collections.filter((c) => day(c.recordedAt!) === date && sc.includes(db.collectionBranch(c) ?? ''));
+    const posted = mine.filter((c) => c.status === 'posted');
+    const waiting = mine.filter((c) => ['received', 'posting', 'posting_failed', 'conflict'].includes(c.status!));
+    const who = (c: S['Collection']) => ({ collectionId: c.id ?? null, receiptNo: c.receiptNo ?? null, status: c.status ?? null, customer: c.customer ? { id: c.customer.id, name: c.customer.name?.bn, code: c.customer.code } : null, collector: c.collector ? { id: c.collector.id, name: c.collector.name } : null });
+    const mismatches: NonNullable<S['ReconciliationReport']['mismatches']> = waiting.map((c) => ({ kind: 'not_posted' as const, ...who(c), erpPaymentId: null, fosAmountPoisha: c.amountPoisha ?? null, erpAmountPoisha: null }));
+    let erpPoisha = posted.reduce((a, c) => a + c.amountPoisha!, 0);
+    let erpCount = posted.length;
+    let matched = posted.length;
+    // older days carry one amount difference and one voided receipt so the table has something to show
+    if (date < db.today() && posted.length > 2) {
+      const a = posted[0]!;
+      mismatches.push({ kind: 'amount_differs', ...who(a), erpPaymentId: 'PAY-90412', fosAmountPoisha: a.amountPoisha ?? null, erpAmountPoisha: a.amountPoisha! - 50_000 });
+      erpPoisha -= 50_000;
+      matched--;
+      const b = posted[1]!;
+      mismatches.push({ kind: 'missing_in_erp', ...who(b), erpPaymentId: null, fosAmountPoisha: b.amountPoisha ?? null, erpAmountPoisha: null });
+      erpPoisha -= b.amountPoisha!;
+      erpCount--;
+      matched--;
+    }
+    mine.filter((c) => c.status === 'voided').forEach((c) => mismatches.push({ kind: 'voided_in_fos', ...who(c), erpPaymentId: null, fosAmountPoisha: c.amountPoisha ?? null, erpAmountPoisha: null }));
+    return HttpResponse.json({
+      date, balanced: mismatches.length === 0, erpFetchedAt: erpCount ? new Date(Date.now() - 4 * 60_000).toISOString() : null,
+      totals: { fosPostedCount: posted.length, fosPostedPoisha: posted.reduce((a, c) => a + c.amountPoisha!, 0), fosWaitingCount: waiting.length, fosWaitingPoisha: waiting.reduce((a, c) => a + c.amountPoisha!, 0), erpCount, erpPoisha, matchedCount: matched },
+      mismatches,
+    });
+  })),
+  http.post(`${BASE}/reports/exports`, authed(async ({ ctx, request }) => {
+    const deny = need(ctx, 'report.export');
+    if (deny) return deny;
+    const b = (await request.json()) as { type?: string; format?: string };
+    if (b.format === 'pdf') return problem(422, 'BUSINESS_RULE', 'export_format_unavailable');
+    if (b.type === 'audit') return problem(422, 'BUSINESS_RULE', 'export_type_unavailable');
+    const id = db.oid('6795');
+    exportJobs.set(id, { at: Date.now(), type: b.type ?? 'export', format: b.format ?? 'csv' });
+    return HttpResponse.json({ id, status: 'queued' }, { status: 202 });
+  })),
+  http.get(`${BASE}/reports/exports/:id`, authed(({ params }) => {
+    const j = exportJobs.get(String(params.id));
+    if (!j) return problem(404, 'NOT_FOUND', 'Export not found');
+    const age = Date.now() - j.at;
+    const status = age < 1500 ? 'queued' : age < 4000 ? 'running' : 'ready';
+    return HttpResponse.json({ id: params.id, status, ...(status === 'ready' ? { downloadUrl: `${BASE}/mock-download/${String(params.id)}/${j.type}.${j.format}` } : {}) });
+  })),
+  http.get(`${BASE}/mock-download/:id/:file`, ({ params }) => new HttpResponse('﻿demo,export\n1,2\n', { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${String(params.file)}"` } })),
   http.get(`${BASE}/search`, authed(({ ctx, url }) => {
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     if (q.length < 2) return problem(400, 'VALIDATION_FAILED', 'Query too short');

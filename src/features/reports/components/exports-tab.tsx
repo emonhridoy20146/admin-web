@@ -1,0 +1,137 @@
+'use client';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { useUi, useBranchId } from '@/shared/lib/ui-store';
+import { useCan } from '@/shared/auth/session';
+import { formatDate, formatMonth, formatNumber } from '@/shared/lib/format';
+import { addDays, todayDhaka } from '@/shared/lib/time';
+import { Card, CardHeader } from '@/shared/ui/card';
+import { EmptyState, ErrorBanner } from '@/shared/ui/feedback';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Field, Input, Select } from '@/shared/ui/form';
+import { useCreateExport, useExportJob } from '../api/reports';
+import { EXPORT_FORMATS, EXPORT_TYPES, exportBody, MAX_DAYS, needsPeriod, needsRange, validateExport, type ExportForm } from '../model/reports';
+
+interface Job {
+  id: string;
+  name: string;
+  detail: string;
+}
+
+export function ExportsTab() {
+  const { t } = useTranslation('reports');
+  const locale = useUi((s) => s.locale);
+  useUi((s) => s.bnDigits);
+  const branchId = useBranchId();
+  const can = useCan('report.export');
+  const today = todayDhaka();
+  const create = useCreateExport();
+  const [f, setF] = useState<ExportForm>({ type: 'collections', format: 'xlsx', from: addDays(today, -29), to: today, period: 'monthly', date: today });
+  const [tried, setTried] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const set = <K extends keyof ExportForm>(k: K, v: ExportForm[K]) => setF((s) => ({ ...s, [k]: v }));
+  const err = validateExport(f, today);
+  const max = MAX_DAYS[f.type];
+
+  if (!can) return <Card><EmptyState icon={FileSpreadsheet} title={t('exports.noPermission')} /></Card>;
+
+  const submit = () => {
+    setTried(true);
+    if (err) return;
+    const name = `${t(`exports.types.${f.type}`)} · ${t(`exports.formats.${f.format}`)}`;
+    const detail = needsRange(f.type) ? t('exports.rangeLabel', { from: formatDate(f.from, { withYear: true }), to: formatDate(f.to, { withYear: true }) }) : needsPeriod(f.type) ? (f.period === 'monthly' ? formatMonth(f.date.slice(0, 7)) : formatDate(f.date, { withYear: true })) : '';
+    create.mutate(exportBody(f, branchId, locale), { onSuccess: (r) => r.id && (setJobs((j) => [{ id: r.id!, name, detail }, ...j]), setTried(false)) });
+  };
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <Card>
+        <form className="space-y-4 p-4" noValidate onSubmit={(e) => (e.preventDefault(), submit())}>
+          <p className="text-sm text-fg-secondary">{t('exports.intro')}</p>
+          <Field label={t('exports.type')}>
+            {(id) => (
+              <Select id={id} value={f.type} onChange={(e) => set('type', e.target.value as ExportForm['type'])}>
+                {EXPORT_TYPES.map((x) => <option key={x} value={x}>{t(`exports.types.${x}`)}</option>)}
+              </Select>
+            )}
+          </Field>
+          {needsRange(f.type) && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t('exports.from')} help={max ? t('exports.maxDays', { n: formatNumber(max) }) : undefined}>
+                {(id, d) => <Input id={id} aria-describedby={d} type="date" max={today} value={f.from} onChange={(e) => e.target.value && set('from', e.target.value)} />}
+              </Field>
+              <Field label={t('exports.to')}>
+                {(id) => <Input id={id} type="date" max={today} value={f.to} onChange={(e) => e.target.value && set('to', e.target.value)} />}
+              </Field>
+            </div>
+          )}
+          {needsPeriod(f.type) && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t('exports.period')}>
+                {(id) => (
+                  <Select id={id} value={f.period} onChange={(e) => set('period', e.target.value as ExportForm['period'])}>
+                    <option value="monthly">{t('exports.periods.monthly')}</option>
+                    <option value="daily">{t('exports.periods.daily')}</option>
+                  </Select>
+                )}
+              </Field>
+              <Field label={t('exports.date')}>
+                {(id) => <Input id={id} type="date" max={today} value={f.date} onChange={(e) => e.target.value && set('date', e.target.value)} />}
+              </Field>
+            </div>
+          )}
+          <Field label={t('exports.format')}>
+            {(id) => (
+              <Select id={id} value={f.format} onChange={(e) => set('format', e.target.value as ExportForm['format'])}>
+                {EXPORT_FORMATS.map((x) => <option key={x} value={x}>{t(`exports.formats.${x}`)}</option>)}
+              </Select>
+            )}
+          </Field>
+          <p className="text-xs text-fg-tertiary">{t('exports.scope')}</p>
+          {tried && err ? <p role="alert" className="text-sm text-danger">{t(`exports.errors.${err}`, { n: formatNumber(max ?? 0) })}</p> : null}
+          {create.error ? <ErrorBanner error={create.error} /> : null}
+          <Button type="submit" variant="primary" loading={create.isPending}>
+            {!create.isPending && <FileSpreadsheet className="size-4" aria-hidden />}
+            {t('exports.create')}
+          </Button>
+        </form>
+      </Card>
+
+      <Card>
+        <CardHeader title={t('exports.jobs')} subtitle={t('exports.linkNote')} />
+        {!jobs.length ? (
+          <p className="px-4 py-12 text-center text-sm text-fg-tertiary">{t('exports.jobsEmpty')}</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {jobs.map((j) => <JobRow key={j.id} job={j} />)}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function JobRow({ job }: { job: Job }) {
+  const { t } = useTranslation('reports');
+  const q = useExportJob(job.id);
+  const status = q.data?.status ?? 'queued';
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-fg">{job.name}</p>
+        {job.detail ? <p className="tabular text-xs text-fg-secondary">{job.detail}</p> : null}
+      </div>
+      <div className="flex items-center gap-3" aria-live="polite">
+        {status === 'ready' ? <Badge tone="success" icon={CircleCheck}>{t('exports.status.ready')}</Badge> : status === 'failed' || q.error ? <Badge tone="danger" icon={CircleAlert}>{t('exports.status.failed')}</Badge> : <Badge tone="info" icon={Loader2}>{t(`exports.status.${status}`)}</Badge>}
+        {status === 'ready' && q.data?.downloadUrl ? (
+          <a href={q.data.downloadUrl} download rel="noopener" aria-label={t('exports.downloadOf', { name: job.name })} className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-primary px-3 text-sm font-medium text-primary-fg hover:bg-primary-hover [@media(pointer:coarse)]:h-11">
+            <Download className="size-4" aria-hidden />
+            {t('exports.download')}
+          </a>
+        ) : null}
+      </div>
+    </li>
+  );
+}

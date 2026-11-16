@@ -26,8 +26,9 @@ import { assignmentsManifest } from '@/features/assignments';
 import { locationManifest } from '@/features/location';
 import { adminDevicesManifest } from '@/features/admin-devices';
 import { systemManifest } from '@/features/system';
+import { reportsManifest } from '@/features/reports';
 
-export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, assignmentsManifest, locationManifest, handoversManifest, staffManifest, attendanceManifest, adminUsersManifest, adminDevicesManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, systemManifest, auditManifest];
+export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, assignmentsManifest, locationManifest, handoversManifest, staffManifest, attendanceManifest, reportsManifest, adminUsersManifest, adminDevicesManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, systemManifest, auditManifest];
 
 registerFeatures(features);
 

@@ -67,8 +67,8 @@ export function SystemPage() {
       <PageHeader
         title={t('title')}
         actions={
-          <Button onClick={() => (void health.refetch(), void erp.refetch(), void sync.refetch())} loading={busy}>
-            {!busy && <RefreshCw className="size-4" aria-hidden />}
+          <Button onClick={() => (void health.refetch(), void erp.refetch(), void sync.refetch())} aria-busy={busy}>
+            <RefreshCw className={cn('size-4', busy && 'animate-spin')} aria-hidden />
             {tc('actions.refresh')}
           </Button>
         }

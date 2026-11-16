@@ -1,0 +1,128 @@
+{
+  "title": "Reports",
+  "subtitle": "Branch collection trends, reconciliation with the ERP and file downloads.",
+  "tabs": {
+    "label": "Report type",
+    "trends": "Branch trends",
+    "reconciliation": "ERP reconciliation",
+    "exports": "Downloads"
+  },
+  "range": {
+    "label": "Period",
+    "7d": "7 days",
+    "30d": "30 days",
+    "90d": "90 days"
+  },
+  "trends": {
+    "collected": "Field collected",
+    "collectedHelp": "Money recorded in the staff app, not the ERP ledger",
+    "cash": "Cash",
+    "mobile": "Mobile banking",
+    "count": "Receipts",
+    "visits": "Visits",
+    "chartTitle": "Field collections by day",
+    "chartTitleWeek": "Field collections by week",
+    "chartSub": "Click a bar to open that day's collections",
+    "chartSubWeek": "Each bar is one week starting on Saturday",
+    "weekOf": "Week from {{date}}",
+    "period": "Period",
+    "sub": "{{receipts}} receipts, {{visits}} visits",
+    "empty": "No collections in this period",
+    "overdueTitle": "Overdue aging (ERP)",
+    "overdueSub": "ERP figures as of {{date}}. Not an official balance.",
+    "overdueTotal": "Total overdue",
+    "customers": "{{n}} customers",
+    "changeUp": "Up {{amount}} since {{date}}",
+    "changeDown": "Down {{amount}} since {{date}}",
+    "changeNone": "Unchanged since {{date}}",
+    "bucket": {
+      "d1_30": "1 to 30 days",
+      "d31_60": "31 to 60 days",
+      "d61_90": "61 to 90 days",
+      "d90p": "Over 90 days"
+    },
+    "badSuggested": "Suggested as bad customers",
+    "tagged": "Tagged as bad",
+    "noOverdue": "No overdue snapshot has been stored for this period yet"
+  },
+  "recon": {
+    "date": "Date",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "balanced": "Balanced",
+    "unbalanced": "Does not balance",
+    "fosPosted": "Field collections posted to the ERP",
+    "fosWaiting": "Field collections not posted yet",
+    "erp": "What the ERP reports",
+    "erpAsOf": "Fetched from the ERP {{time}}",
+    "erpNone": "The ERP reported no field payment for this day",
+    "matched": "Matched",
+    "nReceipts": "{{n}} receipts",
+    "gap": "Gap between posted field collections and the ERP",
+    "gapNone": "No gap",
+    "mismatches": "What does not match",
+    "none": "Everything matches for this day",
+    "kind": {
+      "not_posted": "Not posted",
+      "missing_in_erp": "Missing in ERP",
+      "missing_in_fos": "Missing in field records",
+      "amount_differs": "Amount differs",
+      "reversed_in_erp": "Reversed in ERP",
+      "voided_in_fos": "Voided in the field"
+    },
+    "col": {
+      "kind": "Problem",
+      "receipt": "Receipt",
+      "customer": "Customer",
+      "collector": "Staff",
+      "fos": "Field amount",
+      "erp": "ERP amount",
+      "diff": "Difference"
+    }
+  },
+  "exports": {
+    "intro": "A file takes about a minute to build. It is kept for 7 days and only you can see it.",
+    "noPermission": "You do not have permission to download files.",
+    "type": "Data",
+    "types": {
+      "collections": "Collections",
+      "staff_performance": "Staff performance",
+      "attendance": "Attendance",
+      "overdue_customers": "Overdue customers",
+      "cash_positions": "Cash on hand"
+    },
+    "format": "File type",
+    "formats": {
+      "xlsx": "Excel (.xlsx)",
+      "csv": "CSV"
+    },
+    "from": "From",
+    "to": "To",
+    "period": "Period type",
+    "periods": {
+      "daily": "One day",
+      "monthly": "Whole month"
+    },
+    "date": "Date",
+    "maxDays": "At most {{n}} days",
+    "scope": "The file covers the branch that is selected now.",
+    "create": "Build file",
+    "errors": {
+      "order": "The start date cannot be after the end date",
+      "future": "A future date is not allowed",
+      "tooLong": "This data allows at most {{n}} days"
+    },
+    "jobs": "Files built in this session",
+    "jobsEmpty": "You have not built a file yet",
+    "status": {
+      "queued": "Queued",
+      "running": "Building",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "download": "Download",
+    "downloadOf": "Download {{name}}",
+    "linkNote": "A download link works for 5 minutes",
+    "rangeLabel": "{{from}} to {{to}}"
+  }
+}
