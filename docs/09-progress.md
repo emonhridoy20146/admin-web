@@ -19,6 +19,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Customers list/detail/map, tags, data freshness, pin approvals | ☑ (map lives at `/map` and approvals at `/pin-approvals`, because `/customers/<x>/` is rewritten to the detail page) |
 | Collections, Conflicts resolution, Cash & deposits | ☑ (refund proof photo upload done) |
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
+| Co-work: sessions, joint visits, single/joint stats and credit (FR-CW-004/005) | ☑ |
 | Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals are Phase 4; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |
 | Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas and area assignments done at `/areas`; bulk customer assign and drawing an area on the map later |
 | Devices, System health (ERP, outbox, sync health) | ☐ |
@@ -48,9 +49,10 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 - Devices (`/admin/devices`) and System health (`/admin/system`) done 2026-11-16.
 - Contract note: `Device` has `userId` only (names are joined from `/users`); `DeviceSyncState.userName` is present.
 - Attendance photos (drawer per staff/day, no-photo badge) and the two selfie settings done 2026-11-16 on contract 1.8.0. Settings are edited globally only; per-branch overrides of settings have no UI yet.
-- Requested 2026-11-16, waiting for the field-api contract: co-work visits (joint visits by two or more staff), per-user single vs co-work statistics, effect on targets and performance.
+- Co-work admin side done 2026-11-16 on contract 1.9.1 (field-api `main`): `/cowork` sessions, single/joint visit filter and partners on visits, single/joint/credit on staff, two settings. The invite/accept flow itself is staff-app work.
 - Bulk assign from the customers list and the CI workflow done 2026-11-16. Contract 1.7.1 adopted (plain-array location proposals, audit export).
-- Next: co-work (contract 1.9.0), mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
+- Refund proof photo upload done 2026-11-16 (`proofMediaId`, presigned upload).
+- Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api
 All answered in contract 1.3.0 (2026-11-15):

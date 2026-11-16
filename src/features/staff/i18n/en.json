@@ -9,7 +9,7 @@
   "sort": {
     "label": "Sort",
     "collected": "By collected",
-    "visits": "By visits",
+    "visits": "By visit credit",
     "promises": "By promises kept",
     "name": "By name"
   },
@@ -29,7 +29,8 @@
     "promises": "Promises",
     "days": "Days present",
     "late": "Late",
-    "field": "Field time"
+    "field": "Field time",
+    "credit": "Visit credit"
   },
   "ofTarget": "{{pct}} of target",
   "targetLine": "{{pct}} of the {{target}} target",
@@ -47,7 +48,17 @@
   "link": {
     "collections": "Collections by this staff member",
     "visits": "Visits by this staff member",
-    "attendance": "Attendance this month"
+    "attendance": "Attendance this month",
+    "jointVisits": "This person's joint visits",
+    "sessions": "Who they worked with"
   },
-  "empty": "No active field staff in this branch"
+  "empty": "No active field staff in this branch",
+  "cowork": {
+    "title": "Single and joint visits",
+    "single": "Single",
+    "joint": "Joint",
+    "split": "single {{solo}} · joint {{joint}}",
+    "weight": "{{pct}} per joint visit",
+    "note": "Everyone in a co-work group gets credit for a joint visit, and targets use this credit. Collected money is never shared: it counts only for the person who took it."
+  }
 }

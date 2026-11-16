@@ -463,7 +463,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -497,7 +497,7 @@ export const settings: Record<string, unknown> = {
   'cash.limitPoisha': 5_000_000, 'cash.limitMode': 'warn', 'cash.warnAtRatio': 0.8,
   'location.trackingProvider': 'free', 'location.providerConfig': {}, 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
   'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
-  'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'app.minVersion': '1.0.0',
+  'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
   'map.tileProvider': 'protomaps-bd',
 };
 
@@ -625,6 +625,71 @@ for (let d = 0; d < 30; d++) {
   }
 }
 visits.sort((a, b) => (a.row.checkInAt < b.row.checkInAt ? 1 : -1));
+
+// ---------- co-work (FR-CW, contract 1.9.0): own generator so the sequences above stay as they were ----------
+let lcg3 = 20261116;
+const r3 = () => ((lcg3 = (lcg3 * 1664525 + 1013904223) >>> 0), lcg3 / 4294967296);
+const i3 = (a: number, b: number) => a + Math.floor(r3() * (b - a + 1));
+export const coworkSessions: S['CoworkSession'][] = [];
+for (const b of branches) {
+  const team = fieldStaffOf(b.id!);
+  for (let d = 0; d < 21; d++) {
+    const used = new Set<string>();
+    const groups = d === 0 ? 2 : i3(0, 2);
+    for (let g = 0; g < groups; g++) {
+      const free = team.filter((x) => !used.has(x.id!));
+      if (free.length < 2) break;
+      const size = Math.min(free.length, r3() < 0.7 ? 2 : 3);
+      const picked = [...free].sort(() => r3() - 0.5).slice(0, size);
+      picked.forEach((x) => used.add(x.id!));
+      const start = now().startOf('day').minus({ days: d }).plus({ hours: 9, minutes: 30 + i3(0, 90) });
+      if (start > now()) continue;
+      const creator = picked[0]!;
+      const members: S['CoworkMember'][] = [{ userId: creator.id, name: creator.name?.en, status: 'accepted', invitedBy: creator.id, invitedAt: isoAt(start), respondedAt: isoAt(start), leftAt: null }];
+      for (const x of picked.slice(1)) {
+        const at = start.plus({ minutes: i3(1, 12) });
+        const answered = at <= now();
+        members.push({ userId: x.id, name: x.name?.en, status: answered ? 'accepted' : 'invited', invitedBy: creator.id, invitedAt: isoAt(start), respondedAt: answered ? isoAt(at) : null, leftAt: null });
+      }
+      const extra = team.find((x) => !used.has(x.id!));
+      if (extra && r3() < 0.35) {
+        used.add(extra.id!);
+        members.push({ userId: extra.id, name: extra.name?.en, status: 'rejected', invitedBy: creator.id, invitedAt: isoAt(start), respondedAt: isoAt(start.plus({ minutes: i3(2, 20) })), leftAt: null });
+      }
+      const midnight = now().startOf('day').minus({ days: d - 1 });
+      let endedAt: string | null = d === 0 ? null : isoAt(midnight);
+      const leaver = members.filter((m) => m.status === 'accepted' && m.userId !== creator.id).at(-1);
+      if (leaver && d > 0 && r3() < 0.3) {
+        leaver.status = 'left';
+        leaver.leftAt = isoAt(start.plus({ minutes: i3(90, 240) }));
+        // a pair breaks up when one leaves: the group ends then
+        if (members.filter((m) => m.status === 'accepted').length < 2) endedAt = leaver.leftAt;
+      }
+      coworkSessions.push({
+        id: oid('6790'), businessDate: start.toISODate()!, branchId: b.id, status: d === 0 ? 'open' : 'ended', createdBy: creator.id,
+        note: r3() < 0.3 ? 'বড় বকেয়া এলাকায় একসাথে' : null, members, createdAt: isoAt(start), endedAt,
+      });
+    }
+  }
+}
+// FR-CW-003: a member's visits while in the group are joint, with the others in the group at check-in as partners
+const inGroup = (m: S['CoworkMember'], at: string, end: string | null) => (m.status === 'accepted' || m.status === 'left') && !!m.respondedAt && m.respondedAt <= at && (!m.leftAt || at < m.leftAt) && (!end || at < end);
+for (const cs of coworkSessions) {
+  for (const v of visits) {
+    const m = cs.members.find((x) => x.userId === v.row.userId);
+    if (!m || !inGroup(m, v.row.checkInAt, cs.endedAt ?? null)) continue;
+    const partners = cs.members.filter((x) => x.userId !== m.userId && inGroup(x, v.row.checkInAt, cs.endedAt ?? null));
+    if (!partners.length) continue;
+    v.row.coWorkSessionId = cs.id;
+    v.row.coWork = { sessionId: cs.id, participantIds: partners.map((x) => x.userId!), participants: partners.map((x) => ({ id: x.userId, name: x.name })) };
+  }
+}
+// two visits that claimed co-work the server could not confirm (kept as single, flagged)
+for (const d of [0, 1]) {
+  const day = now().startOf('day').minus({ days: d }).toISODate()!;
+  const v = visits.find((x) => !x.row.coWork && DateTime.fromISO(x.row.checkInAt).setZone(ZONE).toISODate() === day);
+  if (v) v.row.flags = [...(v.row.flags ?? []), 'cowork_invalid'];
+}
 
 // ---------- attendance (pure function of user + date, plus manager corrections) ----------
 export const attendanceCorrections = new Map<string, { type: string; at: string }[]>();

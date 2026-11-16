@@ -17,6 +17,7 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | Assignments | FR-ASG-001…005 | Assignments & areas, Map |
 | Handovers | FR-HO-001, 003, 004, 006, 007 | Handovers |
 | Visits/notes/promises | FR-VIS-004, FR-CUS-006, FR-NOTE-001, FR-PRM-001, 004 | Customer detail, Visits, Promises |
+| Co-work | FR-CW-004, 005 | Co-work, Visits (single/joint filter, partners), Staff (single/joint/credit), Settings |
 | Attendance | FR-ATT-004, 006, 008 | Attendance |
 | Location | FR-LOC-006, 007, 012 | Live map, Route history |
 | Notifications | FR-NOT-002, 003, 005 | Bell, Broadcasts |

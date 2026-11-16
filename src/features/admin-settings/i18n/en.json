@@ -30,6 +30,10 @@
       "title": "Attendance",
       "desc": "Proof required when staff start work."
     },
+    "cowork": {
+      "title": "Co-work",
+      "desc": "How visits count when several staff work together in the field. Collected money is never shared."
+    },
     "app": {
       "title": "Staff app",
       "desc": "Older app versions are asked to update before they can sync."
@@ -135,6 +139,14 @@
     "attendance.selfieEvents": {
       "label": "When a photo is needed",
       "help": "Pick any of work start, break, back to work and work end."
+    },
+    "cowork.visitCredit": {
+      "label": "Credit for a joint visit",
+      "help": "How much one joint visit counts towards each participant's visit target. 100% is a full visit, 50% half, 0% none (it still shows in reports). Branches can have their own value on the server."
+    },
+    "cowork.maxMembers": {
+      "label": "Largest co-work group",
+      "help": "Including the person who asks. People who have not answered yet count too."
     }
   },
   "units": {
@@ -143,7 +155,8 @@
     "days": "days",
     "m": "m",
     "pct": "%",
-    "taka": "৳"
+    "taka": "৳",
+    "people": "people"
   },
   "enum": {
     "warn": "Warn only",
@@ -174,7 +187,8 @@
     "required": "Required.",
     "shiftOrder": "Must be after the shift start.",
     "slowFast": "Must be at least the moving interval.",
-    "selfieEvents": "Pick at least one moment while photos are required."
+    "selfieEvents": "Pick at least one moment while photos are required.",
+    "ratio0": "Between 0 and 100."
   },
   "changed_one": "{{n}} unsaved change",
   "changed_other": "{{n}} unsaved changes",

@@ -25,6 +25,16 @@ describe('settings schema', () => {
     expect(diff(current, { 'cash.limitPoisha': '60000', 'duty.weeklyOff': [6, 5] }).changes).toEqual({ 'cash.limitPoisha': 6_000_000, 'duty.weeklyOff': [5, 6] });
   });
 
+  it('lets the joint-visit credit go down to 0 % while other shares start at 1 % (FR-CW-005)', () => {
+    expect(parse(field('cowork.visitCredit'), '0')).toEqual({ value: 0 });
+    expect(parse(field('cowork.visitCredit'), '৫০')).toEqual({ value: 0.5 });
+    expect(parse(field('cowork.visitCredit'), '101')).toEqual({ error: 'errors.ratio0' });
+    expect(toDraft(field('cowork.visitCredit'), 1)).toBe('100');
+    expect(parse(field('cash.warnAtRatio'), '0')).toEqual({ error: 'errors.ratio' });
+    expect(parse(field('cowork.maxMembers'), '1')).toEqual({ error: 'errors.range' });
+    expect(parse(field('cowork.maxMembers'), '5')).toEqual({ value: 5 });
+  });
+
   it('applies cross-field rules', () => {
     expect(diff(current, { 'duty.shiftEnd': '08:00' }).errors).toEqual({ 'duty.shiftEnd': 'errors.shiftOrder' });
     expect(diff(current, { 'location.fastSec': '60' }).errors).toEqual({ 'location.slowSec': 'errors.slowFast' });

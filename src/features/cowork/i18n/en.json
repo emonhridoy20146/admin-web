@@ -1,0 +1,70 @@
+{
+  "title": "Co-work",
+  "subtitle": "Which staff worked together in the field, when, and how many visits it produced.",
+  "rule": "Every participant gets credit for a joint visit (how much is set in Settings). Collections and cash are never shared: they stay with the person who took the money.",
+  "range": {
+    "label": "Period",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days"
+  },
+  "staff": "Staff member",
+  "allStaff": "All staff",
+  "col": {
+    "members": "Worked together",
+    "when": "When",
+    "status": "Status",
+    "visits": "Joint visits",
+    "startedBy": "Started by",
+    "duration": "Duration"
+  },
+  "status": {
+    "open": "Ongoing",
+    "ended": "Ended"
+  },
+  "member": {
+    "accepted": "In the group",
+    "left": "Left",
+    "invited": "No answer yet",
+    "rejected": "Said no"
+  },
+  "times": {
+    "started": "started {{time}}",
+    "invited": "asked {{time}}",
+    "joined": "joined {{time}}",
+    "rejected": "said no {{time}}",
+    "left": "left {{time}}"
+  },
+  "timeline": {
+    "title": "What happened when",
+    "started": "{{who}} started working together",
+    "invited": "{{by}} asked {{who}}",
+    "accepted": "{{who}} joined",
+    "rejected": "{{who}} said no",
+    "left": "{{who}} left",
+    "ended": "The group ended"
+  },
+  "people": "{{n}} people",
+  "peopleLabel": "Worked together",
+  "more": "+{{n}} more",
+  "waiting": "{{n}} not answered",
+  "declined": "{{n}} said no",
+  "since": "ongoing since {{time}}",
+  "visitsOf": "See {{n}} joint visits",
+  "drawerTitle": "Co-work · {{date}}",
+  "members": "Members",
+  "visits": "Visits by this group",
+  "noVisits": "This group has not recorded a visit yet.",
+  "openVisits": "Open in the visits list",
+  "started": "Started",
+  "ended": "Ended",
+  "stillOpen": "Still ongoing",
+  "note": "Note",
+  "starter": "(started it)",
+  "recordedBy": "Recorded by {{name}}",
+  "with": "with {{names}}",
+  "empty": "Nobody worked together in this period",
+  "emptyBody": "When someone asks a colleague to work together from the staff app, it shows up here.",
+  "notFound": "This co-work session was not found or is not in your branch."
+}

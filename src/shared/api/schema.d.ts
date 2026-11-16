@@ -1004,6 +1004,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cowork/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Ask colleagues of the same branch to work together today (1.9.0). Idempotent by clientId. If the caller is already in an
+         *     open session, the invitees are added to it. Online only. Permission cowork.use.
+         *     422 BUSINESS_RULE: COWORK_INVALID_INVITEE (not active field staff of the caller's branch, or the caller), COWORK_TOO_MANY (over setting cowork.maxMembers).
+         */
+        post: operations["requestCowork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/colleagues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Whom the caller may invite: active field staff of the caller's branch, without the caller, ordered by employee code (1.9.0). Online only. Permission cowork.use. */
+        get: operations["coworkColleagues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/sessions/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Today's sessions where the caller is invited or a member, newest first (1.9.0). Permission cowork.use. */
+        get: operations["myCoworkSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/sessions/{id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Accept or reject an invitation (1.9.0). 409 INVALID_STATE: NOT_INVITED, SESSION_ENDED, ALREADY_IN_SESSION (accepted in another open session). */
+        post: operations["respondCowork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/sessions/{id}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Leave a session (1.9.0). Idempotent. Recording work-out leaves automatically. */
+        post: operations["leaveCowork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Sessions in scope for managers, newest first, with visitsCount (1.9.0). Permission cowork.view. */
+        get: operations["listCoworkSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One session with visitsCount (1.9.0). Permission cowork.view; out of scope is 404. Its visits: GET /visits?coWorkSessionId= */
+        get: operations["getCoworkSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/handovers": {
         parameters: {
             query?: never;
@@ -2352,6 +2475,8 @@ export interface components {
             photoMediaIds?: string[];
             /** @enum {string} */
             source?: "manual" | "suggested";
+            /** @description Set when the visit was made together with co-work partners (1.9.0). The server works out who took part. */
+            coWorkSessionId?: string;
         };
         Visit: components["schemas"]["VisitCreate"] & {
             id?: string;
@@ -2359,6 +2484,56 @@ export interface components {
             checkOutAt?: string | null;
             distanceToPinM?: number | null;
             flags?: string[];
+            /** @description null for a single visit (1.9.0) */
+            coWork?: components["schemas"]["VisitCoWork"] | null;
+        };
+        /** @description Who else took part in a co-work visit: the session members accepted at checkInAt, without the recorder (1.9.0) */
+        VisitCoWork: {
+            sessionId?: string;
+            participantIds?: string[];
+            /** @description Names, on list rows only */
+            participants?: {
+                id?: string;
+                name?: string;
+            }[];
+        };
+        CoworkColleague: {
+            id: string;
+            /** @description Plain display name, like other person names in v1 */
+            name: string;
+            employeeCode: string;
+            /** @description Worked in and not yet worked out at the time of the call; on a break counts as on duty */
+            onDutyToday: boolean;
+            /** @description Already an accepted member of another open session today (accepting an invitation would give ALREADY_IN_SESSION) */
+            inSession: boolean;
+        };
+        CoworkMember: {
+            userId?: string;
+            name?: string;
+            /** @enum {string} */
+            status?: "invited" | "accepted" | "rejected" | "left";
+            invitedBy?: string;
+            /** Format: date-time */
+            invitedAt?: string;
+            respondedAt?: string | null;
+            leftAt?: string | null;
+        };
+        /** @description Staff working together for one business day (1.9.0) */
+        CoworkSession: {
+            id: string;
+            /** Format: date */
+            businessDate: string;
+            branchId?: string;
+            /** @enum {string} */
+            status: "open" | "ended";
+            createdBy?: string;
+            note?: string | null;
+            members: components["schemas"]["CoworkMember"][];
+            /** Format: date-time */
+            createdAt?: string;
+            endedAt?: string | null;
+            /** @description Co-work visits recorded in this session (manager list and detail only) */
+            visitsCount?: number;
         };
         Note: {
             id?: string;
@@ -2693,7 +2868,7 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
@@ -2702,7 +2877,8 @@ export interface components {
              *     customer → CustomerDetail · collection → Collection · visit → Visit · note → Note · promise → Promise ·
              *     tag → Tag (with customerId) · handover → Handover · assignment → Assignment · area → Area · deposit → Deposit ·
              *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
-             *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision)
+             *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
+             *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
              */
             data?: {
                 [key: string]: unknown;
@@ -2859,6 +3035,12 @@ export interface components {
             breakMin?: number;
             fieldMin?: number;
             distanceKm?: number;
+            /** @description Visits recorded alone (1.9.0) */
+            soloVisits?: number;
+            /** @description Joint visits this person took part in, as recorder or as partner; one joint visit counts once per person (1.9.0) */
+            coWorkVisits?: number;
+            /** @description soloVisits + coWorkVisits × setting cowork.visitCredit; the figure visit targets use (1.9.0) */
+            visitCredit?: number;
         };
         OverdueBucket: {
             count?: number;
@@ -4838,6 +5020,187 @@ export interface operations {
             };
         };
     };
+    requestCowork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    clientId: string;
+                    toUserIds: string[];
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Replay of the same clientId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"];
+                };
+            };
+        };
+    };
+    coworkColleagues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkColleague"][];
+                };
+            };
+        };
+    };
+    myCoworkSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"][];
+                };
+            };
+        };
+    };
+    respondCowork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "accept" | "reject";
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"];
+                };
+            };
+        };
+    };
+    leaveCowork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"];
+                };
+            };
+        };
+    };
+    listCoworkSessions: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                userId?: string;
+                from?: string;
+                to?: string;
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["CoworkSession"][];
+                        nextCursor?: string | null;
+                    };
+                };
+            };
+        };
+    };
+    getCoworkSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"];
+                };
+            };
+        };
+    };
     listHandovers: {
         parameters: {
             query?: {
@@ -4977,6 +5340,7 @@ export interface operations {
         parameters: {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
+                /** @description Visits this person recorded, plus co-work visits they took part in (1.9.0) */
                 userId?: string;
                 customerId?: string;
                 /** @description One Dhaka business day; wins over from/to */
@@ -4987,6 +5351,10 @@ export interface operations {
                 to?: string;
                 /** @description Visit outcome (1.4.0) */
                 outcome?: string;
+                /** @description Only co-work visits, or only single visits (1.9.0) */
+                coWork?: "true" | "false";
+                /** @description Visits of one co-work session (1.9.0) */
+                coWorkSessionId?: string;
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -5797,7 +6165,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paged snapshot of the whole scope; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0) */
+            /** @description Paged snapshot for a fresh device; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0). Entities, in this order (1.9.1): attendance_day (today, id userId:date), cowork_session (today's), customer (whole scope), location_proposal (own pending), promise (own open), visit (today's, own and joint). Older history is not included; it is read online. */
             200: {
                 headers: {
                     [name: string]: unknown;

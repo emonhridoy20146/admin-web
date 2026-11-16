@@ -34,3 +34,12 @@ export function geoState(v: Pick<Visit, 'geo' | 'flags' | 'distanceToPinM'>, far
   if (v.flags?.includes('far_from_pin') || (v.distanceToPinM ?? 0) > farM) return 'far';
   return 'ok';
 }
+
+/** Visit kind filter (FR-CW-004): recorded alone, or together with co-work partners. */
+export const KINDS = ['single', 'joint'] as const;
+
+/** FR-CW-003: a joint visit, a single one, or one that claimed co-work the server could not confirm (kept as single). */
+export function coWorkState(v: Pick<Visit, 'coWork' | 'flags'>): 'joint' | 'single' | 'invalid' {
+  if (v.flags?.includes('cowork_invalid')) return 'invalid';
+  return v.coWork ? 'joint' : 'single';
+}

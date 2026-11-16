@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Camera, MapPin, MapPinCheck, MapPinOff, ShieldAlert, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Camera, MapPin, MapPinCheck, MapPinOff, ShieldAlert, TriangleAlert, Users, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
+import { useGate } from '@/shared/feature/useGate';
 import { formatDate, formatDateTime, formatDuration, formatNumber, formatTime, pickText } from '@/shared/lib/format';
 import { todayDhaka } from '@/shared/lib/time';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
@@ -12,19 +13,14 @@ import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
-import type { Tone } from '@/shared/ui/status';
 import { Segmented } from '@/shared/ui/primitives';
 import { Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
 import { useVisits, type Visit } from '../api/visits';
-import { durationMin, geoState, OUTCOMES, rangeFor, RANGES, type GeoState } from '../model/visit';
+import { coWorkState, durationMin, geoState, KINDS, OUTCOMES, rangeFor, RANGES, type GeoState } from '../model/visit';
 import { PhotoLightbox } from '../components/photo-lightbox';
-
-const TONE: Record<string, Tone> = {
-  paid: 'paid', partial_paid: 'dueToday', promised: 'promised', not_home: 'neutral', refused: 'danger',
-  shifted_address: 'warning', customer_dead: 'neutral', product_returned_request: 'warning', other: 'neutral',
-};
+import { VisitOutcomeBadge } from '../components/outcome-badge';
 const GEO: Record<GeoState, { icon: LucideIcon; cls: string }> = {
   ok: { icon: MapPinCheck, cls: 'text-success' },
   far: { icon: MapPin, cls: 'text-warning' },
@@ -42,13 +38,26 @@ export function VisitsPage() {
   const outcome = oneOf(url.get('outcome'), ['', ...OUTCOMES] as const, '');
   const userId = url.get('userId');
   const cursor = url.get('cursor');
+  const gate = useGate();
+  const coworkOn = gate.flag('module.cowork');
+  const canSessions = coworkOn && gate.can('cowork.view');
+  // FR-CW-004: single vs joint visits, and the visits of one co-work session (any day, so the period is not sent)
+  const kind = coworkOn ? oneOf(url.get('kind'), ['', ...KINDS] as const, '') : '';
+  const session = coworkOn ? url.get('session') : '';
   const [limit, setLimit] = useState(25);
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
-  const q = useVisits({ ...rangeFor(range, today), outcome: outcome || undefined, userId: userId || undefined, cursor: cursor || undefined, limit });
+  const q = useVisits({
+    ...(session ? { coWorkSessionId: session } : rangeFor(range, today)),
+    outcome: outcome || undefined,
+    userId: userId || undefined,
+    coWork: kind === 'joint' ? 'true' : kind === 'single' ? 'false' : undefined,
+    cursor: cursor || undefined,
+    limit,
+  });
   const openId = url.get('drawer');
   const open = q.data?.items.find((v) => v.id === openId) ?? null;
   const [photo, setPhoto] = useState<number | null>(null);
-  const multiDay = range === '7d' || range === '30d';
+  const multiDay = !!session || range === '7d' || range === '30d';
 
   const geoCell = (v: Visit) => {
     const s = geoState(v);
@@ -74,8 +83,9 @@ export function VisitsPage() {
         </button>
       ),
     },
-    { id: 'outcome', header: t('col.outcome'), priority: 1, mobile: 'badges', cell: (v) => <Badge tone={TONE[v.outcome] ?? 'neutral'}>{t(`outcome.${v.outcome}`)}</Badge> },
+    { id: 'outcome', header: t('col.outcome'), priority: 1, mobile: 'badges', cell: (v) => <VisitOutcomeBadge outcome={v.outcome} /> },
     { id: 'user', header: t('col.user'), priority: 2, mobile: 'subtitle', cell: (v) => v.user?.name ?? <span className="text-fg-tertiary">—</span> },
+    ...(coworkOn ? [{ id: 'with', header: t('col.with'), priority: 2 as const, mobile: 'badges' as const, cell: (v: Visit) => <CoWorkCell v={v} /> }] : []),
     { id: 'time', header: t('col.time'), priority: 1, mobile: 'meta', cell: (v) => <span className="tabular">{multiDay ? formatDateTime(v.checkInAt) : formatTime(v.checkInAt)}</span> },
     {
       id: 'duration',
@@ -112,15 +122,35 @@ export function VisitsPage() {
       </PageHeader>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Segmented
-          label={t('range.label')}
-          value={range}
-          onChange={(v) => (pager.reset(), url.set({ range: v === 'today' ? null : v, cursor: null }))}
-          options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))}
-        />
-        <div className="flex items-center gap-2">
+        {session ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-info-bg px-3 py-1.5 text-sm text-info">
+            <Users className="size-4 shrink-0" aria-hidden />
+            <span className="font-medium">{t('cowork.sessionFilter')}</span>
+            {canSessions && (
+              <Link href={`/cowork/?drawer=${session}`} className="font-medium underline underline-offset-2">{t('cowork.openSession')}</Link>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => (pager.reset(), url.set({ session: null, cursor: null }))} aria-label={t('cowork.clearSession')}>
+              <X className="size-4" aria-hidden />
+              {t('cowork.clearSession')}
+            </Button>
+          </div>
+        ) : (
+          <Segmented
+            label={t('range.label')}
+            value={range}
+            onChange={(v) => (pager.reset(), url.set({ range: v === 'today' ? null : v, cursor: null }))}
+            options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))}
+          />
+        )}
+        <div className="flex flex-wrap items-center gap-2">
           {userId && (
             <Button size="sm" variant="ghost" onClick={() => (pager.reset(), url.set({ userId: null, cursor: null }))}>{t('clearStaff')}</Button>
+          )}
+          {coworkOn && !session && (
+            <Select aria-label={t('cowork.kind')} value={kind} onChange={(e) => (pager.reset(), url.set({ kind: e.target.value || null, cursor: null }))} className="h-9 sm:w-44">
+              <option value="">{t('cowork.allKinds')}</option>
+              {KINDS.map((k) => <option key={k} value={k}>{t(`cowork.kinds.${k}`)}</option>)}
+            </Select>
           )}
           <Select aria-label={t('col.outcome')} value={outcome} onChange={(e) => (pager.reset(), url.set({ outcome: e.target.value || null, cursor: null }))} className="h-9 sm:w-56">
             <option value="">{t('allOutcomes')}</option>
@@ -147,7 +177,7 @@ export function VisitsPage() {
         onOpenChange={(o) => !o && (setPhoto(null), url.set({ drawer: null }))}
         title={open ? <span lang={locale}>{pickText(open.customer?.name, locale)}</span> : ''}
         subtitle={open ? formatDateTime(open.checkInAt) : undefined}
-        headerExtra={open ? <Badge tone={TONE[open.outcome] ?? 'neutral'}>{t(`outcome.${open.outcome}`)}</Badge> : undefined}
+        headerExtra={open ? <VisitOutcomeBadge outcome={open.outcome} /> : undefined}
         footer={
           open ? (
             <>
@@ -162,6 +192,12 @@ export function VisitsPage() {
       >
         {open && (
           <div className="space-y-5 p-5">
+            {coworkOn && coWorkState(open) === 'invalid' && (
+              <p className="flex items-start gap-2 rounded-sm bg-warning-bg px-3 py-2 text-sm text-warning">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {t('cowork.invalidHint')}
+              </p>
+            )}
             {geoState(open) === 'mock' && (
               <p className="flex items-start gap-2 rounded-sm bg-st-mock-bg px-3 py-2 text-sm text-st-mock">
                 <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -170,7 +206,22 @@ export function VisitsPage() {
             )}
             <DescList
               items={[
-                { label: t('col.user'), value: open.user?.name ?? '—' },
+                { label: coworkOn && open.coWork ? t('cowork.recordedBy') : t('col.user'), value: open.user?.name ?? '—' },
+                ...(coworkOn && open.coWork
+                  ? [
+                      {
+                        label: t('col.with'),
+                        value: (
+                          <span className="flex flex-col gap-0.5">
+                            <span lang={locale}>{open.coWork.participants?.map((p) => p.name).join(', ') || t('cowork.partners', { n: formatNumber(open.coWork.participantIds?.length ?? 0) })}</span>
+                            {canSessions && open.coWork.sessionId && (
+                              <Link href={`/cowork/?drawer=${open.coWork.sessionId}`} className="text-sm font-medium text-primary hover:underline">{t('cowork.openSession')}</Link>
+                            )}
+                          </span>
+                        ),
+                      },
+                    ]
+                  : []),
                 { label: t('col.duration'), value: durationMin(open) == null ? t('ongoing') : formatDuration(Math.max(1, durationMin(open)!)) },
                 { label: t('checkIn'), value: formatTime(open.checkInAt) },
                 { label: t('checkOut'), value: open.checkOutAt ? formatTime(open.checkOutAt) : '—' },
@@ -207,5 +258,23 @@ export function VisitsPage() {
       </Drawer>
       <PhotoLightbox ids={open?.photoMediaIds ?? []} index={photo} onIndex={setPhoto} />
     </>
+  );
+}
+
+/** FR-CW-003: who else was there, or a warning when the visit claimed co-work that the server could not confirm. */
+function CoWorkCell({ v }: { v: Visit }) {
+  const { t } = useTranslation('visits');
+  const locale = useUi((s) => s.locale);
+  const state = coWorkState(v);
+  if (state === 'invalid') return <Badge tone="warning">{t('cowork.invalid')}</Badge>;
+  if (state === 'single') return <span className="text-fg-tertiary">—</span>;
+  const names = v.coWork?.participants?.map((p) => p.name).filter(Boolean) ?? [];
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <Badge tone="info" icon={Users}>{t('cowork.joint')}</Badge>
+      <span className="max-w-[180px] truncate text-sm text-fg-secondary" lang={locale}>
+        {names.length ? names.join(', ') : t('cowork.partners', { n: formatNumber(v.coWork?.participantIds?.length ?? 0) })}
+      </span>
+    </span>
   );
 }

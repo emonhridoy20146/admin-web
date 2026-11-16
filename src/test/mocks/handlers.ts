@@ -74,6 +74,11 @@ function scope(ctx: Ctx, url: URL): string[] {
   const mine = ctx.user.role === 'super_admin' || ctx.user.role === 'viewer' ? db.branches.map((b) => b.id!) : (ctx.user.branchIds ?? []);
   return req ? mine.filter((b) => b === req) : mine;
 }
+/** Manager views of a co-work session carry how many joint visits it produced. */
+function withVisitsCount(s: S['CoworkSession']): S['CoworkSession'] {
+  return { ...s, visitsCount: db.visits.filter((v) => v.row.coWork?.sessionId === s.id).length };
+}
+
 function page<T>(all: T[], url: URL, def = 25) {
   const limit = Math.min(100, Number(url.searchParams.get('limit') ?? def) || def);
   const cur = url.searchParams.get('cursor');
@@ -477,10 +482,34 @@ export const handlers = [
       .map((v) => v.row)
       .filter((v) => (!from || day(v.checkInAt) >= from) && (!to || day(v.checkInAt) <= to))
       .filter((v) => !g('outcome') || v.outcome === g('outcome'))
-      .filter((v) => !g('userId') || v.userId === g('userId'))
-      .filter((v) => !g('customerId') || v.customerId === g('customerId'));
+      // 1.9.0: a person's visits include the joint visits they took part in
+      .filter((v) => !g('userId') || v.userId === g('userId') || !!v.coWork?.participantIds?.includes(g('userId')!))
+      .filter((v) => !g('customerId') || v.customerId === g('customerId'))
+      .filter((v) => !g('coWork') || (g('coWork') === 'true') === !!v.coWork)
+      .filter((v) => !g('coWorkSessionId') || v.coWork?.sessionId === g('coWorkSessionId'));
     const pg = page(all, url);
     return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  http.get(`${BASE}/cowork/sessions`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'cowork.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const g = (k: string) => url.searchParams.get(k);
+    const all = db.coworkSessions
+      .filter((s) => sc.includes(s.branchId ?? ''))
+      .filter((s) => (!g('from') || s.businessDate >= g('from')!) && (!g('to') || s.businessDate <= g('to')!))
+      .filter((s) => !g('userId') || s.members.some((m) => m.userId === g('userId')))
+      .sort((a, b) => ((a.createdAt ?? '') < (b.createdAt ?? '') ? 1 : -1))
+      .map(withVisitsCount);
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  http.get(`${BASE}/cowork/sessions/:id`, authed(({ ctx, params, url }) => {
+    const deny = need(ctx, 'cowork.view');
+    if (deny) return deny;
+    const s = db.coworkSessions.find((x) => x.id === params.id);
+    if (!s || !scope(ctx, url).includes(s.branchId ?? '')) return problem(404, 'NOT_FOUND', 'Co-work session not found');
+    return HttpResponse.json(withVisitsCount(s));
   })),
   http.post(`${BASE}/media/upload-url`, authed(async ({ request }) => {
     const b = (await request.json()) as { kind?: string; contentType?: string; sizeBytes?: number; sha256?: string };
@@ -998,12 +1027,17 @@ export const handlers = [
       mine.forEach((c) => (byMethod[c.method!] = (byMethod[c.method!] ?? 0) + c.amountPoisha!));
       const total = mine.reduce((a, c) => a + c.amountPoisha!, 0);
       const vis = db.visits.filter((v) => v.row.userId === s.id && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date);
+      // FR-CW-005: joint visits credit every participant, weighted by cowork.visitCredit; money is never shared
+      const soloVisits = vis.filter((v) => !v.row.coWork).length;
+      const coWorkVisits = db.visits.filter((v) => v.row.coWork && (v.row.userId === s.id || v.row.coWork.participantIds?.includes(s.id!)) && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date).length;
+      const w = Math.min(1, Math.max(0, Number(db.settings['cowork.visitCredit'] ?? 1)));
       const prom = db.promises.filter((p) => p.row.ownerId === s.id && p.row.promisedDate >= from && p.row.promisedDate <= date);
       const kept = prom.filter((p) => p.row.status === 'kept' || p.row.status === 'partially_kept').length;
       const att = dates.map((d) => db.attendanceDay(s, d));
       const worked = att.filter((a) => a.firstIn);
       return {
         userId: s.id, name: s.name?.en, period: monthly ? date.slice(0, 7) : date, visits: vis.length, uniqueCustomers: new Set(vis.map((v) => v.row.customerId)).size,
+        soloVisits, coWorkVisits, visitCredit: Math.round((soloVisits + coWorkVisits * w) * 100) / 100,
         collectionsCount: mine.length, collectedPoisha: { total, ...byMethod }, targetPoisha: monthly ? 60_000_000 : 2_500_000, promisesDue: prom.length, promisesKept: kept,
         promiseFulfilmentRate: prom.length ? kept / prom.length : undefined, presentDays: worked.length, lateDays: att.filter((a) => (a.lateMin ?? 0) > 0).length,
         lateMin: att.reduce((a, d) => a + (d.lateMin ?? 0), 0), breakMin: att.reduce((a, d) => a + (d.breakMin ?? 0), 0),

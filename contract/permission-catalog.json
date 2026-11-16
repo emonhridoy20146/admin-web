@@ -546,6 +546,32 @@
     }
   },
   {
+    "key": "cowork.use",
+    "module": "cowork",
+    "description": "Ask colleagues to work together, accept, leave",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": false,
+      "branch_manager": false,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "cowork.view",
+    "module": "cowork",
+    "description": "See co-work sessions in scope",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
     "key": "inbox.view",
     "module": "inbox",
     "description": "\"Needs attention\" exceptions inbox",

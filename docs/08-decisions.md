@@ -55,3 +55,9 @@ Only with `NEXT_PUBLIC_API_MOCK=1`: the MSW mock stores the signed-in demo user 
 - **Reason:** Leaflet touches `window` at import, which breaks static pre-rendering if imported at module top. Vector markers need no image hosts, so the CSP only gains the tile origin. `/customers/<anything>/` is rewritten by hosts to the detail page (ADR-W02), so `/customers/map` would collide.
 - **Accessibility:** the map is `role="application"` and is never the only path: each map page lists the same items as text beside it.
 - **Alternatives rejected:** react-leaflet components (more code for the same result, SSR guards everywhere); MapLibre GL (heavier, needs vector tiles and `worker-src blob:`).
+
+## ADR-W12 — Co-work in the admin panel: credit on the staff page, raw counts elsewhere
+- **Decision:** The staff page shows, per person, every visit they took part in (single + joint), split "single · joint", and a separate "Visit credit" column (the server's `visitCredit`), which is also what the visits sort uses. Branch totals keep the recorded visit count so a joint visit is counted once. The visits of one co-work group are opened with `?session=` and ignore the period filter, because a group belongs to one day that may be outside the chosen period. `cowork.visitCredit` is edited as a percentage that may be 0 % (other ratio settings start at 1 %).
+- **Reason:** field-api ADR-029 credits every participant and lets the business weight joint visits; managers need the per-person picture without inflating branch totals. Money figures are untouched: collections stay with the collector.
+- **Alternatives rejected:** dividing a joint visit between participants in the UI (the server owns the rule); showing only the credit (hides how much was joint work).
+

@@ -29,7 +29,8 @@
     "time": "Check-in",
     "duration": "Duration",
     "geo": "Location",
-    "photos": "Photos"
+    "photos": "Photos",
+    "with": "Together with"
   },
   "geo": {
     "ok": "Near pin",
@@ -66,5 +67,21 @@
     "prev": "Previous",
     "next": "Next",
     "failed": "The photo could not be loaded"
+  },
+  "cowork": {
+    "kind": "Visit kind",
+    "allKinds": "Single and joint",
+    "kinds": {
+      "single": "Single only",
+      "joint": "Joint only"
+    },
+    "joint": "Joint",
+    "partners": "{{n}} colleagues",
+    "invalid": "Co-work not confirmed",
+    "invalidHint": "This visit was sent as co-work, but the person who recorded it was not in the group at that time, so it counts as a single visit.",
+    "recordedBy": "Recorded by",
+    "sessionFilter": "Visits of one co-work group",
+    "openSession": "See the group",
+    "clearSession": "All visits"
   }
 }

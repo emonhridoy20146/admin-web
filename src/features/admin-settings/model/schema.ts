@@ -4,9 +4,10 @@
  */
 export type FieldDef =
   | { key: string; type: 'time' }
-  | { key: string; type: 'int'; min: number; max: number; unit?: 'min' | 'sec' | 'days' | 'm' }
+  | { key: string; type: 'int'; min: number; max: number; unit?: 'min' | 'sec' | 'days' | 'm' | 'people' }
   | { key: string; type: 'money' }
-  | { key: string; type: 'ratio' }
+  /** a share shown as whole percent; `min` defaults to 1 % (0 % allowed only where the setting means "nothing") */
+  | { key: string; type: 'ratio'; min?: number }
   | { key: string; type: 'bool' }
   | { key: string; type: 'enum'; options: string[] }
   | { key: string; type: 'weekdays' }
@@ -66,6 +67,14 @@ export const SECTIONS: SectionDef[] = [
       { key: 'attendance.selfieEvents', type: 'multi', options: ['work_in', 'break_start', 'break_end', 'work_out'] },
     ],
   },
+  {
+    id: 'cowork',
+    fields: [
+      // FR-CW-005: what one joint visit counts for each participant in visit targets (100 % = full credit)
+      { key: 'cowork.visitCredit', type: 'ratio', min: 0 },
+      { key: 'cowork.maxMembers', type: 'int', min: 2, max: 10, unit: 'people' },
+    ],
+  },
   { id: 'app', fields: [{ key: 'app.minVersion', type: 'version' }] },
 ];
 
@@ -110,7 +119,7 @@ export function parse(f: FieldDef, d: unknown): { value?: unknown; error?: strin
     }
     case 'ratio': {
       const s = ascii(String(d ?? ''));
-      if (!/^\d+$/.test(s) || Number(s) < 1 || Number(s) > 100) return { error: 'errors.ratio' };
+      if (!/^\d+$/.test(s) || Number(s) < (f.min ?? 1) || Number(s) > 100) return { error: (f.min ?? 1) === 0 ? 'errors.ratio0' : 'errors.ratio' };
       return { value: Number(s) / 100 };
     }
     case 'time':

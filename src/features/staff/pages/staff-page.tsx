@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, CalendarCheck, Footprints, Handshake, MapPinCheck, UsersRound, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarCheck, Footprints, Handshake, Info, MapPinCheck, Users, UsersRound, Wallet } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
@@ -18,7 +18,7 @@ import { MoneyText } from '@/shared/ui/money';
 import { Badge } from '@/shared/ui/badge';
 import { Drawer } from '@/shared/ui/overlay';
 import { useAreas, usePerformance, type PerfRow } from '../api/staff';
-import { byMethod, collected, sortRows, SORTS, targetRatio, totals } from '../model/staff';
+import { byMethod, collected, jointWeight, sortRows, SORTS, targetRatio, totals, visitCredit, visitsTakenPart } from '../model/staff';
 
 const PERIODS = ['daily', 'monthly'] as const;
 
@@ -51,7 +51,11 @@ export function StaffPage() {
     visits: gate.can('visit.view') && gate.flag('module.visits'),
     collections: gate.can('collection.view') && gate.flag('module.collections'),
     attendance: gate.can('attendance.view') && gate.flag('module.attendance'),
+    sessions: gate.can('cowork.view') && gate.flag('module.cowork'),
   };
+  // FR-CW-005: single and joint visits are shown apart, and targets use the weighted visit credit
+  const coworkOn = gate.flag('module.cowork') && gate.flag('module.visits');
+  const credit = (r: PerfRow) => formatNumber(visitCredit(r), { decimals: Number.isInteger(visitCredit(r)) ? 0 : 2 });
   const monthly = period === 'monthly';
   const periodLabel = monthly ? formatMonth(today.slice(0, 7)) : formatDate(today);
 
@@ -95,11 +99,18 @@ export function StaffPage() {
       mobile: 'meta',
       cell: (r) => (
         <span className="inline-flex flex-col items-end">
-          <span className="tabular">{formatNumber(r.visits ?? 0)}</span>
-          <span className="text-xs text-fg-tertiary">{t('unique', { n: formatNumber(r.uniqueCustomers ?? 0) })}</span>
+          <span className="tabular">{formatNumber(coworkOn ? visitsTakenPart(r) : (r.visits ?? 0))}</span>
+          {coworkOn && (r.coWorkVisits ?? 0) > 0 ? (
+            <span className="text-xs text-info">{t('cowork.split', { solo: formatNumber(r.soloVisits ?? 0), joint: formatNumber(r.coWorkVisits ?? 0) })}</span>
+          ) : (
+            <span className="text-xs text-fg-tertiary">{t('unique', { n: formatNumber(r.uniqueCustomers ?? 0) })}</span>
+          )}
         </span>
       ),
     },
+    ...(coworkOn
+      ? [{ id: 'credit', header: t('col.credit'), align: 'end' as const, priority: 3 as const, cell: (r: PerfRow) => <span className="tabular font-medium">{credit(r)}</span> }]
+      : []),
     {
       id: 'promises',
       header: t('col.promises'),
@@ -216,13 +227,28 @@ export function StaffPage() {
             </section>
 
             <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line [&>*]:bg-surface">
-              <Stat label={t('col.visits')} value={formatNumber(open.visits ?? 0)} sub={t('unique', { n: formatNumber(open.uniqueCustomers ?? 0) })} />
+              <Stat label={t('col.visits')} value={formatNumber(coworkOn ? visitsTakenPart(open) : (open.visits ?? 0))} sub={t('unique', { n: formatNumber(open.uniqueCustomers ?? 0) })} />
               <Stat label={t('col.count')} value={formatNumber(open.collectionsCount ?? 0)} />
               <Stat label={t('col.promises')} value={(open.promisesDue ?? 0) > 0 ? t('keptOf', { kept: formatNumber(open.promisesKept ?? 0), due: formatNumber(open.promisesDue ?? 0) }) : '—'} sub={open.promiseFulfilmentRate != null && (open.promisesDue ?? 0) > 0 ? formatPercent(open.promiseFulfilmentRate) : undefined} />
               <Stat label={t('col.field')} value={(open.fieldMin ?? 0) > 0 ? formatDuration(open.fieldMin ?? 0) : '—'} sub={(open.distanceKm ?? 0) > 0 ? t('km', { n: formatNumber(open.distanceKm ?? 0, { decimals: 1 }) }) : undefined} />
               <Stat label={monthly ? t('col.days') : t('col.late')} value={monthly ? formatNumber(open.presentDays ?? 0) : (open.lateMin ?? 0) > 0 ? formatDuration(open.lateMin ?? 0) : '—'} sub={monthly && (open.lateDays ?? 0) > 0 ? t('lateDays', { n: formatNumber(open.lateDays ?? 0) }) : undefined} warn={monthly ? (open.lateDays ?? 0) > 0 : (open.lateMin ?? 0) > 0} />
               <Stat label={t('break')} value={(open.breakMin ?? 0) > 0 ? formatDuration(open.breakMin ?? 0) : '—'} />
             </dl>
+
+            {coworkOn && (
+              <section aria-labelledby="staff-cowork">
+                <h3 id="staff-cowork" className="mb-2 text-sm font-semibold text-fg-secondary">{t('cowork.title')}</h3>
+                <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-md border border-line bg-line [&>*]:bg-surface">
+                  <Stat label={t('cowork.single')} value={formatNumber(open.soloVisits ?? 0)} />
+                  <Stat label={t('cowork.joint')} value={formatNumber(open.coWorkVisits ?? 0)} />
+                  <Stat label={t('col.credit')} value={credit(open)} sub={jointWeight(open) != null ? t('cowork.weight', { pct: formatPercent(jointWeight(open)!) }) : undefined} />
+                </dl>
+                <p className="mt-2 flex items-start gap-2 text-sm text-fg-secondary">
+                  <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
+                  {t('cowork.note')}
+                </p>
+              </section>
+            )}
 
             {canAreas && (
               <section>
@@ -244,6 +270,8 @@ export function StaffPage() {
             <nav aria-label={t('jump')} className="divide-y divide-line overflow-hidden rounded-md border border-line">
               {links.collections && <Jump href={`/collections/?collectorId=${open.userId}${monthly ? '&from=' + today.slice(0, 8) + '01&to=' + today : ''}`} icon={Wallet} label={t('link.collections')} />}
               {links.visits && <Jump href={`/visits/?userId=${open.userId}${monthly ? '&range=30d' : ''}`} icon={Footprints} label={t('link.visits')} />}
+              {links.visits && coworkOn && (open.coWorkVisits ?? 0) > 0 && <Jump href={`/visits/?userId=${open.userId}&kind=joint${monthly ? '&range=30d' : ''}`} icon={Users} label={t('link.jointVisits')} />}
+              {links.sessions && <Jump href={`/cowork/?userId=${open.userId}${monthly ? '&range=30d' : '&range=today'}`} icon={UsersRound} label={t('link.sessions')} />}
               {links.attendance && <Jump href={`/attendance/?view=month`} icon={CalendarCheck} label={t('link.attendance')} />}
             </nav>
           </div>

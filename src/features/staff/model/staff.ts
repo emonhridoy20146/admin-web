@@ -47,9 +47,31 @@ export type Sort = (typeof SORTS)[number];
 export function sortRows(rows: PerfRow[], sort: Sort): PerfRow[] {
   const by: Record<Sort, (a: PerfRow, b: PerfRow) => number> = {
     collected: (a, b) => collected(b) - collected(a),
-    visits: (a, b) => (b.visits ?? 0) - (a.visits ?? 0),
+    visits: (a, b) => visitCredit(b) - visitCredit(a),
     promises: (a, b) => (b.promiseFulfilmentRate ?? -1) - (a.promiseFulfilmentRate ?? -1),
     name: (a, b) => (a.name ?? '').localeCompare(b.name ?? ''),
   };
   return [...rows].sort((a, b) => by[sort](a, b) || (a.name ?? '').localeCompare(b.name ?? ''));
+}
+
+type VisitFigures = Pick<PerfRow, 'visits' | 'soloVisits' | 'coWorkVisits' | 'visitCredit'>;
+
+/**
+ * FR-CW-005: visits this person took part in, alone or as part of a co-work group (a joint visit counts once per person).
+ * A server without co-work figures only has the visits the person recorded.
+ */
+export function visitsTakenPart(r: VisitFigures): number {
+  return r.soloVisits == null && r.coWorkVisits == null ? (r.visits ?? 0) : (r.soloVisits ?? 0) + (r.coWorkVisits ?? 0);
+}
+
+/** The visit figure targets use: single + joint × the `cowork.visitCredit` weight (computed by the server). */
+export function visitCredit(r: VisitFigures): number {
+  return r.visitCredit ?? visitsTakenPart(r);
+}
+
+/** What one joint visit was worth for this row (0…1), read back from the server's figures; null without joint visits. */
+export function jointWeight(r: VisitFigures): number | null {
+  if (!r.coWorkVisits) return null;
+  const w = (visitCredit(r) - (r.soloVisits ?? 0)) / r.coWorkVisits;
+  return Math.min(1, Math.max(0, Math.round(w * 100) / 100));
 }

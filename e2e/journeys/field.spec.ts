@@ -11,6 +11,7 @@ import areasBn from '../../src/features/assignments/i18n/bn.json' with { type: '
 import locBn from '../../src/features/location/i18n/bn.json' with { type: 'json' };
 import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' };
 import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type: 'json' };
+import coworkBn from '../../src/features/cowork/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
 import { confirmWithReason, login, nav } from '../fixtures';
@@ -410,3 +411,48 @@ test('attendance photos: open a staff member\'s day, see each event with its pho
     await expect(drawer.getByText(attendanceBn.events.flag.no_selfie)).toBeVisible();
   }
 });
+
+test('co-work: sessions with members and timeline, their joint visits, the visit kind filter and staff credit', async ({ page }) => {
+  await login(page);
+  await nav(page, coworkBn.title);
+  await page.getByRole('button', { name: coworkBn.range['30d'], exact: true }).click();
+  await page.waitForURL(/range=30d/);
+  const withVisits = page.locator('tbody a[href*="/visits/?session="]');
+  await expect(withVisits.first()).toBeVisible();
+
+  // a session opens in the drawer with its members, its visits and what happened when
+  await page.locator('tbody tr').filter({ has: page.locator('a[href*="/visits/?session="]') }).first().locator('td').first().getByRole('button').click();
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByRole('heading', { name: coworkBn.members })).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: coworkBn.timeline.title })).toBeVisible();
+  await expect(drawer.getByText(/রেকর্ড করেছেন/).first()).toBeVisible();
+
+  // its visits in the visits list: every row is joint, and a row links back to the group
+  await drawer.getByRole('link', { name: coworkBn.openVisits }).click();
+  await page.waitForURL(/\/visits\/\?session=/);
+  await expect(page.getByText(visitsBn.cowork.sessionFilter)).toBeVisible();
+  await expect(page.locator('tbody tr a, tbody tr button').first()).toBeVisible();
+  const rows = page.locator('tbody tr');
+  const n = await rows.count();
+  await expect(rows.filter({ hasText: visitsBn.cowork.joint })).toHaveCount(n);
+  await rows.first().locator('td').first().getByRole('button').click();
+  await expect(page.getByRole('dialog').getByText(visitsBn.col.with)).toBeVisible();
+  await page.getByRole('dialog').getByRole('link', { name: visitsBn.cowork.openSession }).click();
+  await page.waitForURL(/\/cowork\/\?drawer=/);
+  await expect(page.getByRole('dialog').getByRole('heading', { name: coworkBn.members })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // visits: only joint ones
+  await nav(page, visitsBn.title);
+  await page.getByRole('button', { name: visitsBn.range['30d'], exact: true }).click();
+  await page.waitForURL(/range=30d/);
+  await page.getByLabel(visitsBn.cowork.kind).selectOption('joint');
+  await page.waitForURL(/kind=joint/);
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('tbody tr').first()).toContainText(visitsBn.cowork.joint);
+
+  // staff: single and joint visits apart, with the credit targets use
+  await nav(page, staffBn.title);
+  await expect(page.getByRole('columnheader', { name: staffBn.col.credit })).toBeVisible();
+});
+

@@ -1,7 +1,7 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.8.0** (1.2.0 → 1.8.0; 1.8.0 was taken from field-api PR 4 `feat/attendance-photo-every-event` before its merge, re-sync from `main` after it lands; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.9.1** from field-api `main` (1.2.0 → 1.9.1; types regenerated with `pnpm gen:api`).
 ### Changed
 - Axe journey waits for CSS transitions to finish before scanning, so a pager button caught mid-transition no longer reports a false contrast failure.
 - URL state: `set()` starts from the address bar instead of the params captured at render, so two quick changes (a filter, then a row click) no longer drop each other (fixed a flaky promises journey).
@@ -10,6 +10,11 @@ Contract pinned: field-api `openapi.yaml` **1.8.0** (1.2.0 → 1.8.0; 1.8.0 was 
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Co-work (FR-CW-004/005, contract 1.9.0, field-api ADR-029) at `/cowork`: sessions in scope by period and staff member (who worked together, who said no or has not answered, when it started and ended, how many joint visits); a drawer with members and their times, the group's visits (recorder, partners, outcome) and a timeline of what happened when; a note that joint visits credit every participant while collections and cash are never shared. Flag `module.cowork`, permission `cowork.view`, ⌘K command.
+- Visits: "Visit kind" filter (single / joint, `coWork=`), a "Together with" column with the partners of a joint visit, a warning badge and drawer note for `cowork_invalid` (claimed co-work the server could not confirm), and the visits of one co-work group (`?session=` → `coWorkSessionId`, any day) with a link back to the group. Filtering by a staff member now also lists joint visits they took part in (1.9.0 server behaviour).
+- Staff: visits column counts every visit the person took part in with a "single · joint" split, a "Visit credit" column (single + joint × `cowork.visitCredit`, the figure visit targets use), sort by visit credit, and a drawer section with single, joint, credit and the weight per joint visit, plus links to the person's joint visits and co-work groups. Branch total visits stay the recorded count, so a joint visit is not counted twice there.
+- Settings: Co-work section with `cowork.visitCredit` (0–100 %, 0 % allowed) and `cowork.maxMembers` (2–10 people).
+- `VisitOutcomeBadge` exported by the visits feature.
 - Refund proof (FR-COL refund, `PROOF_REQUIRED`): choosing "Refund to customer" on a conflict asks for a photo of the signed refund slip or the money handed back (camera on phones, file picker on desktop); the photo is shrunk to JPEG ≤ 1 MB / 1600 px in the browser, uploaded through `POST /media/upload-url` → presigned `PUT` → `POST /media/{id}/confirm` (kind `refund_proof`) and sent as `proofMediaId`. Resolve stays disabled until the upload is confirmed; the confirm dialog says the photo is attached. Before this the refund action always failed on the server.
 - Shared photo upload helper `shared/media/upload.ts` (resize/re-encode, SHA-256, presigned upload, confirm) for later media uploads.
 - Route history: the day's visits and collections (contract 1.7.1 `events[].data`) are listed with time, customer link, receipt and amount, collection points are drawn on the map, and the field money collected along the route is shown (app records, not the ERP ledger).
