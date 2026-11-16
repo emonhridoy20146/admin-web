@@ -335,3 +335,20 @@ test('W-E12 reports: trends by range, reconciliation for a past day, build and d
   await expect(link).toBeVisible({ timeout: 15_000 });
   await expect(link).toHaveAttribute('href', /cash_positions\.xlsx$/);
 });
+
+test('bulk assign: select customers in the list and give them to one staff member', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, custBn.title);
+  const rows = page.locator('tbody tr');
+  await expect(rows.first().locator('a').first()).toBeVisible();
+  await rows.nth(0).getByRole('checkbox').click();
+  await rows.nth(1).getByRole('checkbox').click();
+  await page.getByRole('button', { name: areasBn.bulk.open }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: areasBn.bulk.confirm, exact: true }).click();
+  await expect(dialog.getByText(areasBn.errors.required)).toBeVisible();
+  await dialog.getByRole('combobox').selectOption({ index: 1 });
+  await dialog.getByRole('button', { name: areasBn.bulk.confirm, exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: areasBn.bulk.open })).toBeHidden();
+});

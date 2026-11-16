@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useUi, useBranchId } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
+import { useGate } from '@/shared/feature/useGate';
 import { formatDate, formatMonth, formatNumber } from '@/shared/lib/format';
 import { addDays, todayDhaka } from '@/shared/lib/time';
 import { Card, CardHeader } from '@/shared/ui/card';
@@ -12,7 +13,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Field, Input, Select } from '@/shared/ui/form';
 import { useCreateExport, useExportJob } from '../api/reports';
-import { EXPORT_FORMATS, EXPORT_TYPES, exportBody, MAX_DAYS, needsPeriod, needsRange, validateExport, type ExportForm } from '../model/reports';
+import { EXPORT_FORMATS, EXPORT_TYPES, exportBody, MAX_DAYS, TYPE_PERMISSION, needsPeriod, needsRange, validateExport, type ExportForm } from '../model/reports';
 
 interface Job {
   id: string;
@@ -26,6 +27,8 @@ export function ExportsTab() {
   useUi((s) => s.bnDigits);
   const branchId = useBranchId();
   const can = useCan('report.export');
+  const gate = useGate();
+  const types = EXPORT_TYPES.filter((x) => !TYPE_PERMISSION[x] || gate.can(TYPE_PERMISSION[x]!));
   const today = todayDhaka();
   const create = useCreateExport();
   const [f, setF] = useState<ExportForm>({ type: 'collections', format: 'xlsx', from: addDays(today, -29), to: today, period: 'monthly', date: today });
@@ -53,7 +56,7 @@ export function ExportsTab() {
           <Field label={t('exports.type')}>
             {(id) => (
               <Select id={id} value={f.type} onChange={(e) => set('type', e.target.value as ExportForm['type'])}>
-                {EXPORT_TYPES.map((x) => <option key={x} value={x}>{t(`exports.types.${x}`)}</option>)}
+                {types.map((x) => <option key={x} value={x}>{t(`exports.types.${x}`)}</option>)}
               </Select>
             )}
           </Field>

@@ -41,6 +41,8 @@ describe('reports', () => {
     expect(validateExport({ ...form, from: '2026-08-01' }, '2026-11-16')).toBe('tooLong');
     expect(validateExport({ ...form, type: 'attendance', from: '2026-09-01' }, '2026-11-16')).toBe('tooLong');
     expect(validateExport({ ...form, type: 'cash_positions', from: '2030-01-01' }, '2026-11-16')).toBeNull();
+    expect(validateExport({ ...form, type: 'audit', from: '2026-10-01' }, '2026-11-16')).toBe('tooLong');
+    expect(validateExport({ ...form, type: 'audit', from: '2026-10-20' }, '2026-11-16')).toBeNull();
   });
 
   it('sends only the params the type needs', () => {

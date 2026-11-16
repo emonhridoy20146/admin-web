@@ -89,7 +89,8 @@
       "staff_performance": "কর্মীর কাজ",
       "attendance": "হাজিরা",
       "overdue_customers": "বকেয়া গ্রাহক",
-      "cash_positions": "হাতে নগদ"
+      "cash_positions": "হাতে নগদ",
+      "audit": "অডিট লগ"
     },
     "format": "ফাইলের ধরন",
     "formats": {

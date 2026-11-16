@@ -47,7 +47,8 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 - Contract 1.4.0/1.5.0 adopted (2026-11-15): typed visit/promise lists with customer and staff refs, from/to/outcome filters.
 - Devices (`/admin/devices`) and System health (`/admin/system`) done 2026-11-16.
 - Contract note: `Device` has `userId` only (names are joined from `/users`); `DeviceSyncState.userName` is present.
-- Next: bulk assign, refund proof upload, CI workflow; Phase 2 scrubber; Phase 3 reports.
+- Bulk assign from the customers list and the CI workflow done 2026-11-16. Contract 1.7.1 adopted (plain-array location proposals, audit export).
+- Next: refund proof upload, mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api
 All answered in contract 1.3.0 (2026-11-15):

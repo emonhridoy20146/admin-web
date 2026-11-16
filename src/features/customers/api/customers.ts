@@ -1,5 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
+import { listOrItems } from '@/shared/api/list';
 import { useBranchId } from '@/shared/lib/ui-store';
 import { EV, useInvalidateOn } from '@/shared/feature/events';
 import type { components, operations } from '@/shared/api/schema';
@@ -82,7 +83,8 @@ export function useProposals(status: 'pending' | 'approved' | 'rejected') {
   const branchId = useBranchId();
   return useQuery({
     queryKey: ['customers', 'location-proposals', { branchId, status }],
-    queryFn: () => unwrap(api.GET('/location-proposals', { params: { query: { branchId, status } } })),
+    // the contract declares a plain array; servers before field-api 1.7.0 wrapped it in { items }
+    queryFn: async () => listOrItems<LocationProposal>(await unwrap(api.GET('/location-proposals', { params: { query: { branchId, status } } }))),
     staleTime: 30_000,
   });
 }

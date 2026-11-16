@@ -89,7 +89,8 @@
       "staff_performance": "Staff performance",
       "attendance": "Attendance",
       "overdue_customers": "Overdue customers",
-      "cash_positions": "Cash on hand"
+      "cash_positions": "Cash on hand",
+      "audit": "Audit log"
     },
     "format": "File type",
     "formats": {

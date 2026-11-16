@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Map as MapIcon, MapPinOff, SearchX, Users } from 'lucide-react';
+import { ExternalLink, Map as MapIcon, MapPinOff, SearchX, UserPlus, Users } from 'lucide-react';
+import { BulkAssignDialog } from '@/features/assignments';
+import { useGate } from '@/shared/feature/useGate';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatDate, formatMoney, formatNumber, formatRelative } from '@/shared/lib/format';
@@ -45,6 +47,11 @@ export function CustomersPage() {
   const rows = useMemo(() => query.data?.items?.map((c) => toCustomerRow(c, locale)), [query.data, locale]);
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('customer:') ? drawer.slice(9) : null;
+  const gate = useGate();
+  const canAssign = gate.can('assignment.manage') && gate.flag('module.assignments');
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [assignOpen, setAssignOpen] = useState(false);
+  const { t: ta } = useTranslation('assignments');
 
   const toggleFilter = (f: string) => {
     pager.reset();
@@ -173,6 +180,15 @@ export function CustomersPage() {
         error={query.error}
         onRetry={() => query.refetch()}
         activeRowKey={drawerId}
+        selectable={canAssign}
+        selection={picked}
+        onSelectionChange={setPicked}
+        bulkBar={
+          <Button size="sm" variant="primary" onClick={() => setAssignOpen(true)}>
+            <UserPlus className="size-3.5" aria-hidden />
+            {ta('bulk.open')}
+          </Button>
+        }
         sort={sort}
         onSortChange={(s) => {
           const allowed = SORTS as readonly string[];
@@ -201,6 +217,7 @@ export function CustomersPage() {
         }
       />
 
+      {canAssign && <BulkAssignDialog open={assignOpen} customerIds={[...picked]} onClose={() => setAssignOpen(false)} onDone={() => (setPicked(new Set()), void query.refetch())} />}
       <CustomerDrawer
         id={drawerId}
         onClose={() => url.set({ drawer: null })}

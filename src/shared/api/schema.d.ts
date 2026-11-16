@@ -635,6 +635,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/location-proposals/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own pin proposals with their status, newest first, max 200 (1.7.0). Permission customer.location.propose. */
+        get: operations["listOwnLocationProposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/location-proposals/{id}/decision": {
         parameters: {
             query?: never;
@@ -1691,8 +1708,9 @@ export interface paths {
         /**
          * @description Async export, built by the worker within about a minute, kept 7 days, visible only to the requester (1.6.0 documents params).
          *     `params` per type: staff_performance → { period, date, branchId?, userId? } · collections → { from, to, branchId? } (≤ 92 days) ·
-         *     attendance → { from, to, branchId? } (≤ 62 days) · overdue_customers, cash_positions → { branchId? }.
-         *     `format: pdf` and `type: audit` are answered with 422 BUSINESS_RULE (`export_format_unavailable` / `export_type_unavailable`) until they are built.
+         *     attendance → { from, to, branchId? } (≤ 62 days) · overdue_customers, cash_positions → { branchId? } ·
+         *     audit → { from, to, branchId? } (≤ 31 days; also needs `audit.view`, else 403) (1.7.1).
+         *     `format: pdf` is answered with 422 BUSINESS_RULE (`export_format_unavailable`) until it is built.
          */
         post: operations["createExport"];
         delete?: never;
@@ -2400,6 +2418,23 @@ export interface components {
                 name?: string;
             };
         };
+        /** @description A pin proposal as seen by the staff member who made it (1.7.0) */
+        OwnLocationProposal: {
+            id: string;
+            /** @description The clientId the app sent, to match its local record */
+            clientId: string;
+            customerId: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected";
+            lat: number;
+            lng: number;
+            accuracyM?: number;
+            note?: string | null;
+            /** @description The manager's reason; always present when rejected */
+            decisionReason?: string | null;
+            createdAt?: string;
+            decidedAt?: string | null;
+        };
         LocationProposal: {
             id?: string;
             customer?: {
@@ -2636,7 +2671,7 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
@@ -2645,7 +2680,7 @@ export interface components {
              *     customer → CustomerDetail · collection → Collection · visit → Visit · note → Note · promise → Promise ·
              *     tag → Tag (with customerId) · handover → Handover · assignment → Assignment · area → Area · deposit → Deposit ·
              *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
-             *     contact_attempt → ContactAttempt
+             *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision)
              */
             data?: {
                 [key: string]: unknown;
@@ -4062,6 +4097,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LocationProposal"][];
+                };
+            };
+        };
+    };
+    listOwnLocationProposals: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnLocationProposal"][];
                 };
             };
         };

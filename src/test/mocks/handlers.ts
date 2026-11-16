@@ -518,6 +518,27 @@ export const handlers = [
     db.addAudit({ actor: actor(ctx.user), action: 'assignment.create', entity: 'area', entityId: a.id, branchId: a.branchId, before: {}, after: { user: db.userById(b.userId)?.employeeCode, area: a.code }, reason: '' });
     return HttpResponse.json({}, { status: 201 });
   })),
+  http.post(`${BASE}/assignments/bulk`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'assignment.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as { userId?: string; customerIds?: string[]; reason?: string };
+    const u = db.userById(b.userId);
+    if (!u || !Array.isArray(b.customerIds) || !b.customerIds.length) return problem(400, 'VALIDATION_FAILED', 'userId and customerIds are required');
+    if (b.customerIds.length > 1000) return problem(400, 'VALIDATION_FAILED', 'At most 1000 customers at once');
+    let assigned = 0;
+    let skipped = 0;
+    for (const id of b.customerIds) {
+      const c = db.customerById(id);
+      if (!c || c.item.assignee?.id === u.id) {
+        skipped++;
+        continue;
+      }
+      c.item.assignee = { id: u.id, name: u.name?.en };
+      assigned++;
+    }
+    db.addAudit({ actor: actor(ctx.user), action: 'assignment.bulk', entity: 'user', entityId: u.id, before: {}, after: { customers: assigned }, reason: b.reason ?? '' });
+    return HttpResponse.json({ assigned, skipped });
+  })),
   http.delete(`${BASE}/assignments/:id`, authed(({ params, ctx }) => {
     const deny = need(ctx, 'assignment.manage');
     if (deny) return deny;
@@ -1053,7 +1074,10 @@ export const handlers = [
     if (deny) return deny;
     const b = (await request.json()) as { type?: string; format?: string };
     if (b.format === 'pdf') return problem(422, 'BUSINESS_RULE', 'export_format_unavailable');
-    if (b.type === 'audit') return problem(422, 'BUSINESS_RULE', 'export_type_unavailable');
+    if (b.type === 'audit') {
+      const denyAudit = need(ctx, 'audit.view');
+      if (denyAudit) return denyAudit;
+    }
     const id = db.oid('6795');
     exportJobs.set(id, { at: Date.now(), type: b.type ?? 'export', format: b.format ?? 'csv' });
     return HttpResponse.json({ id, status: 'queued' }, { status: 202 });

@@ -19,7 +19,7 @@ export const customersManifest: FeatureManifest = {
     { path: '/map', title: 'customers:map.title', permission: 'customer.view', navGroup: 'field', icon: MapIcon, order: 11 },
     { path: '/pin-approvals', title: 'customers:pins.title', permission: 'customer.location.approve', navGroup: 'field', icon: MapPinned, order: 12, useBadge: usePendingPins },
   ],
-  permissions: ['customer.view', 'customer.export', 'customer.location.approve'],
+  permissions: ['customer.view', 'customer.export', 'customer.location.approve', 'assignment.manage'],
   events: { listens: [EV.customerTagged, EV.collectionResolved] },
   commands: [
     { id: 'customers.map', title: 'customers:map.title', icon: MapIcon, href: '/map/', permission: 'customer.view' },

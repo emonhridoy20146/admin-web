@@ -48,5 +48,15 @@
     "code": "Use a code of 2 to 20 characters (A-Z, 0-9, hyphen)",
     "codeTaken": "This code already exists",
     "erpCodes": "Enter at least one ERP area code"
+  },
+  "bulk": {
+    "title": "Assign {{n}} customers to one staff member",
+    "desc": "The selected customers will appear in this staff member's app. Anyone who held them before loses them.",
+    "reason": "Reason (optional)",
+    "confirm": "Assign",
+    "done": "{{n}} customers assigned to {{name}}",
+    "skipped": "{{n}} already belonged to this staff member",
+    "tooMany": "At most {{n}} customers can be assigned at once",
+    "open": "Assign to staff"
   }
 }

@@ -84,14 +84,16 @@ export function reconGap(r: Pick<Recon, 'totals'> | undefined): number {
   return (r?.totals?.fosPostedPoisha ?? 0) - (r?.totals?.erpPoisha ?? 0);
 }
 
-export const EXPORT_TYPES = ['collections', 'staff_performance', 'attendance', 'overdue_customers', 'cash_positions'] as const satisfies readonly ExportType[];
+export const EXPORT_TYPES = ['collections', 'staff_performance', 'attendance', 'overdue_customers', 'cash_positions', 'audit'] as const satisfies readonly ExportType[];
 export type OfferedType = (typeof EXPORT_TYPES)[number];
 export const EXPORT_FORMATS = ['xlsx', 'csv'] as const satisfies readonly ExportFormat[];
 export type OfferedFormat = (typeof EXPORT_FORMATS)[number];
 
 /** Longest range the server accepts per type, in days (contract 1.6.0). */
-export const MAX_DAYS: Partial<Record<OfferedType, number>> = { collections: 92, attendance: 62 };
-export const needsRange = (t: OfferedType) => t === 'collections' || t === 'attendance';
+export const MAX_DAYS: Partial<Record<OfferedType, number>> = { collections: 92, attendance: 62, audit: 31 };
+/** Permission a type needs on top of `report.export` (contract 1.7.1: the audit export needs `audit.view`). */
+export const TYPE_PERMISSION: Partial<Record<OfferedType, string>> = { audit: 'audit.view' };
+export const needsRange = (t: OfferedType) => t === 'collections' || t === 'attendance' || t === 'audit';
 export const needsPeriod = (t: OfferedType) => t === 'staff_performance';
 
 export interface ExportForm {

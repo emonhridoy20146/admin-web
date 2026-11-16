@@ -59,3 +59,14 @@ export function useSaveArea() {
     onSuccess: done,
   });
 }
+
+/** FR-ASG: give many customers to one staff member in one call (at most 1000 ids). */
+export function useBulkAssign() {
+  const done = useDone();
+  return useMutation({
+    mutationFn: (v: { userId: string; customerIds: string[]; reason?: string }) => unwrap(api.POST('/assignments/bulk', { body: v })),
+    onSuccess: done,
+  });
+}
+
+export const BULK_MAX = 1000;

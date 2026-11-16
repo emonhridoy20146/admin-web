@@ -7,7 +7,7 @@ export const reportsManifest: FeatureManifest = {
   name: 'reports',
   flag: 'module.reports',
   routes: [{ path: '/reports', title: 'reports:title', permission: 'report.view', navGroup: 'field', icon: ChartColumn, order: 80 }],
-  permissions: ['report.view', 'report.export', 'collection.view'],
+  permissions: ['report.view', 'report.export', 'collection.view', 'audit.view'],
   commands: [{ id: 'reports.open', title: 'reports:title', icon: ChartColumn, href: '/reports/', permission: 'report.view' }],
   messages: { bn, en },
 };
