@@ -3,11 +3,13 @@
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.8.0** (1.2.0 → 1.8.0; 1.8.0 was taken from field-api PR 4 `feat/attendance-photo-every-event` before its merge, re-sync from `main` after it lands; types regenerated with `pnpm gen:api`).
 ### Changed
+- URL state: `set()` starts from the address bar instead of the params captured at render, so two quick changes (a filter, then a row click) no longer drop each other (fixed a flaky promises journey).
 - Pin approvals read `GET /location-proposals` as a plain array (field-api 1.7.0) and still accept the older `{ items }` envelope (`shared/api/list.ts`).
 - Permissions → branch tab reads current exceptions from `GET /rbac/overrides/branch/{branchId}` (1.3.0) instead of probing through one user; the "read through one user" notice is gone.
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Route history: the day's visits and collections (contract 1.7.1 `events[].data`) are listed with time, customer link, receipt and amount, collection points are drawn on the map, and the field money collected along the route is shown (app records, not the ERP ledger).
 - Attendance photos (FR-ATT-001, contract 1.8.0): a row in the attendance day view opens a drawer with every event of that staff member (work start, break start, back to work, work end) with the front-camera photo taken at that moment (presigned URL, enlarge on click), time, location accuracy and flags (no photo, no location, mock GPS, phone clock wrong, sent late); corrected and replaced events are marked. Days with a missing photo carry a "No photo" badge in the day list.
 - Settings: `attendance.selfieRequired` (master switch) and `attendance.selfieEvents` (which of the four moments need a photo; new multi-select field type; at least one while required). `attendance.selfieAtWorkIn` is gone from the API and from the form.
 - Bulk assign (FR-ASG): select customers in the customers list and give them to one staff member (`POST /assignments/bulk`, at most 1000, optional reason); the dialog is exported by the assignments feature and shown only with `assignment.manage` and `module.assignments`.

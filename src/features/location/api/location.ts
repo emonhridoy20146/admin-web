@@ -6,6 +6,7 @@ import type { components } from '@/shared/api/schema';
 export type Latest = components['schemas']['LatestLocation'];
 export type Stop = components['schemas']['Stop'];
 export type DaySummary = components['schemas']['LocationDailySummary'];
+export type RouteEvent = components['schemas']['TimelineItem'];
 
 /** How often the live map asks again. The server marks a position stale after 5 minutes, so 30 s is plenty. */
 export const LIVE_REFRESH_MS = 30_000;

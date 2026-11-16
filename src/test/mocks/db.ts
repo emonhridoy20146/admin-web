@@ -794,7 +794,7 @@ export function routeHistory(userId: string, date: string) {
     const start = DateTime.fromISO(v.row.checkInAt, { zone: ZONE });
     const end = v.row.checkOutAt ? DateTime.fromISO(v.row.checkOutAt, { zone: ZONE }) : start.plus({ minutes: 6 });
     stops.push({ start: isoAt(start), end: isoAt(end), dwellMin: Math.max(1, Math.round(end.diff(start, 'minutes').minutes)), lat: g.lat, lng: g.lng, customerId: v.row.customerId, customerName: v.row.customer?.name?.bn ?? null, distanceToPinM: v.row.distanceToPinM ?? null, visitId: null });
-    events.push({ kind: 'visit', at: v.row.checkInAt, actor: { id: u.id, name: u.name?.en }, summary: { bn: `${v.row.customer?.name?.bn ?? ''}: ভিজিট`, en: `Visit: ${v.row.customer?.name?.en ?? ''}` } });
+    events.push({ kind: 'visit', at: v.row.checkInAt, refId: v.row.id, actor: { id: u.id, name: u.name?.en }, summary: { bn: `${v.row.customer?.name?.bn ?? ''}: ভিজিট`, en: `Visit: ${v.row.customer?.name?.en ?? ''}` }, data: { customerId: v.row.customerId, lat: g.lat, lng: g.lng } });
     if (i === 1) {
       // a tea stall: a stop that is not at any customer
       const tea = { lat: g.lat + 0.0021, lng: g.lng - 0.0017 };
@@ -803,6 +803,11 @@ export function routeHistory(userId: string, date: string) {
       prev = tea;
     } else prev = g;
   });
+  for (const c of collections) {
+    if (c.collector?.id !== userId || c.status === 'voided' || dayOf(c.recordedAt!) !== date) continue;
+    const loc = customerById(c.customer?.id ?? '')?.item.location;
+    events.push({ kind: 'collection', at: c.recordedAt!, refId: c.id, actor: { id: u.id, name: u.name?.en }, summary: { bn: `${c.customer?.name?.bn ?? ''}: আদায়`, en: `Collection: ${c.customer?.name?.en ?? ''}` }, data: { customerId: c.customer?.id, ...(loc?.lat != null && loc?.lng != null ? { lat: loc.lat + 0.0002, lng: loc.lng + 0.0002 } : {}), amountPoisha: c.amountPoisha, method: c.method, receiptNo: c.receiptNo } });
+  }
   const first = DateTime.fromISO(mine[0]!.row.checkInAt, { zone: ZONE });
   const lastAt = DateTime.fromISO(stops.at(-1)!.end!, { zone: ZONE });
   const gapMin = h % 3 === 0 ? 0 : 12 + (h % 40);

@@ -74,6 +74,10 @@
     "gapsTitle": "When no position was received",
     "eventsTitle": "Work that day",
     "legendCustomer": "Stop at a customer",
-    "legendOther": "Stop elsewhere"
+    "legendOther": "Stop elsewhere",
+    "collection": "Collection",
+    "visit": "Visit",
+    "collectedField": "Field collected",
+    "legendCollection": "Where money was collected"
   }
 }

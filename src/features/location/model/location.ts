@@ -1,4 +1,4 @@
-import type { Latest, Stop } from '../api/location';
+import type { Latest, RouteEvent, Stop } from '../api/location';
 
 export const FRESHNESS = ['fresh', 'stale', 'lost'] as const;
 export type Freshness = (typeof FRESHNESS)[number];
@@ -61,3 +61,38 @@ export const STOP_TOKEN: Record<StopKind, string> = { customer: '--success-fg', 
 export function sortStops(stops: Stop[] | undefined): Stop[] {
   return [...(stops ?? [])].sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''));
 }
+
+export interface WorkEvent {
+  kind: 'visit' | 'collection';
+  at: string;
+  summary: RouteEvent['summary'];
+  customerId: string | null;
+  lat: number | null;
+  lng: number | null;
+  /** field money recorded in the app at this moment (collections only) */
+  amountPoisha: number | null;
+  method: string | null;
+  receiptNo: string | null;
+}
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
+
+/** Visits and collections of the day in time order. `data` is free-form in the contract, so every field is read defensively. */
+export function workEvents(events: RouteEvent[] | undefined): WorkEvent[] {
+  return (events ?? [])
+    .filter((e): e is RouteEvent & { kind: 'visit' | 'collection'; at: string } => (e.kind === 'visit' || e.kind === 'collection') && !!e.at)
+    .map((e) => {
+      const d = (e.data ?? {}) as Record<string, unknown>;
+      const money = e.kind === 'collection';
+      return { kind: e.kind, at: e.at, summary: e.summary, customerId: str(d.customerId), lat: num(d.lat), lng: num(d.lng), amountPoisha: money ? num(d.amountPoisha) : null, method: money ? str(d.method) : null, receiptNo: money ? str(d.receiptNo) : null };
+    })
+    .sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/** Field money collected along the route (app records, not the ERP ledger). */
+export function collectedOnRoute(events: WorkEvent[]): number {
+  return events.reduce((a, e) => a + (e.kind === 'collection' ? (e.amountPoisha ?? 0) : 0), 0);
+}
+
+export const COLLECTION_TOKEN = '--info-fg';

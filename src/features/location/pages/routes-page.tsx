@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, MapPin, Route, ShieldAlert, UserRound, WifiOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, MapPinCheck, Route, ShieldAlert, UserRound, Wallet, WifiOff } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
@@ -18,7 +18,8 @@ import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { Button } from '@/shared/ui/button';
 import { Field, Input, Select } from '@/shared/ui/form';
 import { useHistory, useStaff } from '../api/location';
-import { gaps, sortStops, STOP_TOKEN, stopKind } from '../model/location';
+import { MoneyText } from '@/shared/ui/money';
+import { COLLECTION_TOKEN, collectedOnRoute, gaps, sortStops, STOP_TOKEN, stopKind, workEvents } from '../model/location';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -45,7 +46,8 @@ export function RoutesPage() {
   const track = useMemo(() => decodePolyline(q.data?.polyline), [q.data?.polyline]);
   const stops = useMemo(() => sortStops(q.data?.stops), [q.data?.stops]);
   const lost = useMemo(() => gaps(q.data?.segments), [q.data?.segments]);
-  const events = q.data?.events ?? [];
+  const events = useMemo(() => workEvents(q.data?.events), [q.data?.events]);
+  const collected = collectedOnRoute(events);
   const sum = q.data?.summary;
   const person = staff.data?.find((u) => u.id === userId);
   const name = pickText(person?.name, locale);
@@ -57,8 +59,12 @@ export function RoutesPage() {
 
   const paths: MapPath[] = useMemo(() => (track.length > 1 ? [{ points: track, token: '--primary' }] : []), [track]);
   const markers: MapMarker[] = useMemo(
-    () => stops.filter((s) => typeof s.lat === 'number' && typeof s.lng === 'number').map((s, i) => ({ id: String(i), lat: s.lat!, lng: s.lng!, token: STOP_TOKEN[stopKind(s)], title: `${formatNumber(i + 1)}. ${s.customerName ?? t('routes.otherPlace')}`, strong: stopAt === i })),
-    [stops, stopAt, t],
+    () => [
+      // collections first so a stop at the same place stays on top and clickable
+      ...events.filter((e) => e.kind === 'collection' && e.lat !== null && e.lng !== null).map((e, i) => ({ id: `c${i}`, lat: e.lat!, lng: e.lng!, token: COLLECTION_TOKEN, title: `${t('routes.collection')} · ${formatTime(e.at)}`, hollow: true, strong: true })),
+      ...stops.filter((s) => typeof s.lat === 'number' && typeof s.lng === 'number').map((s, i) => ({ id: String(i), lat: s.lat!, lng: s.lng!, token: STOP_TOKEN[stopKind(s)], title: `${formatNumber(i + 1)}. ${s.customerName ?? t('routes.otherPlace')}`, strong: stopAt === i })),
+    ],
+    [stops, stopAt, events, t],
   );
   const showStop = (i: number) => {
     const s = stops[i];
@@ -119,7 +125,7 @@ export function RoutesPage() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="h-[46vh] min-h-72 lg:h-[calc(100vh-22rem)] lg:min-h-96">
-              <MapView label={t('routes.map', { name })} center={center} zoom={13} paths={paths} markers={markers} fit={fit} onMarkerClick={(id) => showStop(Number(id))} />
+              <MapView label={t('routes.map', { name })} center={center} zoom={13} paths={paths} markers={markers} fit={fit} onMarkerClick={(id) => !id.startsWith('c') && showStop(Number(id))} />
             </div>
 
             <div className="flex min-h-0 flex-col gap-4 lg:h-[calc(100vh-22rem)] lg:min-h-96 lg:overflow-y-auto">
@@ -158,6 +164,7 @@ export function RoutesPage() {
                 <p className="flex flex-wrap gap-x-3 gap-y-1 border-t border-line px-4 py-2.5 text-xs text-fg-secondary">
                   <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full" style={{ background: `var(${STOP_TOKEN.customer})` }} aria-hidden />{t('routes.legendCustomer')}</span>
                   <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full" style={{ background: `var(${STOP_TOKEN.other})` }} aria-hidden />{t('routes.legendOther')}</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2" style={{ borderColor: `var(${COLLECTION_TOKEN})` }} aria-hidden />{t('routes.legendCollection')}</span>
                 </p>
               </section>
 
@@ -180,12 +187,25 @@ export function RoutesPage() {
 
               {events.length > 0 && (
                 <section aria-labelledby="route-events" className="rounded-md border border-line bg-surface shadow-e1">
-                  <h2 id="route-events" className="border-b border-line px-4 py-3 text-sm font-semibold text-fg">{t('routes.eventsTitle')}</h2>
+                  <h2 id="route-events" className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 text-sm font-semibold text-fg">
+                    {t('routes.eventsTitle')}
+                    {collected > 0 ? <span className="text-xs font-normal text-fg-secondary">{t('routes.collectedField')}: <MoneyText poisha={collected} className="font-medium text-fg" /></span> : null}
+                  </h2>
                   <ul className="divide-y divide-line">
                     {events.map((e, i) => (
                       <li key={i} className="flex items-start gap-3 px-4 py-2.5 text-sm">
-                        <span className="tabular w-16 shrink-0 text-fg-secondary">{e.at ? formatTime(e.at) : ''}</span>
-                        <span className="text-fg" lang={locale}>{pickText(e.summary, locale)}</span>
+                        <span className="tabular w-16 shrink-0 text-fg-secondary">{formatTime(e.at)}</span>
+                        {e.kind === 'collection' ? <Wallet className="mt-0.5 size-4 shrink-0 text-info" aria-hidden /> : <MapPinCheck className="mt-0.5 size-4 shrink-0 text-fg-tertiary" aria-hidden />}
+                        <span className="min-w-0 flex-1">
+                          <span className="sr-only">{t(e.kind === 'collection' ? 'routes.collection' : 'routes.visit')}: </span>
+                          {e.customerId && canCustomer ? (
+                            <Link href={`/customers/${e.customerId}/`} className="text-fg hover:underline" lang={locale}>{pickText(e.summary, locale)}</Link>
+                          ) : (
+                            <span className="text-fg" lang={locale}>{pickText(e.summary, locale)}</span>
+                          )}
+                          {e.receiptNo ? <span className="block font-mono text-xs text-fg-tertiary">{e.receiptNo}</span> : null}
+                        </span>
+                        {e.amountPoisha !== null ? <MoneyText poisha={e.amountPoisha} className="shrink-0 font-medium" /> : null}
                       </li>
                     ))}
                   </ul>

@@ -18,7 +18,9 @@ export function useUrlState() {
 
   const set = useCallback(
     (patch: UrlPatch, opts: { push?: boolean } = {}) => {
-      const next = new URLSearchParams(sp.toString());
+      // start from the address bar, not from the params captured at render: two changes in a row (a filter, then a row
+      // click) must not drop each other when the second one runs before React re-renders
+      const next = new URLSearchParams(typeof window === 'undefined' ? sp.toString() : window.location.search);
       for (const [k, v] of Object.entries(patch)) {
         const val = Array.isArray(v) ? v.join(',') : v;
         if (val == null || val === '') next.delete(k);

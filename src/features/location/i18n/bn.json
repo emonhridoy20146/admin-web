@@ -74,6 +74,10 @@
     "gapsTitle": "কখন অবস্থান পাওয়া যায়নি",
     "eventsTitle": "সেদিনের কাজ",
     "legendCustomer": "গ্রাহকের কাছে থামা",
-    "legendOther": "অন্য জায়গায় থামা"
+    "legendOther": "অন্য জায়গায় থামা",
+    "collection": "আদায়",
+    "visit": "ভিজিট",
+    "collectedField": "মাঠে আদায়",
+    "legendCollection": "আদায়ের জায়গা"
   }
 }

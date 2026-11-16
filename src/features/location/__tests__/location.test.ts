@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodePolyline } from '@/shared/map/geo';
 import { locationManifest } from '../manifest';
-import { batteryPct, counts, freshnessOf, gaps, sortLatest, sortStops, stopKind } from '../model/location';
+import { batteryPct, collectedOnRoute, counts, freshnessOf, gaps, sortLatest, sortStops, stopKind, workEvents } from '../model/location';
 
 describe('location', () => {
   it('has a manifest with both routes', () => {
@@ -50,5 +50,20 @@ describe('location', () => {
     expect(sortStops([{ start: '2026-11-16T07:00:00Z' }, { start: '2026-11-16T05:00:00Z' }]).map((s) => s.start)).toEqual(['2026-11-16T05:00:00Z', '2026-11-16T07:00:00Z']);
     expect(stopKind({ customerId: 'x' })).toBe('customer');
     expect(stopKind({ customerId: null })).toBe('other');
+  });
+
+  it('reads visit and collection events defensively and totals field money', () => {
+    const ev = workEvents([
+      { kind: 'collection', at: '2026-11-16T05:10:00Z', data: { customerId: 'c1', lat: 22.7, lng: 90.3, amountPoisha: 150000, method: 'cash', receiptNo: 'R-1' } },
+      { kind: 'visit', at: '2026-11-16T05:00:00Z', data: { customerId: 'c1', lat: 22.7, lng: 90.3, amountPoisha: 999 } },
+      { kind: 'note', at: '2026-11-16T05:05:00Z' },
+      { kind: 'collection', at: '2026-11-16T06:00:00Z', data: { amountPoisha: 'x' } },
+      { kind: 'visit' },
+    ]);
+    expect(ev.map((e) => e.kind)).toEqual(['visit', 'collection', 'collection']);
+    expect(ev[0]!.amountPoisha).toBeNull();
+    expect(ev[1]).toMatchObject({ customerId: 'c1', amountPoisha: 150000, method: 'cash', receiptNo: 'R-1' });
+    expect(ev[2]).toMatchObject({ customerId: null, lat: null, amountPoisha: null });
+    expect(collectedOnRoute(ev)).toBe(150000);
   });
 });
