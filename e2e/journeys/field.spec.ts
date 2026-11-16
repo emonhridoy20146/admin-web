@@ -91,6 +91,38 @@ test('W-E5 resolve a conflict to a plan; a double click resolves it once', async
   await expect(cards).toHaveCount(before - 1);
 });
 
+test('W-E5b a refund needs a photo of the proof before it can be confirmed', async ({ page }) => {
+  await login(page);
+  await nav(page, colBn.conflicts);
+  const cards = page.locator('main [aria-label="' + colBn.fieldRecord + '"]');
+  await expect(cards.first()).toBeVisible();
+  const before = await cards.count();
+  await page.getByLabel(colBn.action, { exact: true }).first().selectOption('refund');
+  const resolveBtn = page.getByRole('button', { name: colBn.resolve, exact: true }).first();
+  await expect(resolveBtn).toBeDisabled();
+
+  // a small JPEG made in the browser stands in for the camera photo
+  const jpeg = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 48;
+    const x = c.getContext('2d')!;
+    x.fillStyle = 'gray';
+    x.fillRect(0, 0, 64, 48);
+    return c.toDataURL('image/jpeg', 0.9).split(',')[1]!;
+  });
+  await page.locator('main input[type=file]').first().setInputFiles({ name: 'refund.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpeg, 'base64') });
+  await expect(page.getByText(colBn.proof.ready, { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('img', { name: colBn.proof.preview })).toBeVisible();
+  await expect(resolveBtn).toBeEnabled();
+
+  await resolveBtn.click();
+  await expect(page.getByRole('dialog')).toContainText(colBn.proof.attached);
+  await confirmWithReason(page, 'Customer asked for the money back at the branch.', /সমাধান/);
+  await expect(page.getByText(colBn.resolved).first()).toBeVisible();
+  await expect(cards).toHaveCount(before - 1);
+});
+
 test('W-E6 verify and reject deposits; the pending queue updates', async ({ page }) => {
   await login(page);
   await nav(page, cashBn.title);

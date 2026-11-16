@@ -115,6 +115,7 @@ function recomputeCustomer(c: db.MockCustomer) {
   c.detail.badges = c.item.badges;
 }
 
+const uploads = new Map<string, boolean>();
 const exportJobs = new Map<string, { at: number; type: string; format: string }>();
 
 export const handlers = [
@@ -481,6 +482,20 @@ export const handlers = [
     const pg = page(all, url);
     return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
   })),
+  http.post(`${BASE}/media/upload-url`, authed(async ({ request }) => {
+    const b = (await request.json()) as { kind?: string; contentType?: string; sizeBytes?: number; sha256?: string };
+    if (!b.kind || !['image/jpeg', 'image/webp', 'audio/aac', 'audio/mp4'].includes(b.contentType ?? '') || !b.sha256) return problem(400, 'VALIDATION_FAILED', 'kind, contentType and sha256 are required');
+    if ((b.sizeBytes ?? 0) > 1_048_576) return problem(413, 'PAYLOAD_TOO_LARGE', 'At most 1 MiB');
+    const mediaId = db.oid('6799');
+    uploads.set(mediaId, false);
+    return HttpResponse.json({ mediaId, uploadUrl: `${BASE}/mock-storage/${mediaId}`, headers: {}, expiresAt: new Date(Date.now() + 600_000).toISOString(), alreadyExists: false }, { status: 201 });
+  })),
+  http.put(`${BASE}/mock-storage/:id`, ({ params }) => {
+    if (!uploads.has(String(params.id))) return new HttpResponse(null, { status: 403 });
+    uploads.set(String(params.id), true);
+    return new HttpResponse(null, { status: 200 });
+  }),
+  http.post(`${BASE}/media/:id/confirm`, authed(({ params }) => (uploads.get(String(params.id)) ? HttpResponse.json({}) : problem(409, 'NOT_UPLOADED', 'The file has not been uploaded')))),
   http.get(`${BASE}/media/:id/url`, authed(({ params }) => {
     // a generated placeholder image as a data: URL (no external host, CSP-safe)
     const hue = [...params.id!].reduce((s, ch) => (s + ch.charCodeAt(0)) % 360, 0);
@@ -827,7 +842,8 @@ export const handlers = [
     const c = db.collections.find((x) => x.id === params.id);
     if (!c) return problem(404, 'NOT_FOUND', 'Collection not found');
     if (c.status !== 'conflict' && c.status !== 'posting_failed') return problem(409, 'ALREADY_RESOLVED', 'This collection is already resolved');
-    const b = (await request.json()) as { action: string; erpPlanId?: string; reason: string };
+    const b = (await request.json()) as { action: string; erpPlanId?: string; reason: string; proofMediaId?: string };
+    if (b.action === 'refund' && !b.proofMediaId) return problem(422, 'BUSINESS_RULE', 'PROOF_REQUIRED');
     const before = { status: c.status };
     const map: Record<string, S['CollectionStatus']> = { post_to_plan: 'resolved_posted', post_as_advance: 'resolved_posted', retry_post: 'posted', refund: 'resolved_refund', void: 'resolved_voided' };
     c.status = map[b.action] ?? 'resolved_posted';

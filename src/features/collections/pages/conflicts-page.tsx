@@ -24,6 +24,7 @@ import {
   type Collection,
   type ResolveBody,
 } from '../api/collections';
+import { ProofPicker } from '../components/proof-picker';
 
 const ACTIONS = ['post_to_plan', 'post_as_advance', 'retry_post', 'refund', 'void'] as const;
 type Action = (typeof ACTIONS)[number];
@@ -76,6 +77,7 @@ function ConflictCard({ c }: { c: Collection }) {
   const plans = (customer.data?.plans ?? []).filter((p) => p.status === 'active' || p.status === 'defaulted');
   const [planId, setPlanId] = useState<string>('');
   const [open, setOpen] = useState(false);
+  const [proofId, setProofId] = useState<string | null>(null);
   const chosenPlan = planId || c.erpPlanId || plans[0]?.erpPlanId || '';
   const name = pickText(c.customer?.name, locale);
   const amount = formatMoney(c.amountPoisha ?? 0);
@@ -86,6 +88,7 @@ function ConflictCard({ c }: { c: Collection }) {
       action,
       reason,
       ...(action === 'post_to_plan' ? { erpPlanId: chosenPlan } : {}),
+      ...(action === 'refund' && proofId ? { proofMediaId: proofId } : {}),
     };
     await resolve.mutateAsync({ id: c.id!, key: idempotencyKey, body });
     toast.success(t('resolved'));
@@ -232,7 +235,10 @@ function ConflictCard({ c }: { c: Collection }) {
                   id={id}
                   aria-describedby={d}
                   value={action}
-                  onChange={(e) => setAction(e.target.value as Action)}
+                  onChange={(e) => {
+                    setAction(e.target.value as Action);
+                    setProofId(null);
+                  }}
                 >
                   {ACTIONS.map((a) => (
                     <option key={a} value={a}>
@@ -261,10 +267,15 @@ function ConflictCard({ c }: { c: Collection }) {
                 )}
               </Field>
             )}
+            {action === 'refund' && (
+              <div className="sm:col-span-2">
+                <ProofPicker onChange={setProofId} />
+              </div>
+            )}
           </div>
           <Button
             onClick={() => setOpen(true)}
-            disabled={action === 'post_to_plan' && !chosenPlan}
+            disabled={(action === 'post_to_plan' && !chosenPlan) || (action === 'refund' && !proofId)}
             className="lg:mb-6"
           >
             {t('resolve')}
@@ -294,6 +305,7 @@ function ConflictCard({ c }: { c: Collection }) {
             ...(action === 'post_to_plan'
               ? [{ label: t('targetPlan'), value: <span className="font-mono">{chosenPlan}</span> }]
               : []),
+            ...(action === 'refund' ? [{ label: t('proof.label'), value: t('proof.attached') }] : []),
             {
               label: t('col.amount'),
               value: <MoneyText poisha={c.amountPoisha} className="font-semibold" />,

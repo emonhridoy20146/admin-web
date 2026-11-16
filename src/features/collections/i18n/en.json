@@ -3,7 +3,12 @@
   "subtitle": "Money recorded in the field. Posted means the ERP has accepted it.",
   "conflicts": "Conflicts",
   "conflictsSubtitle": "Field collections the ERP did not accept. Resolve each one; nothing is dropped silently.",
-  "range": { "today": "Today", "yesterday": "Yesterday", "7d": "Last 7 days", "30d": "Last 30 days" },
+  "range": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days"
+  },
   "allMethods": "All methods",
   "allStatus": "All statuses",
   "flagged": "Flagged only",
@@ -63,7 +68,7 @@
     "post_to_plan": "Post this money against the plan you choose in the ERP.",
     "post_as_advance": "Keep the money on the customer's account as an advance.",
     "retry_post": "Send it to the ERP again unchanged (for temporary errors).",
-    "refund": "Money goes back to the customer; record the refund proof.",
+    "refund": "The money goes back to the customer. A photo of the refund proof is required.",
     "void": "The money was not actually collected."
   },
   "targetPlan": "Target plan",
@@ -75,5 +80,21 @@
   "plans": "Plans",
   "fieldRecord": "Field record",
   "cashWithCollector": "Cash with collector",
-  "rule": "Resolving posts or reverses money in the ERP. It is not undoable here."
+  "rule": "Resolving posts or reverses money in the ERP. It is not undoable here.",
+  "proof": {
+    "label": "Refund proof",
+    "help": "A photo of the refund slip signed by the customer, or of the money handed back. A refund cannot be confirmed without it.",
+    "pick": "Take or choose a photo",
+    "replace": "Use another photo",
+    "remove": "Remove",
+    "uploading": "Sending photo…",
+    "ready": "Photo attached",
+    "preview": "Refund proof photo",
+    "attached": "Photo attached",
+    "errors": {
+      "notImage": "Only a picture can be used.",
+      "tooBig": "The photo could not be brought under 1 MB. Use another one.",
+      "unreadable": "This picture format cannot be read. Use a JPEG photo."
+    }
+  }
 }

@@ -19,6 +19,8 @@ test('main pages have no serious axe violations', async ({ page }) => {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.waitForLoadState('networkidle');
+    // let state transitions (e.g. a pager button turning enabled) finish so axe sees settled colours
+    await page.waitForFunction(() => document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== 'running'));
     const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     for (const v of r.violations) if (v.impact === 'serious' || v.impact === 'critical') found.push(`${path} ${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`);
   }
