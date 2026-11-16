@@ -29,4 +29,14 @@ describe('settings schema', () => {
     expect(diff(current, { 'duty.shiftEnd': '08:00' }).errors).toEqual({ 'duty.shiftEnd': 'errors.shiftOrder' });
     expect(diff(current, { 'location.fastSec': '60' }).errors).toEqual({ 'location.slowSec': 'errors.slowFast' });
   });
+
+  it('stores selfie events as an ordered subset and needs at least one while photos are required', () => {
+    const f = SECTIONS.find((x) => x.id === 'attendance')!.fields.find((x) => x.key === 'attendance.selfieEvents')!;
+    expect(parse(f, ['work_out', 'bogus', 'work_in'])).toEqual({ value: ['work_in', 'work_out'] });
+    expect(toDraft(f, undefined)).toEqual([]);
+    const cur = { 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'work_out'] };
+    expect(diff(cur, { 'attendance.selfieEvents': [] }).errors).toEqual({ 'attendance.selfieEvents': 'errors.selfieEvents' });
+    expect(diff(cur, { 'attendance.selfieRequired': false, 'attendance.selfieEvents': [] })).toEqual({ changes: { 'attendance.selfieRequired': false, 'attendance.selfieEvents': [] }, errors: {} });
+    expect(diff(cur, { 'attendance.selfieEvents': ['work_in', 'work_out'] }).changes).toEqual({});
+  });
 });

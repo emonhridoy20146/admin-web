@@ -81,5 +81,26 @@
     "time": "Enter a valid time",
     "future": "The time cannot be in the future",
     "reason": "Write a reason of at least {{min}} characters"
+  },
+  "noSelfie": "No photo",
+  "details": "Day details and photos of {{name}}",
+  "events": {
+    "empty": "No attendance records on this day",
+    "summary": "{{n}} of {{total}} records have a photo",
+    "summaryMissing": "{{n}} of {{total}} records have no photo",
+    "noPhoto": "No photo",
+    "openPhoto": "Enlarge the photo of {{event}}",
+    "photoTitle": "{{name}}, {{event}}, {{time}}",
+    "photoAlt": "Photo taken by {{name}} at {{event}}",
+    "photoFailed": "The photo could not be loaded",
+    "replaced": "Replaced",
+    "accuracy": "Location accuracy ±{{n}} m",
+    "flag": {
+      "no_selfie": "No photo given",
+      "no_location": "No location",
+      "mock_location": "Mock GPS",
+      "clock_skew": "Phone clock wrong",
+      "late_sync": "Sent late"
+    }
   }
 }

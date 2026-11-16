@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, ChevronLeft, ChevronRight, ClockAlert, PencilLine, UserCheck, UserX } from 'lucide-react';
+import { CalendarDays, CameraOff, ChevronLeft, ChevronRight, ClockAlert, PencilLine, UserCheck, UserX } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
@@ -17,9 +17,10 @@ import { Segmented } from '@/shared/ui/primitives';
 import { Input } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { useDays, useStaff, useSummary, type AttendanceDay } from '../api/attendance';
-import { countDay, index, lastDay, monthDays, monthOf, shiftMonth, sortDay, type Status } from '../model/attendance';
+import { countDay, index, lastDay, missingSelfie, monthDays, monthOf, shiftMonth, sortDay, type Status } from '../model/attendance';
 import { MonthMatrix } from '../components/month-matrix';
 import { CorrectionDialog } from '../components/correction-dialog';
+import { DayDrawer } from '../components/day-drawer';
 
 const TONE: Record<Status, Tone> = {
   on_duty: 'success', on_break: 'info', off_duty: 'neutral', present: 'success', late: 'warning', absent: 'danger',
@@ -52,6 +53,8 @@ export function AttendancePage() {
   const counts = countDay(rows.map((r) => r.day).filter((d): d is AttendanceDay => !!d));
   const summary = useMemo(() => new Map((summaryQ.data ?? []).map((s) => [s.userId!, s])), [summaryQ.data]);
   const loading = staff.isLoading || dayQ.isLoading;
+  const openId = view === 'day' ? url.get('drawer') : '';
+  const openRow = rows.find((r) => r.id === openId);
 
   const columns: Column<Row>[] = [
     {
@@ -78,6 +81,7 @@ export function AttendancePage() {
             <Badge tone={TONE[s]}>{t(`status.${s}`)}</Badge>
             {r.day?.corrected && <Badge tone="neutral" icon={PencilLine}>{t('corrected')}</Badge>}
             {r.day?.autoClosed && <Badge tone="warning" icon={false}>{t('autoClosed')}</Badge>}
+            {missingSelfie(r.day) && <Badge tone="danger" icon={CameraOff}>{t('noSelfie')}</Badge>}
           </span>
         );
       },
@@ -95,7 +99,7 @@ export function AttendancePage() {
           priority: 2 as const,
           hideable: false,
           cell: (r: Row) => (
-            <Button size="sm" variant="ghost" onClick={() => setTarget({ userId: r.id, name: r.name, date })} aria-label={t('correctFor', { name: r.name })}>
+            <Button size="sm" variant="ghost" onClick={(e) => (e.stopPropagation(), setTarget({ userId: r.id, name: r.name, date }))} aria-label={t('correctFor', { name: r.name })}>
               <PencilLine className="size-3.5" aria-hidden />
               {t('correct')}
             </Button>
@@ -151,6 +155,8 @@ export function AttendancePage() {
             columns={columns}
             rows={loading ? undefined : rows}
             rowKey={(r) => r.id}
+            activeRowKey={openId || null}
+            onRowClick={(r) => url.set({ drawer: r.id }, { push: true })}
             loading={loading}
             error={dayQ.error ?? staff.error}
             onRetry={() => (void dayQ.refetch(), void staff.refetch())}
@@ -167,6 +173,7 @@ export function AttendancePage() {
         <MonthMatrix staff={people} days={monthDays(month, today)} byUser={byUser} summary={summary} today={today} onPick={(d) => url.set({ view: null, date: d === today ? null : d }, { push: true })} />
       )}
 
+      <DayDrawer target={openRow ? { userId: openRow.id, name: openRow.name, date } : null} onClose={() => url.set({ drawer: null })} />
       <CorrectionDialog target={target} onClose={() => setTarget(null)} />
     </>
   );

@@ -10,6 +10,8 @@ export type FieldDef =
   | { key: string; type: 'bool' }
   | { key: string; type: 'enum'; options: string[] }
   | { key: string; type: 'weekdays' }
+  /** any subset of fixed options, stored as a JSON array in the options' order */
+  | { key: string; type: 'multi'; options: string[] }
   | { key: string; type: 'version' };
 
 export interface SectionDef {
@@ -57,7 +59,13 @@ export const SECTIONS: SectionDef[] = [
       { key: 'location.stillSec', type: 'int', min: 30, max: 1800, unit: 'sec' },
     ],
   },
-  { id: 'attendance', fields: [{ key: 'attendance.selfieAtWorkIn', type: 'bool' }] },
+  {
+    id: 'attendance',
+    fields: [
+      { key: 'attendance.selfieRequired', type: 'bool' },
+      { key: 'attendance.selfieEvents', type: 'multi', options: ['work_in', 'break_start', 'break_end', 'work_out'] },
+    ],
+  },
   { id: 'app', fields: [{ key: 'app.minVersion', type: 'version' }] },
 ];
 
@@ -78,6 +86,7 @@ export function toDraft(f: FieldDef, v: unknown): unknown {
     case 'ratio':
       return v == null ? '' : String(Math.round(Number(v) * 100));
     case 'weekdays':
+    case 'multi':
       return Array.isArray(v) ? [...v] : [];
     default:
       return v ?? '';
@@ -110,6 +119,10 @@ export function parse(f: FieldDef, d: unknown): { value?: unknown; error?: strin
       return /^\d+\.\d+\.\d+$/.test(String(d)) ? { value: String(d) } : { error: 'errors.version' };
     case 'weekdays':
       return { value: [...((d as number[]) ?? [])].sort((a, b) => a - b) };
+    case 'multi': {
+      const picked = Array.isArray(d) ? d.map(String) : [];
+      return { value: f.options.filter((o) => picked.includes(o)) };
+    }
     case 'bool':
       return { value: !!d };
     case 'enum':
@@ -126,6 +139,8 @@ export function crossErrors(values: Record<string, unknown>): Record<string, str
   const fast = values['location.fastSec'];
   const slow = values['location.slowSec'];
   if (typeof fast === 'number' && typeof slow === 'number' && fast > slow) e['location.slowSec'] = 'errors.slowFast';
+  const ev = values['attendance.selfieEvents'];
+  if (values['attendance.selfieRequired'] === true && Array.isArray(ev) && ev.length === 0) e['attendance.selfieEvents'] = 'errors.selfieEvents';
   return e;
 }
 

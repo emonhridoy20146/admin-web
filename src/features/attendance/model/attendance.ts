@@ -1,4 +1,4 @@
-import type { AttendanceDay } from '../api/attendance';
+import type { AttendanceEvent, AttendanceDay } from '../api/attendance';
 
 export type Status = NonNullable<AttendanceDay['status']>;
 
@@ -88,4 +88,29 @@ export function validateCorrection(v: CorrectionForm, date: string, now: Date = 
   else if (Date.parse(dhakaIso(date, v.time)) > now.getTime()) e.time = 'errors.future';
   if (v.reason.trim().length < REASON_MIN) e.reason = 'errors.reason';
   return e;
+}
+
+/** A day is flagged when at least one of its events came without the required photo. */
+export function missingSelfie(d: Pick<AttendanceDay, 'flags'> | undefined): boolean {
+  return !!d?.flags?.includes('no_selfie');
+}
+
+export const EVENT_FLAGS = ['no_selfie', 'no_location', 'mock_location', 'clock_skew', 'late_sync'] as const;
+export type EventFlag = (typeof EVENT_FLAGS)[number];
+
+/** Known flags of an event, in a fixed order; unknown ones are dropped so the UI never shows a raw key. */
+export function eventFlags(e: Pick<AttendanceEvent, 'flags'>): EventFlag[] {
+  return EVENT_FLAGS.filter((f) => e.flags?.includes(f));
+}
+
+export interface EventSummary {
+  total: number;
+  withPhoto: number;
+  noPhoto: number;
+}
+
+/** Counts over the events that still count in the day (replaced ones are history). */
+export function summariseEvents(events: AttendanceEvent[] | undefined): EventSummary {
+  const live = (events ?? []).filter((e) => !e.replaced);
+  return { total: live.length, withPhoto: live.filter((e) => !!e.selfieMediaId).length, noPhoto: live.filter((e) => e.flags?.includes('no_selfie')).length };
 }

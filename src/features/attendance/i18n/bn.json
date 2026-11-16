@@ -64,7 +64,7 @@
   "event": {
     "work_in": "কাজ শুরু",
     "break_start": "বিরতি শুরু",
-    "break_end": "বিরতি শেষ",
+    "break_end": "কাজে ফেরা",
     "work_out": "কাজ শেষ"
   },
   "correction": {
@@ -81,5 +81,26 @@
     "time": "সঠিক সময় দিন",
     "future": "ভবিষ্যতের সময় দেওয়া যাবে না",
     "reason": "কমপক্ষে {{min}} অক্ষরে কারণ লিখুন"
+  },
+  "noSelfie": "ছবি নেই",
+  "details": "{{name}}-এর দিনের বিস্তারিত ও ছবি",
+  "events": {
+    "empty": "এই দিনে কোনো হাজিরার রেকর্ড নেই",
+    "summary": "{{total}}টি রেকর্ডের {{n}}টিতে ছবি আছে",
+    "summaryMissing": "{{total}}টি রেকর্ডের {{n}}টিতে ছবি নেই",
+    "noPhoto": "ছবি নেই",
+    "openPhoto": "{{event}}-এর ছবি বড় করে দেখুন",
+    "photoTitle": "{{name}}, {{event}}, {{time}}",
+    "photoAlt": "{{event}}-এর সময় {{name}}-এর তোলা ছবি",
+    "photoFailed": "ছবিটি আনা যায়নি",
+    "replaced": "বদলে দেওয়া হয়েছে",
+    "accuracy": "অবস্থানের নির্ভুলতা ±{{n}} মি",
+    "flag": {
+      "no_selfie": "ছবি দেননি",
+      "no_location": "অবস্থান নেই",
+      "mock_location": "নকল GPS",
+      "clock_skew": "ফোনের ঘড়ি ভুল",
+      "late_sync": "দেরিতে পাঠানো"
+    }
   }
 }

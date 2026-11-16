@@ -120,10 +120,6 @@
       "label": "Interval while still",
       "help": ""
     },
-    "attendance.selfieAtWorkIn": {
-      "label": "Selfie at work-in",
-      "help": ""
-    },
     "app.minVersion": {
       "label": "Minimum app version",
       "help": "Format 1.2.0"
@@ -131,6 +127,14 @@
     "location.trackingProvider": {
       "label": "Tracking engine",
       "help": "Background location library the staff app uses. Switch to the paid engine once its licence is bought; apps pick it up on their next settings refresh."
+    },
+    "attendance.selfieRequired": {
+      "label": "Photo required for attendance",
+      "help": "When on, staff must take a front-camera photo at the moments picked below. Attendance without a photo is still saved, but flagged."
+    },
+    "attendance.selfieEvents": {
+      "label": "When a photo is needed",
+      "help": "Pick any of work start, break, back to work and work end."
     }
   },
   "units": {
@@ -145,7 +149,11 @@
     "warn": "Warn only",
     "block": "Block new cash collections",
     "free": "Free (open source)",
-    "paid": "Paid (licensed)"
+    "paid": "Paid (licensed)",
+    "work_in": "Work start",
+    "break_start": "Break start",
+    "break_end": "Back to work",
+    "work_out": "Work end"
   },
   "weekdays": [
     "Sun",
@@ -165,7 +173,8 @@
     "version": "Use the form 1.2.0.",
     "required": "Required.",
     "shiftOrder": "Must be after the shift start.",
-    "slowFast": "Must be at least the moving interval."
+    "slowFast": "Must be at least the moving interval.",
+    "selfieEvents": "Pick at least one moment while photos are required."
   },
   "changed_one": "{{n}} unsaved change",
   "changed_other": "{{n}} unsaved changes",
@@ -176,5 +185,6 @@
   "saved": "Settings saved",
   "fixErrors": "Fix the highlighted fields first.",
   "on": "On",
-  "off": "Off"
+  "off": "Off",
+  "none": "None"
 }

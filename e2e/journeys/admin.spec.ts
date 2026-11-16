@@ -5,6 +5,7 @@ import auditBn from '../../src/features/audit/i18n/bn.json' with { type: 'json' 
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import devBn from '../../src/features/admin-devices/i18n/bn.json' with { type: 'json' };
 import sysBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
+import settingsBn from '../../src/features/admin-settings/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import { confirmWithReason, login, nav } from '../fixtures';
@@ -93,4 +94,17 @@ test('system health: server, ERP link and phone sync are shown, problems first',
   await expect(page.getByRole('heading', { level: 2, name: sysBn.sync.title })).toBeVisible();
   await expect(page.locator('tbody tr').first()).toBeVisible();
   expect(await page.locator('tbody tr').count()).toBeGreaterThan(5);
+});
+
+test('settings: attendance photo is required by default; drop one moment and save with a reason', async ({ page }) => {
+  await login(page);
+  await nav(page, settingsBn.title);
+  const group = page.getByRole('group', { name: settingsBn.fields['attendance.selfieEvents'].label });
+  for (const k of ['work_in', 'break_start', 'break_end', 'work_out'] as const) await expect(group.getByRole('button', { name: settingsBn.enum[k], pressed: true })).toBeVisible();
+  await group.getByRole('button', { name: settingsBn.enum.break_start }).click();
+  await expect(group.getByRole('button', { name: settingsBn.enum.break_start, pressed: false })).toBeVisible();
+  await page.getByRole('button', { name: settingsBn.review }).click();
+  await confirmWithReason(page, 'বিরতির সময় ছবি আপাতত লাগবে না', settingsBn.saveConfirm);
+  await expect(page.getByText(settingsBn.saved)).toBeVisible();
+  await expect(group.getByRole('button', { name: settingsBn.enum.break_start, pressed: false })).toBeVisible();
 });

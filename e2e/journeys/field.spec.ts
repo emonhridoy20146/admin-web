@@ -148,6 +148,8 @@ test('promises: filter by window, open one and cancel it with a reason', async (
   await page.getByRole('group', { name: promisesBn.when }).getByRole('button', { name: promisesBn.window.next7 }).click();
   await expect(page).toHaveURL(/when=next7/);
   await page.getByLabel(promisesBn.col.status).selectOption('open');
+  await expect(page).toHaveURL(/status=open/);
+  await page.waitForLoadState('networkidle');
   await expect(page.locator('tbody tr button').first()).toBeVisible();
   await page.locator('tbody tr button').first().click();
   const drawer = page.getByRole('dialog');
@@ -351,4 +353,28 @@ test('bulk assign: select customers in the list and give them to one staff membe
   await dialog.getByRole('button', { name: areasBn.bulk.confirm, exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('button', { name: areasBn.bulk.open })).toBeHidden();
+});
+
+test('attendance photos: open a staff member\'s day, see each event with its photo and enlarge one', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, attendanceBn.title);
+  // go back until a worked day is found (today may not have started, Friday is the weekly off)
+  const worked = page.locator('tbody tr').filter({ hasText: new RegExp(`${attendanceBn.status.present}|${attendanceBn.status.late}`) });
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: attendanceBn.prevDay }).click();
+    // the previous day's rows stay on screen while the new day loads, so wait for a worked row instead of counting at once
+    if (await worked.first().waitFor({ timeout: 4000 }).then(() => true, () => false)) break;
+  }
+  await worked.first().click();
+  await expect(page).toHaveURL(/drawer=/);
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText(attendanceBn.event.work_in)).toBeVisible();
+  await expect(drawer.getByText(attendanceBn.event.work_out)).toBeVisible();
+  const photo = drawer.getByRole('button', { name: new RegExp(attendanceBn.event.work_in) });
+  if (await photo.count()) {
+    await photo.click();
+    await expect(page.getByRole('dialog').last().locator('img')).toBeVisible();
+  } else {
+    await expect(drawer.getByText(attendanceBn.events.flag.no_selfie)).toBeVisible();
+  }
 });

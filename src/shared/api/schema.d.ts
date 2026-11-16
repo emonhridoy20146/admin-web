@@ -1253,7 +1253,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description One staff member's raw events of a business date, oldest first, with photo, place and flags per event (1.8.0). Permission attendance.view; a user outside the caller's branches is 404. The photo is read with GET /media/{id}/url. */
+        get: operations["listAttendanceEvents"];
         put?: never;
         post: operations["attendanceEvent"];
         delete?: never;
@@ -2544,6 +2545,27 @@ export interface components {
             autoClosed?: boolean;
             corrected?: boolean;
             flags?: string[];
+        };
+        /** @description A stored attendance event as managers see it (1.8.0) */
+        AttendanceEvent: {
+            id: string;
+            /** @enum {string} */
+            type: "work_in" | "break_start" | "break_end" | "work_out";
+            /** Format: date-time */
+            at: string;
+            geo?: {
+                lat?: number;
+                lng?: number;
+                accuracyM?: number;
+                mock?: boolean;
+            } | null;
+            selfieMediaId?: string | null;
+            /** @description e.g. no_selfie, no_location, mock_location, clock_skew, late_sync */
+            flags: string[];
+            /** @enum {string} */
+            source?: "app" | "correction" | "system";
+            /** @description true when a correction replaced this event; it no longer counts in the day */
+            replaced?: boolean;
         };
         LocationPoint: {
             /** Format: date-time */
@@ -5364,6 +5386,29 @@ export interface operations {
             };
         };
     };
+    listAttendanceEvents: {
+        parameters: {
+            query: {
+                userId: string;
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceEvent"][];
+                };
+            };
+        };
+    };
     attendanceEvent: {
         parameters: {
             query?: never;
@@ -5385,6 +5430,7 @@ export interface operations {
                     /** @description null when no GPS fix could be taken (1.2.0); send geoUnavailableReason */
                     geo: components["schemas"]["GeoFix"] | null;
                     geoUnavailableReason?: components["schemas"]["GeoUnavailableReason"];
+                    /** @description Front-camera photo (media kind `selfie`) uploaded by this user. Stored on every event type. Required at the event types in setting `attendance.selfieEvents` while `attendance.selfieRequired` is true (defaults: true, all four types); an event without it is still stored and flagged `no_selfie` (1.8.0). */
                     selfieMediaId?: string;
                 };
             };

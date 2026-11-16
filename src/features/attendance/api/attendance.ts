@@ -6,6 +6,7 @@ import type { components, operations } from '@/shared/api/schema';
 export type AttendanceDay = components['schemas']['AttendanceDay'];
 export type SummaryRow = components['schemas']['AttendanceSummaryRow'];
 export type User = components['schemas']['User'];
+export type AttendanceEvent = components['schemas']['AttendanceEvent'];
 export type CorrectionBody = operations['attendanceCorrection']['requestBody']['content']['application/json'];
 
 export function useDays(from: string, to: string) {
@@ -44,5 +45,26 @@ export function useCorrect() {
   return useMutation({
     mutationFn: (body: CorrectionBody) => unwrap(api.POST('/attendance/corrections', { body })),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['attendance'] }),
+  });
+}
+
+/** One staff member's raw events of a business date, oldest first, with photo, place and flags (contract 1.8.0). */
+export function useEvents(userId: string | null, date: string) {
+  return useQuery({
+    queryKey: ['attendance', 'events', userId, date],
+    queryFn: () => unwrap(api.GET('/attendance/events', { params: { query: { userId: userId!, date } } })),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+/** Short-lived presigned URL of an attendance photo. A face photo is personal data: never stored, never cached past its expiry. */
+export function useSelfieUrl(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ['attendance', 'selfie', id],
+    queryFn: () => unwrap(api.GET('/media/{id}/url', { params: { path: { id: id! } } })),
+    enabled: !!id,
+    staleTime: 4 * 60_000,
+    gcTime: 5 * 60_000,
   });
 }

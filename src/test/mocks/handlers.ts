@@ -400,6 +400,15 @@ export const handlers = [
     });
     return HttpResponse.json({ month, items });
   })),
+  http.get(`${BASE}/attendance/events`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'attendance.view');
+    if (deny) return deny;
+    const u = db.userById(url.searchParams.get('userId'));
+    const date = url.searchParams.get('date') ?? '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return problem(400, 'VALIDATION_FAILED', 'date is required');
+    if (!u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '')) return problem(404, 'NOT_FOUND', 'User not found');
+    return HttpResponse.json(db.attendanceEvents(u, date));
+  })),
   http.post(`${BASE}/attendance/corrections`, authed(async ({ request, ctx }) => {
     const deny = need(ctx, 'attendance.manage');
     if (deny) return deny;
@@ -475,6 +484,10 @@ export const handlers = [
   http.get(`${BASE}/media/:id/url`, authed(({ params }) => {
     // a generated placeholder image as a data: URL (no external host, CSP-safe)
     const hue = [...params.id!].reduce((s, ch) => (s + ch.charCodeAt(0)) % 360, 0);
+    if (params.id!.startsWith('selfie-')) {
+      const face = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="960"><rect width="720" height="960" fill="hsl(${hue} 28% 80%)"/><circle cx="360" cy="380" r="150" fill="hsl(${hue} 30% 55%)"/><path d="M110 960c0-200 110-330 250-330s250 130 250 330Z" fill="hsl(${hue} 32% 40%)"/></svg>`;
+      return HttpResponse.json({ url: `data:image/svg+xml;utf8,${encodeURIComponent(face)}`, expiresAt: new Date(Date.now() + 300_000).toISOString() });
+    }
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720"><rect width="960" height="720" fill="hsl(${hue} 30% 82%)"/><rect x="330" y="300" width="300" height="240" fill="hsl(${hue} 25% 62%)"/><path d="M300 310 480 170 660 310Z" fill="hsl(${hue} 35% 42%)"/><rect x="440" y="400" width="80" height="140" fill="hsl(${hue} 30% 30%)"/></svg>`;
     return HttpResponse.json({ url: `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`, expiresAt: new Date(Date.now() + 300_000).toISOString() });
   })),

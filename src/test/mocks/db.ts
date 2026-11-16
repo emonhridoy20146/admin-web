@@ -497,7 +497,7 @@ export const settings: Record<string, unknown> = {
   'cash.limitPoisha': 5_000_000, 'cash.limitMode': 'warn', 'cash.warnAtRatio': 0.8,
   'location.trackingProvider': 'free', 'location.providerConfig': {}, 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
   'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
-  'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieAtWorkIn': false, 'app.minVersion': '1.0.0',
+  'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'app.minVersion': '1.0.0',
   'map.tileProvider': 'protomaps-bd',
 };
 
@@ -668,8 +668,37 @@ export function attendanceDay(u: MockUser, date: string): S['AttendanceDay'] {
   return {
     ...base, status: late > 0 ? 'late' : 'present', firstIn: isoAt(inAt), lastOut: isoAt(outAt), lateMin: late, breakMin,
     dutyMin: Math.max(0, Math.round(outAt.diff(inAt, 'minutes').minutes) - breakMin), breaks: [{ start: isoAt(bStart), end: isoAt(bStart.plus({ minutes: breakMin })) }],
-    autoClosed, corrected: !!corr, flags: breakMin > 60 ? ['over_break'] : [],
+    autoClosed, corrected: !!corr, flags: [...(breakMin > 60 ? ['over_break'] : []), ...(noSelfieAt(u.id!, date).length ? ['no_selfie'] : [])],
   };
+}
+/** Event types of a day that came without a photo (about one day in nine misses one). */
+function noSelfieAt(userId: string, date: string): string[] {
+  const h = hash(`selfie:${userId}:${date}`);
+  return h % 9 === 0 ? [(['work_in', 'break_start', 'break_end', 'work_out'] as const)[(h >> 5) % 4]!] : [];
+}
+export function attendanceEvents(u: MockUser, date: string): S['AttendanceEvent'][] {
+  const d = attendanceDay(u, date);
+  const b = branches.find((x) => x.id === u.branchIds?.[0]);
+  const missing = noSelfieAt(u.id!, date);
+  const h = hash(`ev:${u.id}:${date}`);
+  const corr = attendanceCorrections.get(`${u.id}:${date}`) ?? [];
+  const raw: { type: S['AttendanceEvent']['type']; at: string }[] = [];
+  if (d.firstIn) raw.push({ type: 'work_in', at: d.firstIn });
+  for (const br of d.breaks ?? []) {
+    if (br.start) raw.push({ type: 'break_start', at: br.start });
+    if (br.end) raw.push({ type: 'break_end', at: br.end });
+  }
+  if (d.lastOut && !d.autoClosed) raw.push({ type: 'work_out', at: d.lastOut });
+  return raw.map((e, i) => {
+    const corrected = corr.some((c) => c.type === e.type);
+    const none = !corrected && missing.includes(e.type);
+    return {
+      id: `${u.id}-${date}-${e.type}-${i}`, type: e.type, at: e.at, source: corrected ? ('correction' as const) : ('app' as const), replaced: false,
+      geo: corrected ? null : { lat: (b?.lat ?? 22.7) + (((h >> (i * 3)) % 60) - 30) / 10_000, lng: (b?.lng ?? 90.36) + (((h >> (i * 2 + 1)) % 60) - 30) / 10_000, accuracyM: 6 + ((h >> i) % 30), mock: false },
+      selfieMediaId: corrected || none ? null : `selfie-${u.id}-${date}-${e.type}`,
+      flags: [...(none ? ['no_selfie'] : []), ...(corrected ? ['no_location'] : [])],
+    };
+  });
 }
 
 // ---------- pin proposals ----------

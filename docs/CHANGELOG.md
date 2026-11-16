@@ -1,13 +1,15 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.7.1** (1.2.0 → 1.7.1, synced from field-api `main`; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.8.0** (1.2.0 → 1.8.0; 1.8.0 was taken from field-api PR 4 `feat/attendance-photo-every-event` before its merge, re-sync from `main` after it lands; types regenerated with `pnpm gen:api`).
 ### Changed
 - Pin approvals read `GET /location-proposals` as a plain array (field-api 1.7.0) and still accept the older `{ items }` envelope (`shared/api/list.ts`).
 - Permissions → branch tab reads current exceptions from `GET /rbac/overrides/branch/{branchId}` (1.3.0) instead of probing through one user; the "read through one user" notice is gone.
 - A super admin viewing one branch now gets that branch's effective feature flags (`GET /feature-flags/effective`), so a module switched OFF for the branch is hidden while it is selected.
 - Deposits show `Deposit.userName`; conflicts and deposits lists use the typed envelopes (casts removed).
 ### Added
+- Attendance photos (FR-ATT-001, contract 1.8.0): a row in the attendance day view opens a drawer with every event of that staff member (work start, break start, back to work, work end) with the front-camera photo taken at that moment (presigned URL, enlarge on click), time, location accuracy and flags (no photo, no location, mock GPS, phone clock wrong, sent late); corrected and replaced events are marked. Days with a missing photo carry a "No photo" badge in the day list.
+- Settings: `attendance.selfieRequired` (master switch) and `attendance.selfieEvents` (which of the four moments need a photo; new multi-select field type; at least one while required). `attendance.selfieAtWorkIn` is gone from the API and from the form.
 - Bulk assign (FR-ASG): select customers in the customers list and give them to one staff member (`POST /assignments/bulk`, at most 1000, optional reason); the dialog is exported by the assignments feature and shown only with `assignment.manage` and `module.assignments`.
 - CI workflow (`.github/workflows/ci.yml`): lint, typecheck, unit tests, permission and i18n checks, mock build and Playwright journeys on every push and pull request.
 - Reports (FR-RPT) at `/reports`, three tabs: **Branch trends** (field collections by day or week for 7/30/90 days with cash/mobile split, receipts and visits, chart with table view; ERP overdue aging from the latest nightly snapshot with movement since the first one, labelled as ERP figures), **ERP reconciliation** (one business date: posted and waiting field collections against what the ERP reports with its fetch time, matched count, gap, mismatch table by kind) and **Downloads** (async CSV/XLSX export of collections, staff performance, attendance, overdue customers, cash positions; range limits from the contract; polls until ready; needs `report.export`). PDF export is not offered because the API answers 422 for it. The audit log export (contract 1.7.1, at most 31 days) is offered to users with `audit.view`.

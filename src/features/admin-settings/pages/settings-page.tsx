@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
 import { cn } from '@/shared/lib/cn';
@@ -148,6 +149,8 @@ function display(f: FieldDef, v: unknown, t: (k: string, o?: Record<string, unkn
       const names = t('weekdays', { returnObjects: true }) as unknown as string[];
       return (v as number[]).map((d) => names[d]).join(', ') || '—';
     }
+    case 'multi':
+      return (v as string[]).map((o) => t(`enum.${o}`)).join(', ') || t('none');
     default:
       return String(v);
   }
@@ -189,6 +192,30 @@ function FieldRow({ f, value, onChange, changed, error, disabled }: { f: FieldDe
                 className={cn('h-9 min-w-11 rounded-sm border px-2 text-sm font-medium transition-colors disabled:opacity-50', on ? 'border-primary bg-primary-subtle text-primary-subtle-fg' : 'border-line text-fg-secondary hover:bg-surface-hover')}
               >
                 {n}
+              </button>
+            );
+          })}
+        </div>
+      );
+      break;
+    }
+    case 'multi': {
+      const sel = (value as string[]) ?? [];
+      control = (
+        <div role="group" aria-labelledby={`${id}-l`} aria-describedby={describedBy} className="flex flex-wrap gap-1.5">
+          {f.options.map((o) => {
+            const on = sel.includes(o);
+            return (
+              <button
+                key={o}
+                type="button"
+                aria-pressed={on}
+                disabled={disabled}
+                onClick={() => onChange(on ? sel.filter((x) => x !== o) : [...sel, o])}
+                className={cn('inline-flex h-9 items-center gap-1.5 rounded-sm border px-3 text-sm font-medium transition-colors disabled:opacity-50 [@media(pointer:coarse)]:h-11', on ? 'border-primary bg-primary-subtle text-primary-subtle-fg' : 'border-line text-fg-secondary hover:bg-surface-hover')}
+              >
+                {on && <Check className="size-3.5" aria-hidden strokeWidth={2.5} />}
+                {t(`enum.${o}`)}
               </button>
             );
           })}
