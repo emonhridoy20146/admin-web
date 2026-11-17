@@ -1048,3 +1048,76 @@ export function qualityFindings(c: MockCustomer): { issue: (typeof DQ_ISSUES)[nu
   return out;
 }
 
+
+// ---------- leave, holidays, shifts, notices (contract 1.12.0) ----------
+// Deterministic: no rnd() here, so the data above stays as it was.
+const dayOff = (n: number) => now().plus({ days: n }).toISODate()!;
+const dayCount = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
+
+export const shifts: S['Shift'][] = [
+  { id: 'sh-day', name: 'Day shift', start: '09:00', end: '18:00', weeklyOff: [5], lateGraceMin: 15, maxBreakMin: 60 },
+  { id: 'sh-market', name: 'Market day shift', start: '10:00', end: '19:00', weeklyOff: [5, 6], lateGraceMin: 20, maxBreakMin: 45 },
+];
+// a few staff work the market-day shift; the rest use the day shift or the branch default
+staff.forEach((u, i) => {
+  u.shiftId = i % 5 === 2 ? 'sh-market' : i % 3 === 0 ? 'sh-day' : null;
+});
+
+const year = Number(today().slice(0, 4));
+export const holidays: S['Holiday'][] = [
+  { id: oid('6741'), date: `${year}-02-21`, name: { bn: 'শহীদ দিবস ও আন্তর্জাতিক মাতৃভাষা দিবস', en: 'Language Martyrs Day' }, branchIds: [], type: 'national' },
+  { id: oid('6741'), date: `${year}-03-26`, name: { bn: 'স্বাধীনতা দিবস', en: 'Independence Day' }, branchIds: [], type: 'national' },
+  { id: oid('6741'), date: `${year}-05-01`, name: { bn: 'মে দিবস', en: 'May Day' }, branchIds: [], type: 'national' },
+  { id: oid('6741'), date: dayOff(9), name: { bn: 'শাখার বার্ষিক সভা', en: 'Branch annual meeting' }, branchIds: [B[0]!], type: 'branch' },
+  { id: oid('6741'), date: `${year}-12-16`, name: { bn: 'বিজয় দিবস', en: 'Victory Day' }, branchIds: [], type: 'national' },
+  { id: oid('6741'), date: `${year}-12-25`, name: { bn: 'বড়দিন', en: 'Christmas Day' }, branchIds: [], type: 'national' },
+];
+
+export type MockLeave = S['LeaveRequest'];
+export const leaveRequests: MockLeave[] = [];
+function addLeave(u: MockUser, type: MockLeave['type'], fromIn: number, days: number, reason: string, status: MockLeave['status'], createdHoursAgo: number, decisionReason?: string) {
+  const from = dayOff(fromIn);
+  const to = dayOff(fromIn + days - 1);
+  const createdAt = isoAt(now().minus({ hours: createdHoursAgo }));
+  const decided = status === 'approved' || status === 'rejected';
+  const mgr = managers.find((m) => m.branchIds?.[0] === u.branchIds?.[0]);
+  leaveRequests.push({
+    id: oid('6742'), userId: u.id, userName: u.name?.en, branchId: u.branchIds?.[0] ?? null, type, from, to, days: dayCount(from, to), reason, status,
+    ...(decided ? { decidedBy: mgr?.id, decidedAt: isoAt(now().minus({ hours: Math.max(1, createdHoursAgo - 3) })) } : {}),
+    ...(decisionReason ? { decisionReason } : {}),
+    ...(status === 'cancelled' ? { cancelledAt: isoAt(now().minus({ hours: createdHoursAgo - 1 })) } : {}),
+    createdAt,
+  });
+}
+{
+  const s = staff.filter((u) => u.active);
+  const b0 = s.filter((u) => u.branchIds?.[0] === B[0]);
+  const b1 = s.filter((u) => u.branchIds?.[0] === B[1]);
+  addLeave(b0[0]!, 'sick', 1, 2, 'জ্বর, ডাক্তার বিশ্রাম নিতে বলেছেন', 'pending', 3);
+  addLeave(b0[1]!, 'casual', 6, 3, 'বোনের বিয়ে', 'pending', 20);
+  addLeave(b0[2]!, 'casual', 3, 1, 'জমির কাগজের কাজে উপজেলা অফিসে যেতে হবে', 'pending', 26);
+  addLeave(b0[4]!, 'other', -5, 2, 'পরিবারের অসুস্থতা', 'approved', 140);
+  addLeave(b0[5]!, 'casual', 2, 4, 'গ্রামের বাড়ি যাব', 'rejected', 50, 'সাপ্তাহিক কালেকশন ড্রাইভ চলছে, পরের সপ্তাহে নিন');
+  addLeave(b0[6]!, 'sick', 12, 1, '', 'cancelled', 30);
+  addLeave(b1[0]!, 'sick', 0, 1, 'পেটের সমস্যা', 'pending', 2);
+  addLeave(b1[1]!, 'casual', 15, 2, 'ঈদের পরে বাড়ি যাওয়া', 'approved', 70);
+}
+
+/** `recipientIds` is fixed when the notice is sent, as on the server (people added later do not get old notices). */
+export interface MockBroadcast { row: S['Broadcast']; recipientIds: string[]; acks: Map<string, string> }
+export const broadcasts: MockBroadcast[] = [];
+/** Active users a broadcast reaches: its branches (none = all) and roles (none = field staff), never the sender. */
+export function broadcastRecipients(branchIds: string[], roles: Role[], senderId?: string): MockUser[] {
+  const rs = roles.length ? roles : (['field_staff'] as Role[]);
+  return users.filter((u) => u.active && u.id !== senderId && rs.includes(u.role!) && (!branchIds.length || (u.branchIds ?? []).some((x) => branchIds.includes(x))));
+}
+export function addBroadcast(row: Omit<S['Broadcast'], 'id' | 'recipientCount' | 'ackCount'>, ackShare = 0, ackMinutesAfter = 30): MockBroadcast {
+  const roles = (row.roles?.length ? row.roles : ['field_staff']) as Role[];
+  const rec = broadcastRecipients(row.branchIds ?? [], roles, row.createdBy?.id);
+  const b: MockBroadcast = { row: { id: oid('6743'), ...row, roles }, recipientIds: rec.map((u) => u.id!), acks: new Map() };
+  rec.slice(0, Math.floor(rec.length * ackShare)).forEach((u, i) => b.acks.set(u.id!, isoAt(DateTime.fromISO(row.createdAt!).plus({ minutes: ackMinutesAfter + i * 7 }))));
+  broadcasts.unshift(b);
+  return b;
+}
+addBroadcast({ title: { bn: 'ঈদের ছুটির সময়সূচি', en: 'Eid holiday schedule' }, body: { bn: 'ঈদের আগের দুই দিন অফিস দুপুর ২টা পর্যন্ত খোলা থাকবে।', en: 'The office is open until 2 PM on the two days before Eid.' }, branchIds: [], roles: [], requireAck: false, createdBy: { id: superAdmin.id, name: superAdmin.name?.en }, createdAt: isoAt(now().minus({ days: 6 })) }, 0.9);
+addBroadcast({ title: { bn: 'নতুন নিয়ম: রসিদ ছাড়া টাকা নয়', en: 'New rule: no money without a receipt' }, body: { bn: 'আজ থেকে কোনো কিস্তির টাকা নিলে সাথে সাথে অ্যাপে রসিদ দিন। রসিদ ছাড়া টাকা নিলে তা গ্রহণযোগ্য হবে না।', en: 'From today, give a receipt in the app as soon as you take an installment. Money taken without a receipt is not accepted.' }, branchIds: [B[0]!], roles: ['field_staff'], requireAck: true, createdBy: { id: managers[0]!.id, name: managers[0]!.name?.en }, createdAt: isoAt(now().minus({ hours: 20 })) }, 0.6, 12);

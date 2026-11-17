@@ -18,6 +18,8 @@ export interface UserFormValues {
   erpEmployeeId: string;
   /** whole taka as typed; empty = use the default limit */
   cashLimitTaka: string;
+  /** work shift (FR-SET-003); empty = the branch's duty hours */
+  shiftId: string;
 }
 
 export type UserFormErrors = Partial<Record<keyof UserFormValues, string>>;
@@ -32,6 +34,7 @@ export const emptyForm = (branchId?: string): UserFormValues => ({
   employeeCode: '',
   erpEmployeeId: '',
   cashLimitTaka: '',
+  shiftId: '',
 });
 
 export function fromUser(u: User): UserFormValues {
@@ -45,6 +48,7 @@ export function fromUser(u: User): UserFormValues {
     employeeCode: u.employeeCode ?? '',
     erpEmployeeId: u.erpEmployeeId ?? '',
     cashLimitTaka: u.cashLimitPoisha != null ? String(Math.round(u.cashLimitPoisha / 100)) : '',
+    shiftId: u.shiftId ?? '',
   };
 }
 
@@ -96,6 +100,7 @@ export function toCreate(v: UserFormValues): UserCreate {
     ...(v.username ? { username: v.username } : {}),
     ...(v.erpEmployeeId.trim() ? { erpEmployeeId: v.erpEmployeeId.trim() } : {}),
     ...(limit != null && !Number.isNaN(limit) ? { cashLimitPoisha: limit } : {}),
+    ...(v.shiftId ? { shiftId: v.shiftId } : {}),
   };
 }
 
@@ -110,6 +115,8 @@ export function toUpdate(before: User, v: UserFormValues, reason: string): UserU
     out.branchIds = v.branchIds;
   const limit = toPoisha(v.cashLimitTaka);
   if (limit != null && !Number.isNaN(limit) && limit !== before.cashLimitPoisha) out.cashLimitPoisha = limit;
+  // a shift can be changed to another one; going back to the branch hours is not in the contract
+  if (v.shiftId && v.shiftId !== (before.shiftId ?? '')) out.shiftId = v.shiftId;
   return out;
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useBranches } from '@/features/shell';
+import { useShifts } from '@/features/attendance';
 import { useUi } from '@/shared/lib/ui-store';
 import { pickText } from '@/shared/lib/format';
 import { Dialog } from '@/shared/ui/overlay';
@@ -41,6 +42,7 @@ export function UserFormDialog({
   const locale = useUi((s) => s.locale);
   const branchId = useUi((s) => s.branchId);
   const branches = useBranches();
+  const shifts = useShifts();
   const create = useCreateUser();
   const update = useUpdateUser();
   const [v, setV] = useState<UserFormValues>(emptyForm());
@@ -264,6 +266,20 @@ export function UserFormDialog({
                   value={v.cashLimitTaka}
                   onChange={(e) => set('cashLimitTaka', e.target.value)}
                 />
+              )}
+            </Field>
+          )}
+          {v.role === 'field_staff' && (
+            <Field label={t('form.shift')} help={t('form.shiftHelp')}>
+              {(id, d) => (
+                <Select id={id} aria-describedby={d} value={v.shiftId} onChange={(e) => set('shiftId', e.target.value)}>
+                  {(!user?.shiftId || !v.shiftId) && <option value="">{t('form.noShift')}</option>}
+                  {(shifts.data ?? []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {`${s.name} · ${s.start}–${s.end}`}
+                    </option>
+                  ))}
+                </Select>
               )}
             </Field>
           )}

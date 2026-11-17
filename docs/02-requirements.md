@@ -53,6 +53,9 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | FR-W-019 | Dark mode + language toggle + Bangla digits toggle in user menu. | active | P0 | E |
 | FR-W-020 **[ADDED]** | Day-sheet planner: manager sees staff's due-today/promised list on a map before the day and can reassign. | proposed | P3 | E |
 | FR-W-021 **[ADDED 2026-11-17]** | Map point picker: fixed centre pin, map moves under it (pointer, wheel, keyboard), pasted coordinates accepted, coordinates always shown as text, refuses points outside Bangladesh. Used to set a customer's pin (FR-CUS-011). | active | P1 | U E |
+| FR-W-022 **[ADDED 2026-11-17]** | Leave approvals: waiting requests first, status and date filters with counts, approve with a confirmation naming the days, reject with a reason, overlap warning and the person's other requests; nav badge with the waiting count (master FR-ATT-008, contract 1.12.0). | active | P2 | U E A |
+| FR-W-023 **[ADDED 2026-11-17]** | Holidays and shifts: holidays per year (national or some branches), add and delete; shifts with hours, weekly off, late grace and break limit, add and edit; a user's shift in the user form (master FR-SET-002/003). | active | P2 | U E A |
+| FR-W-024 **[ADDED 2026-11-17]** | Notices: compose in Bangla (English optional) to branches and groups, must read, confirm before sending; list with read counts; who has not read first, with read times (master FR-NOT-005, contract 1.12.0). | active | P2 | U E A |
 
 ## 3. Non-functional (web specifics)
 | ID | Requirement |

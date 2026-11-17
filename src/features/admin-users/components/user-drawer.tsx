@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { KeyRound, Pencil, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import { useBranches } from '@/features/shell';
+import { useShifts } from '@/features/attendance';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan, useSession } from '@/shared/auth/session';
 import { formatDateTime, formatMoney, formatRelative, pickText } from '@/shared/lib/format';
@@ -27,6 +28,7 @@ export function UserDrawer({ id, onClose }: { id: string | null; onClose: () => 
   const canRbac = useCan('rbac.view');
   const q = useUser(id);
   const branches = useBranches();
+  const shifts = useShifts();
   const reset = useResetPassword();
   const setActive = useSetActive();
   const [edit, setEdit] = useState(false);
@@ -149,6 +151,13 @@ export function UserDrawer({ id, onClose }: { id: string | null; onClose: () => 
                             label: t('col.cashLimit'),
                             value:
                               u.cashLimitPoisha != null ? formatMoney(u.cashLimitPoisha) : t('defaultLimit'),
+                          },
+                          {
+                            label: t('form.shift'),
+                            value: (() => {
+                              const sh = shifts.data?.find((x) => x.id === u.shiftId);
+                              return sh ? `${sh.name} · ${sh.start}–${sh.end}` : t('form.noShift');
+                            })(),
                           },
                         ]
                       : []),

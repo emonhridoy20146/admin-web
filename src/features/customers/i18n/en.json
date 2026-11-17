@@ -105,6 +105,7 @@
   "overdueAmount": "Overdue {{amount}}",
   "installmentOf": "Installment {{amount}}",
   "attempts": {
+    "guarantorCall": "Call to the guarantor",
     "title": "Contact attempts",
     "empty": "No calls or SMS logged.",
     "more": "Show all ({{n}})",

@@ -71,4 +71,13 @@ describe('user form model', () => {
     expect(changedKeys(u)).toEqual(['cashLimitPoisha']);
     expect(changedKeys(toUpdate(before, fromUser(before), 'x'))).toEqual([]);
   });
+
+  it('sends a work shift on create and a changed shift on edit (FR-SET-003)', () => {
+    expect(toCreate({ ...valid, shiftId: 'sh-day' }).shiftId).toBe('sh-day');
+    expect(toCreate(valid)).not.toHaveProperty('shiftId');
+    const before = { id: 'u1', name: { bn: 'রহিম', en: 'Rahim' }, phone: '01712345678', role: 'field_staff' as const, branchIds: ['b1'], employeeCode: 'FS-01', shiftId: 'sh-day', version: 1 };
+    expect(fromUser(before).shiftId).toBe('sh-day');
+    expect(changedKeys(toUpdate(before, { ...fromUser(before), shiftId: 'sh-market' }, 'r'))).toEqual(['shiftId']);
+    expect(changedKeys(toUpdate(before, fromUser(before), 'r'))).toEqual([]);
+  });
 });
