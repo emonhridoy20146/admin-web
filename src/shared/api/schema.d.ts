@@ -481,10 +481,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Any signed-in user. Sorted by date. `branchId` (1.12.0) keeps national holidays and that branch's own. */
         get: operations["listHolidays"];
         put?: never;
+        /** @description settings.manage. A `branch` holiday names its branches, a `national` one has none (400 otherwise). The same date for an overlapping set of branches answers 409 INVALID_STATE `HOLIDAY_EXISTS` (1.12.0). Audited. */
         post: operations["createHoliday"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calendar/holidays/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description settings.manage (1.12.0). Removes a holiday entered by mistake; audited as `holiday.deleted`. Attendance days already finalised are not re-derived. */
+        delete: operations["deleteHoliday"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1542,6 +1561,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attendance/me/shift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description attendance.record (1.12.0). The caller's shift: their own if assigned, else the branch default (`id: default`). Weekly off days are 0 = Sunday … 6 = Saturday. */
+        get: operations["myShift"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attendance/days": {
         parameters: {
             query?: never;
@@ -1615,7 +1651,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description attendance.manage, in branch scope. Rejecting needs a reason (≥ 5 characters, 422 `REASON_REQUIRED`); nobody decides their own (422 `CANNOT_DECIDE_OWN_LEAVE`); a decided request answers 409 `ALREADY_DECIDED`. */
         post: operations["decideLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leave-requests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description leave.request (1.12.0). The requester withdraws their own pending request (e.g. to fix the dates). Repeating it answers the cancelled request; a decided one answers 409 `ALREADY_DECIDED`; someone else's 404. */
+        post: operations["cancelLeave"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1805,9 +1859,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Holders of notification.broadcast see what they sent or what went to their branches; everyone else sees broadcasts addressed to them. Newest first. */
         get: operations["listBroadcasts"];
         put?: never;
         post: operations["createBroadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/broadcasts/{id}/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description notification.broadcast (1.12.0), same scope as the sender's list (else 404). Everyone it went to and whether they read it; not read first. */
+        get: operations["listBroadcastRecipients"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1823,6 +1895,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description A recipient read it ("পড়েছি"). Idempotent; the first time counts. Offline phones use the sync mutation `broadcast_ack` (1.12.0). */
         post: operations["ackBroadcast"];
         delete?: never;
         options?: never;
@@ -2294,7 +2367,20 @@ export interface components {
             reviewBy?: string;
             lockedReason?: string;
         };
+        HolidayCreate: {
+            /** Format: date */
+            date: string;
+            name: components["schemas"]["I18nText"];
+            branchIds?: string[];
+            /**
+             * @default national
+             * @enum {string}
+             */
+            type: "national" | "branch";
+        };
+        /** @description `id` since 1.12.0. */
         Holiday: {
+            id?: string;
             /** Format: date */
             date?: string;
             name?: components["schemas"]["I18nText"];
@@ -2921,22 +3007,29 @@ export interface components {
             dutyMin?: number;
             overBreakDays?: number;
         };
+        /** @description 1.12.0 adds `branchId`, `days`, `decisionReason`, `cancelledAt` and status `cancelled`. */
         LeaveRequest: {
             id?: string;
             userId?: string;
             userName?: string;
+            branchId?: string | null;
             /** @enum {string} */
             type?: "casual" | "sick" | "other";
             /** Format: date */
             from?: string;
             /** Format: date */
             to?: string;
+            /** @description Calendar days from..to, both included */
+            days?: number;
             reason?: string;
             /** @enum {string} */
-            status?: "pending" | "approved" | "rejected";
+            status?: "pending" | "approved" | "rejected" | "cancelled";
             decidedBy?: string;
             /** Format: date-time */
             decidedAt?: string;
+            decisionReason?: string;
+            /** Format: date-time */
+            cancelledAt?: string;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -2973,6 +3066,27 @@ export interface components {
             ackCount?: number;
             /** @description Whether the caller acknowledged it */
             acked?: boolean;
+            /**
+             * Format: date-time
+             * @description When the caller acknowledged it (1.12.0)
+             */
+            ackedAt?: string;
+        };
+        /** @description 1.12.0 */
+        BroadcastRecipients: {
+            broadcastId?: string;
+            recipientCount?: number;
+            ackCount?: number;
+            items?: {
+                userId?: string;
+                name?: components["schemas"]["I18nText"];
+                employeeCode?: string;
+                branchId?: string | null;
+                role?: components["schemas"]["Role"];
+                acked?: boolean;
+                /** Format: date-time */
+                ackedAt?: string;
+            }[];
         };
         AttendanceDay: {
             userId?: string;
@@ -3089,7 +3203,7 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /** @enum {string} */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -3102,6 +3216,7 @@ export interface components {
              *     visit_checkout → { visitId | visitClientId, checkOutAt, outcome? } · promise_cancel → { promiseId, reason } ·
              *     cash_closing → { businessDate, note? } · handover_decision → { handoverId, decision: accept|reject, reason? (required to reject) } ·
              *     tag payload may carry `ifMatch` (customer version).
+             *     1.12.0: broadcast_ack → { broadcastId, at? } (when the staff tapped "read"; kept between sending and now).
              *     Every mutation is idempotent by mutationId; the same id with a different payload is rejected with IDEMPOTENCY_MISMATCH.
              */
             payload: {
@@ -3164,6 +3279,12 @@ export interface components {
             customerId: string;
             /** @enum {string} */
             channel: "call" | "sms" | "whatsapp";
+            /**
+             * @description Who was contacted (1.12.0); for the guarantor phoneIndex is not used
+             * @default customer
+             * @enum {string}
+             */
+            target: "customer" | "guarantor";
             /** @description Index into customer phones (never the number itself) */
             phoneIndex?: number;
             /** Format: date-time */
@@ -4454,6 +4575,7 @@ export interface operations {
         parameters: {
             query?: {
                 year?: number;
+                branchId?: string;
             };
             header?: never;
             path?: never;
@@ -4481,7 +4603,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Holiday"];
+                "application/json": components["schemas"]["HolidayCreate"];
             };
         };
         responses: {
@@ -4490,8 +4612,32 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content: {
+                    "application/json": components["schemas"]["Holiday"];
+                };
+            };
+            409: components["responses"]["Problem"];
+        };
+    };
+    deleteHoliday: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content?: never;
             };
+            404: components["responses"]["Problem"];
         };
     };
     listShifts: {
@@ -6552,6 +6698,26 @@ export interface operations {
             };
         };
     };
+    myShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shift"];
+                };
+            };
+        };
+    };
     listAttendanceDays: {
         parameters: {
             query: {
@@ -6639,7 +6805,12 @@ export interface operations {
         parameters: {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
-                status?: "pending" | "approved" | "rejected";
+                status?: "pending" | "approved" | "rejected" | "cancelled";
+                /** @description attendance.manage only (1.12.0); ignored for staff */
+                userId?: string;
+                /** @description Requests overlapping from..to (1.12.0) */
+                from?: string;
+                to?: string;
             };
             header?: never;
             path?: never;
@@ -6686,7 +6857,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LeaveRequest"];
+                };
+            };
+            /** @description INVALID_STATE `LEAVE_OVERLAPS` (a pending or approved request covers one of the days) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description BUSINESS_RULE `LEAVE_TOO_LONG` (more than 31 days) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
         };
     };
@@ -6710,8 +6901,34 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LeaveRequest"];
+                };
             };
+        };
+    };
+    cancelLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequest"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
         };
     };
     ingestPoints: {
@@ -7008,14 +7225,17 @@ export interface operations {
     };
     listBroadcasts: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK (declared in 1.4.0; server implementation pending) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -7059,6 +7279,29 @@ export interface operations {
             };
         };
     };
+    listBroadcastRecipients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastRecipients"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
     ackBroadcast: {
         parameters: {
             query?: never;
@@ -7077,6 +7320,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: components["responses"]["Problem"];
         };
     };
     listInbox: {

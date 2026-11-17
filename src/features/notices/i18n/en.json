@@ -1,0 +1,63 @@
+{
+  "title": "Notices",
+  "subtitle": "Send a notice to staff phones. For a must-read notice, see who tapped \"read\" and who has not.",
+  "new": "New notice",
+  "empty": "No notices sent yet",
+  "info": "For information",
+  "mustRead": "Must read",
+  "allRead": "Everyone read",
+  "readOf": "{{read}} of {{total}} read",
+  "allBranches": "All branches",
+  "myBranches": "My branches",
+  "sentBy": "{{name}} · {{at}}",
+  "sent": "Notice sent to {{n}} people",
+  "audience": "Goes to: {{roles}} · {{branches}}",
+  "col": {
+    "title": "Notice",
+    "kind": "Type",
+    "read": "Read",
+    "to": "Sent to",
+    "by": "Sent by",
+    "at": "Sent"
+  },
+  "compose": {
+    "title": "New notice",
+    "desc": "It reaches the staff app at the next sync and as a push notification.",
+    "titleBn": "Title (Bangla)",
+    "titleEn": "Title (English)",
+    "enHelp": "Optional. Leave empty to show the Bangla text.",
+    "bodyBn": "Message (Bangla)",
+    "bodyEn": "Message (English)",
+    "branches": "Branches",
+    "branchesHelpAll": "None picked = every branch.",
+    "branchesHelpMine": "None picked = all your branches.",
+    "roles": "Who gets it",
+    "requireAck": "Must read",
+    "requireAckHelp": "Staff see a banner on Today until they tap \"read\" (পড়েছি), and you see who has not.",
+    "next": "Review and send"
+  },
+  "confirm": {
+    "title": "Send this notice?",
+    "back": "Back",
+    "send": "Send now",
+    "mustRead": "It will be shown as must read until each person taps \"read\". A sent notice cannot be taken back.",
+    "info": "A sent notice cannot be taken back."
+  },
+  "recipients": {
+    "title": "Who got it",
+    "show": "Show",
+    "unread": "Not read",
+    "read": "Read",
+    "all": "All",
+    "notRead": "Not read",
+    "readAt": "Read {{at}}",
+    "readNoTime": "Read",
+    "none": "Nobody here",
+    "noneUnread": "Everyone has read it"
+  },
+  "errors": {
+    "required": "Required",
+    "tooLong": "At most {{n}} characters",
+    "roles": "Pick at least one group"
+  }
+}

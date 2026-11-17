@@ -20,7 +20,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Collections, Conflicts resolution, Cash & deposits | ☑ (refund proof photo upload done) |
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
 | Co-work: sessions, joint visits, single/joint stats and credit (FR-CW-004/005) | ☑ |
-| Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals are Phase 4; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |
+| Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals, holidays and shifts done 2026-11-17 on contract 1.12.0; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |
 | Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas and area assignments done at `/areas`; bulk customer assign from the list (2026-11-16); assign or un-assign one customer from its detail (2026-11-17, contract 1.11.0); drawing an area on the map later |
 | Devices, System health (ERP, outbox, sync health) | ☐ |
 | Mobile responsive pass (card lists, 360 px critical tasks) | ☐ |
@@ -38,6 +38,8 @@ Status (2026-11-16): ◐ `/reports` has Branch trends, ERP reconciliation and Do
 
 ## Phase 4 — Premium (as approved)
 Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
+
+Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/attendance/leave`), holidays and shifts (`/attendance/calendar`, shift in the user form) and notices with read tracking (`/notices`) are done on contract 1.12.0 with journeys and axe. Left: day-sheet planner, SMS logs.
 
 ## Status notes (2026-11-15)
 - Verified: lint (incl. boundaries), typecheck, 69 unit tests, 21 Playwright journeys incl. axe on 19 pages, `check:permissions`, `check:i18n`, static export served with rewrites + hashed CSP.

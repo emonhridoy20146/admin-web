@@ -161,6 +161,12 @@ function nameRe() {
   return _re;
 }
 const actor = (u: db.MockUser) => ({ id: u.id, name: u.name?.en, role: u.role });
+/** A notice as one viewer sees it: counts for the sender, read state for a recipient. */
+function broadcastView(b: db.MockBroadcast, viewer: db.MockUser): S['Broadcast'] {
+  const at = b.acks.get(viewer.id!);
+  return { ...b.row, recipientCount: b.recipientIds.length, ackCount: b.acks.size, acked: !!at, ...(at ? { ackedAt: at } : {}) };
+}
+
 const idem = new Map<string, S["Collection"]>();
 
 const custBranchOk = (ctx: Ctx, c: db.MockCustomer) => scope(ctx, new URL('http://x/')).includes(c.branchId);
@@ -910,7 +916,8 @@ export const handlers = [
       const at = new Date(Date.now() - (i * 26 + (seed % 9) + 1) * 3600_000).toISOString();
       return {
         id: `ca-${c.item.id}-${i}`, clientId: `00000000-0000-4000-8000-${String(seed * 100 + i).padStart(12, '0')}`, customerId: c.item.id!, userId: c.item.assignee?.id,
-        channel: sms ? 'sms' : 'call', phoneIndex: i % 3 === 2 ? 1 : 0, at, receivedAt: at,
+        // 1.12.0: every fifth call of an overdue customer went to the guarantor (no phone slot)
+        ...(!sms && i % 5 === 4 ? { channel: 'call' as const, target: 'guarantor' as const } : { channel: sms ? ('sms' as const) : ('call' as const), target: 'customer' as const, phoneIndex: i % 3 === 2 ? 1 : 0 }), at, receivedAt: at,
         durationSec: outcome === 'connected' ? 40 + ((seed * (i + 3)) % 400) : null, outcome,
         note: outcome === 'connected' && i === 0 ? 'সামনের সপ্তাহে দেবেন বলেছেন' : undefined,
       };
@@ -1378,6 +1385,129 @@ export const handlers = [
     all = all.filter((a) => !a.branchId || sc.includes(a.branchId));
     const p = page(all, url);
     return HttpResponse.json({ items: p.items, nextCursor: p.nextCursor });
+  })),
+  // ---------- leave requests (1.12.0) ----------
+  http.get(`${BASE}/leave-requests`, authed(({ ctx, url }) => {
+    const g = (k: string) => url.searchParams.get(k);
+    const manager = perms(ctx.user).has('attendance.manage');
+    const sc = scope(ctx, url);
+    const items = db.leaveRequests
+      .filter((r) => (manager ? sc.includes(r.branchId ?? '') : r.userId === ctx.user.id))
+      .filter((r) => !g('status') || r.status === g('status'))
+      .filter((r) => !manager || !g('userId') || r.userId === g('userId'))
+      .filter((r) => (!g('from') || r.to! >= g('from')!) && (!g('to') || r.from! <= g('to')!))
+      .sort((a, b) => ((a.createdAt ?? '') < (b.createdAt ?? '') ? 1 : -1))
+      .slice(0, 300);
+    return HttpResponse.json({ items });
+  })),
+  http.post(`${BASE}/leave-requests/:id/decision`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'attendance.manage');
+    if (deny) return deny;
+    const r = db.leaveRequests.find((x) => x.id === params.id);
+    if (!r || !scope(ctx, new URL('http://x/')).includes(r.branchId ?? '')) return problem(404, 'NOT_FOUND', 'Leave request not found');
+    const b = (await request.json()) as S['Decision'];
+    if (r.userId === ctx.user.id) return problem(422, 'BUSINESS_RULE', 'You cannot decide your own leave', undefined, { rule: 'CANNOT_DECIDE_OWN_LEAVE' });
+    if (r.status !== 'pending') return problem(409, 'INVALID_STATE', 'This request is already decided', undefined, { reason: 'ALREADY_DECIDED' });
+    if (b.decision === 'reject' && (b.reason ?? '').trim().length < 5) return problem(422, 'BUSINESS_RULE', 'A reason is required to reject', undefined, { rule: 'REASON_REQUIRED' });
+    Object.assign(r, { status: b.decision === 'approve' ? 'approved' : 'rejected', decidedBy: ctx.user.id, decidedAt: new Date().toISOString(), ...(b.reason?.trim() ? { decisionReason: b.reason.trim() } : {}) });
+    db.addAudit({ actor: actor(ctx.user), action: 'leave.decided', entity: 'leave', entityId: r.id, branchId: r.branchId ?? undefined, before: { status: 'pending' }, after: { status: r.status }, reason: b.reason ?? '' });
+    return HttpResponse.json(r);
+  })),
+  // ---------- holidays and shifts ----------
+  http.get(`${BASE}/calendar/holidays`, authed(({ url }) => {
+    const y = url.searchParams.get('year');
+    const br = url.searchParams.get('branchId');
+    const items = db.holidays
+      .filter((h) => !y || h.date!.startsWith(`${y}-`))
+      .filter((h) => !br || !h.branchIds?.length || h.branchIds.includes(br))
+      .sort((a, b) => (a.date! < b.date! ? -1 : 1));
+    return HttpResponse.json(items);
+  })),
+  http.post(`${BASE}/calendar/holidays`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'settings.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as S['HolidayCreate'];
+    const type = b.type ?? 'national';
+    const branchIds = b.branchIds ?? [];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date ?? '') || !b.name?.bn?.trim() || (type === 'branch') !== branchIds.length > 0) return problem(400, 'VALIDATION_FAILED', 'date, name.bn and branches that match the type are required');
+    const clash = db.holidays.find((h) => h.date === b.date && (!h.branchIds?.length || !branchIds.length || h.branchIds.some((x) => branchIds.includes(x))));
+    if (clash) return problem(409, 'INVALID_STATE', 'A holiday already exists on this date', undefined, { reason: 'HOLIDAY_EXISTS', id: clash.id });
+    const h: S['Holiday'] = { id: db.oid('6741'), date: b.date, name: { bn: b.name.bn.trim(), en: b.name.en?.trim() || b.name.bn.trim() }, branchIds, type };
+    db.holidays.push(h);
+    db.addAudit({ actor: actor(ctx.user), action: 'holiday.created', entity: 'holiday', entityId: h.id, after: { date: h.date, type, branchIds }, reason: '' });
+    return HttpResponse.json(h, { status: 201 });
+  })),
+  http.delete(`${BASE}/calendar/holidays/:id`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'settings.manage');
+    if (deny) return deny;
+    const i = db.holidays.findIndex((h) => h.id === params.id);
+    if (i < 0) return problem(404, 'NOT_FOUND', 'Holiday not found');
+    const [h] = db.holidays.splice(i, 1);
+    db.addAudit({ actor: actor(ctx.user), action: 'holiday.deleted', entity: 'holiday', entityId: h!.id, before: { date: h!.date, type: h!.type }, reason: '' });
+    return new HttpResponse(null, { status: 204 });
+  })),
+  http.get(`${BASE}/shifts`, authed(() => HttpResponse.json(db.shifts))),
+  http.post(`${BASE}/shifts`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'settings.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as S['Shift'];
+    if (!b.name?.trim() || !/^\d{2}:\d{2}$/.test(b.start ?? '') || !/^\d{2}:\d{2}$/.test(b.end ?? '')) return problem(400, 'VALIDATION_FAILED', 'name, start and end are required');
+    const sh: S['Shift'] = { id: db.oid('6744'), name: b.name.trim(), start: b.start, end: b.end, weeklyOff: b.weeklyOff ?? [5], lateGraceMin: b.lateGraceMin ?? 15, maxBreakMin: b.maxBreakMin ?? 60 };
+    db.shifts.push(sh);
+    db.addAudit({ actor: actor(ctx.user), action: 'shift.created', entity: 'shift', entityId: sh.id, after: sh, reason: '' });
+    return HttpResponse.json(sh, { status: 201 });
+  })),
+  http.patch(`${BASE}/shifts/:id`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'settings.manage');
+    if (deny) return deny;
+    const sh = db.shifts.find((x) => x.id === params.id);
+    if (!sh) return problem(404, 'NOT_FOUND', 'Shift not found');
+    const b = (await request.json()) as S['Shift'];
+    const before = { ...sh };
+    Object.assign(sh, { ...b, id: sh.id });
+    db.addAudit({ actor: actor(ctx.user), action: 'shift.updated', entity: 'shift', entityId: sh.id, before, after: sh, reason: '' });
+    return HttpResponse.json(sh);
+  })),
+  // ---------- notices (broadcasts) ----------
+  http.get(`${BASE}/broadcasts`, authed(({ ctx, url }) => {
+    const canSend = perms(ctx.user).has('notification.broadcast');
+    const sa = ctx.user.role === 'super_admin';
+    const mine = ctx.user.branchIds ?? [];
+    const all = db.broadcasts
+      .filter((b) => (canSend ? sa || b.row.createdBy?.id === ctx.user.id || (b.row.branchIds ?? []).some((x) => mine.includes(x)) || b.recipientIds.includes(ctx.user.id!) : b.recipientIds.includes(ctx.user.id!)))
+      .map((b) => broadcastView(b, ctx.user));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  http.post(`${BASE}/broadcasts`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'notification.broadcast');
+    if (deny) return deny;
+    const b = (await request.json()) as { branchIds?: string[]; roles?: db.Role[]; title?: S['I18nText']; body?: S['I18nText']; requireAck?: boolean };
+    if (!b.title?.bn?.trim() || !b.body?.bn?.trim()) return problem(400, 'VALIDATION_FAILED', 'title.bn and body.bn are required');
+    const sa = ctx.user.role === 'super_admin';
+    const asked = b.branchIds?.length ? b.branchIds : null;
+    if (asked && !sa && !asked.every((x) => (ctx.user.branchIds ?? []).includes(x))) return problem(404, 'NOT_FOUND', 'Branch not found');
+    const branchIds = asked ?? (sa ? [] : (ctx.user.branchIds ?? []));
+    const roles = (b.roles?.length ? b.roles : ['field_staff']) as db.Role[];
+    if (!db.broadcastRecipients(branchIds, roles, ctx.user.id).length) return problem(422, 'BUSINESS_RULE', 'Nobody would receive this notice', undefined, { rule: 'NO_RECIPIENTS' });
+    const txt = (t: S['I18nText']) => ({ bn: t.bn!.trim(), en: t.en?.trim() || t.bn!.trim() });
+    const m = db.addBroadcast({ title: txt(b.title), body: txt(b.body), branchIds, roles, requireAck: !!b.requireAck, createdBy: { id: ctx.user.id, name: ctx.user.name?.en }, createdAt: new Date().toISOString() });
+    db.addAudit({ actor: actor(ctx.user), action: 'broadcast.sent', entity: 'broadcast', entityId: m.row.id, after: { recipients: m.recipientIds.length, roles, requireAck: !!b.requireAck }, reason: '' });
+    return HttpResponse.json(broadcastView(m, ctx.user), { status: 201 });
+  })),
+  http.get(`${BASE}/broadcasts/:id/recipients`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'notification.broadcast');
+    if (deny) return deny;
+    const b = db.broadcasts.find((x) => x.row.id === params.id);
+    const sa = ctx.user.role === 'super_admin';
+    if (!b || !(sa || b.row.createdBy?.id === ctx.user.id || (b.row.branchIds ?? []).some((x) => (ctx.user.branchIds ?? []).includes(x)))) return problem(404, 'NOT_FOUND', 'Notice not found');
+    const items = b.recipientIds.map((id) => {
+      const u = db.userById(id)!;
+      const at = b.acks.get(id);
+      return { userId: id, name: u.name, employeeCode: u.employeeCode, branchId: u.branchIds?.[0] ?? null, role: u.role, acked: !!at, ...(at ? { ackedAt: at } : {}) };
+    });
+    items.sort((a, c) => Number(a.acked) - Number(c.acked) || (a.name?.en ?? '').localeCompare(c.name?.en ?? ''));
+    return HttpResponse.json({ broadcastId: b.row.id, recipientCount: b.recipientIds.length, ackCount: b.acks.size, items });
   })),
   http.get(`${BASE}/notifications`, authed(() => HttpResponse.json({ items: [], nextCursor: null }))),
 ];

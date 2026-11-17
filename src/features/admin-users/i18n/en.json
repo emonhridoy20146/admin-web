@@ -48,14 +48,18 @@
     "saveTitle": "Save changes to {{name}}?",
     "saveDesc": "Changed: {{fields}}. The audit log records your reason.",
     "saved": "User updated",
-    "noChanges": "Nothing has changed."
+    "noChanges": "Nothing has changed.",
+    "shift": "Work shift",
+    "shiftHelp": "Hours, weekly off and late rule. Shifts are set up in Holidays and shifts.",
+    "noShift": "Branch duty hours (no shift)"
   },
   "fields": {
     "name": "name",
     "phone": "phone",
     "role": "role",
     "branchIds": "branches",
-    "cashLimitPoisha": "cash limit"
+    "cashLimitPoisha": "cash limit",
+    "shiftId": "shift"
   },
   "errors": {
     "required": "Required.",

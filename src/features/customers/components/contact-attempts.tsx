@@ -16,7 +16,7 @@ function iconOf(a: ContactAttempt): LucideIcon {
   return a.outcome && FAILED.has(a.outcome) ? PhoneMissed : Phone;
 }
 
-/** FR-M-014: calls and messages staff logged for this customer. Shows the phone slot, never the number. */
+/** FR-M-014: calls and messages staff logged for this customer. Shows the phone slot, never the number; a call to the guarantor (1.12.0) has no slot. */
 export function ContactAttempts({ customerId }: { customerId: string }) {
   const { t } = useTranslation('customers');
   const q = useContactAttempts(customerId);
@@ -37,7 +37,7 @@ export function ContactAttempts({ customerId }: { customerId: string }) {
               <Icon className={cn('mt-0.5 size-4 shrink-0', failed ? 'text-warning' : 'text-fg-tertiary')} aria-hidden />
               <div className="min-w-0 text-sm">
                 <p className="text-fg">
-                  {t(`attempts.channel.${a.channel}`)}
+                  {a.target === 'guarantor' ? t('attempts.guarantorCall') : t(`attempts.channel.${a.channel}`)}
                   {a.outcome && <span className={cn('ms-1.5', failed ? 'text-warning' : 'text-fg-secondary')}>· {t(`attempts.outcome.${a.outcome}`)}</span>}
                   {a.channel === 'call' && !!a.durationSec && <span className="tabular ms-1.5 text-fg-secondary">· {formatDuration(Math.max(1, Math.round(a.durationSec / 60)))}</span>}
                 </p>

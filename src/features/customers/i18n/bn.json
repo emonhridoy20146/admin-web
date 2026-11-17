@@ -105,6 +105,7 @@
   "overdueAmount": "খেলাপি {{amount}}",
   "installmentOf": "কিস্তি {{amount}}",
   "attempts": {
+    "guarantorCall": "জামিনদারকে কল",
     "title": "যোগাযোগের চেষ্টা",
     "empty": "কোনো কল বা SMS রেকর্ড নেই।",
     "more": "সব দেখুন ({{n}})",
