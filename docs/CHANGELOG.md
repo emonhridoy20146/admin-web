@@ -1,8 +1,16 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.10.0** from field-api `main` (merge daa6f77; 1.2.0 → 1.10.0; types regenerated with `pnpm gen:api`; catalog has `target.view`, `target.manage`).
+Contract pinned: field-api `openapi.yaml` **1.11.0** from field-api `main` (merge d5a0123, PR #8; 1.10.0 → 1.11.0; types regenerated with `pnpm gen:api`; `customer.location.approve` now also covers setting a pin on the map).
+### Added (contract 1.11.0, owner request 2026-11-17)
+- Set a customer's pin on the map (FR-CUS-011): "Set pin" / "Move pin" on the customer's contact card (`customer.location.approve`) opens a map with a fixed pin in the middle, ride-app style: drag, scroll, arrow keys or a click move the map under the pin. It starts at the current pin (drawn hollow for comparison), else the branch, shows the coordinates and how far the pin moved (warning above 500 m), accepts pasted coordinates (decimal pairs, N/E degrees, map links with `@lat,lng`, Bangla digits; longitude-first pairs are swapped) and an optional note, and refuses points outside Bangladesh. Saves with `POST /customers/{id}/location` (idempotent `clientId` per dialog); the pin applies at once and the area and assignee are recomputed by the server. `?action=pin` opens the dialog.
+- Assign one customer (FR-ASG-002): "Assign" / "Change" on the contact card (`assignment.manage`, flag `module.assignments`) shows who holds the customer now and why (direct, through the area, or nobody), gives the customer to a staff member of its branch with an optional reason, and ends a direct assignment so the customer goes back to the area's staff member. Customers without anyone show "Nobody assigned" in warning colour. `?action=assign` opens the dialog. The dialog is exported by the assignments feature.
+- Data quality: "Fix" links open the right dialog (pin problems → set pin; no staff → assign).
+- Pin approvals: badges for pins a manager set directly and staff pins applied at once (customer had no pin), "Map pin" vs "GPS" method, how far the staff phone was from a map pin (flagged above 300 m or with mock GPS), and who set a direct pin.
+- Shared `MapPicker` (`shared/map/map-picker.tsx`) and coordinate helpers (`parseCoords`, `formatCoords`, `inBangladesh`).
+- Mock API: direct pin set, single customer assignment (branch check, end, fallback to area holder), assignment-aware customer detail. Journeys for both flows; both dialogs are in the axe checks.
 ### Changed
+- Customer list and detail refresh when an assignment changes anywhere in the panel.
 - Staff: target progress is measured against the target **to date** (server `amountAchievement`), the target column also shows the visit target reached (visit credit), the drawer shows the whole-month target with its working days and a visit-target bar, and links to the person's daily targets and the leaderboard.
 - Overview: the collected card adds visit credit against today's visit target; "Staff today" measures against each person's target and links to the leaderboard.
 - Downloads: "PDF" file type (server-built, A4 landscape, Bangla embedded) and the "Data quality" data set with an optional problem; other pages can open the form on a data set (`?type=`, `?issue=`). The PDF card now lists every page that prints well.

@@ -10,11 +10,11 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | RBAC | FR-RBAC-001…005, 007 | Users & roles, Permissions |
 | Users/branches/settings/flags | FR-USER-001/002, FR-BR-001, FR-SET-001…003, FR-FLAG-001/002 | Admin section |
 | ERP status | FR-ERP-003, 004, 005 | Header dot, System health, customer refresh |
-| Customers | FR-CUS-001…010 | Customers, detail, Map, Data quality (FR-CUS-009, under Reports) |
+| Customers | FR-CUS-001…011 | Customers, detail, Map, Data quality (FR-CUS-009, under Reports), set pin on the map (FR-CUS-011) |
 | Tags | FR-TAG-002, 003, 005, 006, 007, 008 | Customer detail, Inbox |
 | Collections | FR-COL-005, 006, 007, 009, 010, 013, 014, 015 | Collections, Conflicts, Reconciliation, Daily targets (FR-COL-015: branch default and personal targets with history; progress on Staff and Overview) |
 | Cash | FR-CASH-001, 002, 003, 004, 005 | Cash & deposits |
-| Assignments | FR-ASG-001…005 | Assignments & areas, Map |
+| Assignments | FR-ASG-001…005 | Assignments & areas, Map, assign one customer from its detail (FR-ASG-002), bulk assign from the list |
 | Handovers | FR-HO-001, 003, 004, 006, 007 | Handovers |
 | Visits/notes/promises | FR-VIS-004, FR-CUS-006, FR-NOTE-001, FR-PRM-001, 004 | Customer detail, Visits, Promises |
 | Co-work | FR-CW-004, 005 | Co-work, Visits (single/joint filter, partners), Staff (single/joint/credit), Settings |
@@ -52,6 +52,7 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | FR-W-018 **[ADDED]** | Print-friendly views (customer statement of field activity, day sheet for a staff). | proposed | P3 | E |
 | FR-W-019 | Dark mode + language toggle + Bangla digits toggle in user menu. | active | P0 | E |
 | FR-W-020 **[ADDED]** | Day-sheet planner: manager sees staff's due-today/promised list on a map before the day and can reassign. | proposed | P3 | E |
+| FR-W-021 **[ADDED 2026-11-17]** | Map point picker: fixed centre pin, map moves under it (pointer, wheel, keyboard), pasted coordinates accepted, coordinates always shown as text, refuses points outside Bangladesh. Used to set a customer's pin (FR-CUS-011). | active | P1 | U E |
 
 ## 3. Non-functional (web specifics)
 | ID | Requirement |

@@ -28,3 +28,23 @@ test('main pages have no serious axe violations', async ({ page }) => {
   }
   expect(found).toEqual([]);
 });
+
+test('map pin and assign dialogs have no serious axe violations', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // the manager's data-quality list opens on customers without a pin; their links open the fix dialog
+  await login(page, 'manager');
+  await page.goto('/data-quality/');
+  const link = page.locator('tbody tr').first().getByRole('link');
+  await expect(link).toHaveAttribute('href', /\?action=pin$/);
+  const href = (await link.getAttribute('href'))!;
+  const found: string[] = [];
+  for (const action of ['pin', 'assign']) {
+    await page.goto(href.replace(/action=\w+$/, `action=${action}`));
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await page.waitForFunction(() => document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== 'running'));
+    const r = await new AxeBuilder({ page }).include('[role=dialog]').withTags(['wcag2a', 'wcag2aa']).analyze();
+    for (const v of r.violations) if (v.impact === 'serious' || v.impact === 'critical') found.push(`${action} ${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`);
+  }
+  expect(found).toEqual([]);
+});

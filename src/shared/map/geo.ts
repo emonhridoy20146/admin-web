@@ -66,3 +66,38 @@ export function decodePolyline(encoded: string | undefined | null): LatLng[] {
   }
   return out;
 }
+
+/** Same generous Bangladesh box as field-api `core/geo` (a pin outside it is refused with OUTSIDE_BANGLADESH). */
+export const BD_BOUNDS: Bounds = { minLat: 20.3, maxLat: 26.8, minLng: 87.9, maxLng: 92.8 };
+
+export function inBangladesh(p: LatLng): boolean {
+  return p.lat >= BD_BOUNDS.minLat && p.lat <= BD_BOUNDS.maxLat && p.lng >= BD_BOUNDS.minLng && p.lng <= BD_BOUNDS.maxLng;
+}
+
+/**
+ * Reads coordinates someone pasted: `22.70123, 90.37011`, `22.70123 90.37011`, `22.70123° N, 90.37011° E`
+ * (Google Maps / WhatsApp location) or a maps link containing `@lat,lng` or `q=lat,lng`. Bangla digits are accepted.
+ * When the first number is clearly a longitude (and the second a latitude) for Bangladesh, the pair is swapped.
+ */
+export function parseCoords(text: string): LatLng | null {
+  const ascii = text.replace(/[০-৯]/g, (d) => String(d.charCodeAt(0) - 0x09e6)).trim();
+  if (!ascii) return null;
+  const link = /[@=](-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/.exec(ascii);
+  const nums = link ? [link[1]!, link[2]!] : ascii.match(/-?\d{1,3}(?:\.\d+)?/g);
+  if (!nums || nums.length !== 2) return null;
+  let lat = Number(nums[0]);
+  let lng = Number(nums[1]);
+  if (/\d\s*°?\s*S\b/i.test(ascii)) lat = -Math.abs(lat);
+  if (/\d\s*°?\s*W\b/i.test(ascii)) lng = -Math.abs(lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  // "90.37, 22.70" (lng first) is a common slip; swap when only the swapped pair makes sense.
+  if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) [lat, lng] = [lng, lat];
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  if (!inBangladesh({ lat, lng }) && inBangladesh({ lat: lng, lng: lat })) [lat, lng] = [lng, lat];
+  return { lat, lng };
+}
+
+/** `22.70123, 90.37011` — five decimals ≈ 1 m. */
+export function formatCoords(p: LatLng): string {
+  return `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+}

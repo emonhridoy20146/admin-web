@@ -121,15 +121,31 @@ function ProposalCard({ p, canDecide, onApprove, onReject }: { p: LocationPropos
           <Link href={`/customers/${p.customer?.id}/`} className="block truncate text-md font-semibold text-fg hover:text-primary" lang={locale}>{name}</Link>
           <p className="font-mono text-xs text-fg-tertiary">{p.customer?.code}</p>
         </div>
-        {p.status !== 'pending' ? <StatusBadge status={p.status === 'approved' ? 'verified' : 'rejected'} /> : vm.risky ? <Badge tone="warning" icon={TriangleAlert}>{t('pins.check')}</Badge> : null}
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          {p.direct ? <Badge tone="neutral">{t('pins.direct')}</Badge> : p.autoApplied ? <Badge tone="info">{t('pins.autoApplied')}</Badge> : null}
+          {p.status !== 'pending' ? <StatusBadge status={p.status === 'approved' ? 'verified' : 'rejected'} /> : null}
+          {vm.risky && (p.status === 'pending' || p.autoApplied) ? <Badge tone="warning" icon={TriangleAlert}>{t('pins.check')}</Badge> : null}
+        </div>
       </div>
       <div className="h-52 overflow-hidden border-y border-line">
         {vm.proposed ? <MapView label={t('pins.mapOf', { name })} center={vm.proposed} zoom={16} markers={markers} lines={lines} fit={fit} className="min-h-0 rounded-none border-0" /> : null}
       </div>
       <dl className="grid grid-cols-3 gap-px bg-line [&>*]:bg-surface">
         <Fact label={t('pins.moved')} value={vm.movedM == null ? t('pins.noPin') : t('pins.metres', { n: formatNumber(vm.movedM) })} warn={(vm.movedM ?? 0) > 500} />
-        <Fact label={t('pins.accuracy')} value={t('pins.plusMinus', { n: formatNumber(Math.round(p.accuracyM ?? 0)) })} warn={(p.accuracyM ?? 0) > 50} />
-        <Fact label={t('pins.by')} value={p.proposer?.name ?? '—'} sub={p.createdAt ? formatRelative(p.createdAt) : undefined} />
+        {vm.method === 'map' ? (
+          <Fact
+            label={t('pins.method.map')}
+            value={p.direct ? '—' : p.deviceMock ? t('pins.mockPhone') : vm.phoneM == null ? t('pins.phoneUnknown') : t('pins.phoneAway', { n: formatNumber(vm.phoneM) })}
+            warn={!p.direct && (p.deviceMock || (vm.phoneM ?? 0) > 300)}
+          />
+        ) : (
+          <Fact label={t('pins.accuracy')} value={t('pins.plusMinus', { n: formatNumber(Math.round(p.accuracyM ?? 0)) })} warn={(p.accuracyM ?? 0) > 50} />
+        )}
+        {p.direct ? (
+          <Fact label={t('pins.setBy')} value={p.decider?.name || p.proposer?.name || '—'} sub={p.createdAt ? formatRelative(p.createdAt) : undefined} />
+        ) : (
+          <Fact label={t('pins.by')} value={p.proposer?.name ?? '—'} sub={p.createdAt ? formatRelative(p.createdAt) : undefined} />
+        )}
       </dl>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-4 py-2 text-xs text-fg-secondary">
         <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full border-2 border-fg-secondary" aria-hidden />{t('pins.current')}</span>

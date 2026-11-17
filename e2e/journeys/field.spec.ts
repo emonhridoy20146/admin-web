@@ -456,3 +456,79 @@ test('co-work: sessions with members and timeline, their joint visits, the visit
   await expect(page.getByRole('columnheader', { name: staffBn.col.credit })).toBeVisible();
 });
 
+
+const tail = (s: string) => new RegExp(`${s.split('}}').pop()!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
+
+test('map pin: from the data-quality list, set a missing pin by moving the map and by pasting coordinates (FR-CUS-011)', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, repBn.dq.title);
+  const link = page.locator('tbody tr').first().getByRole('link');
+  await expect(link).toHaveAttribute('href', /\/customers\/.+\/\?action=pin$/);
+  await link.click();
+  const dialog = page.getByRole('dialog', { name: tail(custBn.setPin.titleNew) });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(custBn.setPin.noPinYet)).toBeVisible();
+
+  // ride-app style: the pin stays in the middle, the map moves under it
+  const map = dialog.getByRole('application');
+  const readout = dialog.locator('span.font-mono').first();
+  await expect(readout).toHaveText(/^\d+\.\d{5}, \d+\.\d{5}$/);
+  const start = await readout.innerText();
+  const box = (await map.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 60, { steps: 8 });
+  await page.mouse.up();
+  await expect(readout).not.toHaveText(start);
+
+  // coordinates from elsewhere (lng first by mistake is swapped back)
+  await dialog.getByLabel(custBn.setPin.paste).fill('nonsense');
+  await dialog.getByRole('button', { name: custBn.setPin.go }).click();
+  await expect(dialog.getByText(custBn.setPin.pasteError)).toBeVisible();
+  await dialog.getByLabel(custBn.setPin.paste).fill('90.36002, 22.71001');
+  await dialog.getByRole('button', { name: custBn.setPin.go }).click();
+  await expect(readout).toHaveText('22.71001, 90.36002');
+  await dialog.getByLabel(custBn.setPin.note).fill('দোকানের সাইনবোর্ড থেকে');
+  await dialog.getByRole('button', { name: custBn.setPin.save }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText(tail(custBn.setPin.saved))).toBeVisible();
+  await expect(page.getByText('22.71001, 90.36002')).toBeVisible();
+  await expect(page).not.toHaveURL(/action=pin/);
+  await expect(page.getByRole('button', { name: custBn.setPin.openMove })).toBeVisible();
+
+  // it is in the pin history as set by a manager
+  await nav(page, custBn.pins.title);
+  await page.getByRole('button', { name: custBn.pins.tab.approved, exact: true }).click();
+  await expect(page.locator('main ul > li').first().getByText(custBn.pins.direct)).toBeVisible();
+});
+
+test('assign one customer: give an unassigned customer to a staff member, then end the direct assignment (FR-ASG-002)', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, custBn.title);
+  await toggleChip(page, custBn.filters.unassigned);
+  await expect(page.locator('tbody tr a')).toHaveCount(3);
+  await openFirstRow(page);
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText(custBn.nobodyAssigned, { exact: true })).toBeVisible();
+  await drawer.getByRole('button', { name: custBn.assign.open }).click();
+
+  const dialog = page.getByRole('dialog', { name: tail(areasBn.one.title) });
+  await expect(dialog.getByText(areasBn.one.viaNone)).toBeVisible();
+  await dialog.getByRole('button', { name: areasBn.one.confirm, exact: true }).click();
+  await expect(dialog.getByText(areasBn.errors.required)).toBeVisible();
+  const select = dialog.getByRole('combobox');
+  await select.selectOption({ index: 1 });
+  const staff = (await select.locator('option:checked').innerText()).split(' · ')[0]!.trim();
+  await dialog.getByRole('button', { name: areasBn.one.confirm, exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(drawer.getByText(staff, { exact: true })).toBeVisible();
+  await expect(page.locator('tbody tr a')).toHaveCount(2); // no longer unassigned
+
+  await drawer.getByRole('button', { name: custBn.assign.change }).click();
+  const again = page.getByRole('dialog', { name: tail(areasBn.one.titleChange) });
+  await expect(again.getByText(areasBn.one.viaDirect)).toBeVisible();
+  await again.getByRole('button', { name: areasBn.one.end }).click();
+  await expect(again).toBeHidden();
+  await expect(drawer.getByText(custBn.nobodyAssigned, { exact: true })).toBeVisible();
+  await expect(page.locator('tbody tr a')).toHaveCount(3);
+});

@@ -70,3 +70,31 @@ export function useBulkAssign() {
 }
 
 export const BULK_MAX = 1000;
+
+/** Field staff of one branch (the customer's), for assigning one customer. */
+export function useStaffOf(branchId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['assignments', 'staff', branchId ?? 'all'],
+    queryFn: async () => (await unwrap(api.GET('/users', { params: { query: { branchId: branchId ?? undefined, role: 'field_staff', active: true, limit: 100 } } }))).items ?? [],
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** The active direct (customer) assignment of one customer, if any: tells "assigned directly" from "through an area". */
+export function useCustomerAssignment(customerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['assignments', 'customer', customerId],
+    queryFn: async () => (await unwrap(api.GET('/assignments', { params: { query: { customerId: customerId!, active: true } } }))).find((a) => a.type === 'customer' && a.customerId === customerId) ?? null,
+    enabled: !!customerId,
+    staleTime: 30_000,
+  });
+}
+
+/** FR-ASG-002: give one customer to one staff member (a direct assignment beats the area's). */
+export function useAssignCustomer() {
+  const done = useDone();
+  return useMutation({
+    mutationFn: ({ userId, customerId, reason }: { userId: string; customerId: string; reason?: string }) => unwrap(api.POST('/assignments', { body: { userId, type: 'customer', customerId, reason } })),
+    onSuccess: done,
+  });
+}

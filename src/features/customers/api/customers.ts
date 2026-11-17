@@ -12,7 +12,7 @@ export type CustomerQuery = NonNullable<operations['listCustomers']['parameters'
 
 export function useCustomers(params: Omit<CustomerQuery, 'branchId'>) {
   const branchId = useBranchId();
-  useInvalidateOn([EV.customerTagged, EV.collectionResolved], [['customers']]);
+  useInvalidateOn([EV.customerTagged, EV.collectionResolved, EV.assignmentChanged], [['customers']]);
   const query: CustomerQuery = { ...params, branchId };
   return useQuery({
     queryKey: ['customers', 'list', query],
@@ -23,7 +23,7 @@ export function useCustomers(params: Omit<CustomerQuery, 'branchId'>) {
 }
 
 export function useCustomer(id: string | null | undefined) {
-  useInvalidateOn([EV.customerTagged, EV.collectionResolved], [['customers', 'detail']]);
+  useInvalidateOn([EV.customerTagged, EV.collectionResolved, EV.assignmentChanged], [['customers', 'detail'], ['customers', 'timeline']]);
   return useQuery({
     queryKey: ['customers', 'detail', id],
     queryFn: () => unwrap(api.GET('/customers/{id}', { params: { path: { id: id! } } })),
@@ -94,6 +94,19 @@ export function useDecideProposal() {
   return useMutation({
     mutationFn: ({ id, decision, reason }: { id: string; decision: 'approve' | 'reject'; reason?: string }) =>
       unwrap(api.POST('/location-proposals/{id}/decision', { params: { path: { id } }, body: { decision, reason } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
+  });
+}
+
+/**
+ * FR-CUS-011 (contract 1.11.0): a manager drops the pin on the map. `clientId` is made once per dialog, so a retry
+ * after a network error cannot set the pin twice. Not optimistic: the pin changes on screen after the server says so.
+ */
+export function useSetLocation(customerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { clientId: string; lat: number; lng: number; note?: string }) =>
+      unwrap(api.POST('/customers/{id}/location', { params: { path: { id: customerId } }, body: { ...v, method: 'map' } })),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
   });
 }

@@ -21,7 +21,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Promises, Visits (photo lightbox), Notes tab | ☑ |
 | Co-work: sessions, joint visits, single/joint stats and credit (FR-CW-004/005) | ☑ |
 | Staff list/detail, Attendance (day grid, month matrix, corrections) | ☑ (leave approvals are Phase 4; staff page is gated by `module.reports` + `report.view` because it reads `/reports/staff-performance`) |
-| Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas and area assignments done at `/areas`; bulk customer assign and drawing an area on the map later |
+| Assignments & areas (map draw, bulk), Handovers | ◐ handovers done (area scope; individual-customer scope and staff-initiated requests later); areas and area assignments done at `/areas`; bulk customer assign from the list (2026-11-16); assign or un-assign one customer from its detail (2026-11-17, contract 1.11.0); drawing an area on the map later |
 | Devices, System health (ERP, outbox, sync health) | ☐ |
 | Mobile responsive pass (card lists, 360 px critical tasks) | ☐ |
 **Acceptance:** W-E3…W-E7, W-E13 green; manager completes a full pilot day from a phone; every KPI links to its list.
@@ -52,6 +52,7 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 - Co-work admin side done 2026-11-16 on contract 1.9.1 (field-api `main`): `/cowork` sessions, single/joint visit filter and partners on visits, single/joint/credit on staff, two settings. The invite/accept flow itself is staff-app work.
 - Bulk assign from the customers list and the CI workflow done 2026-11-16. Contract 1.7.1 adopted (plain-array location proposals, audit export).
 - Refund proof photo upload done 2026-11-16 (`proofMediaId`, presigned upload).
+- Map pins and single-customer assignment done 2026-11-17 on contract 1.11.0 (owner request): set or move a customer's pin on a map with a fixed centre pin or pasted coordinates (applies at once), assign one customer to a staff member of its branch or end a direct assignment, fix links from data quality, method and phone distance on pin approvals.
 - Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api

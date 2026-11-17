@@ -221,6 +221,7 @@ Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/
 - Legend toggleable; layer switcher (customers / staff / areas / routes).
 - Route polyline 4 px brand.600, gaps dashed neutral.400, stops as numbered circles; scrubber syncs a moving marker.
 - Map + list split view: list updates with viewport ("Showing 46 customers in view").
+- Picking a point (`MapPicker`): the pin is fixed in the middle (primary fill, lifts 8 px while the map moves, its shadow dot stays on the point) and the map moves under it; a click pans to the clicked spot; the current point is drawn as a hollow `--fg-secondary` circle for comparison. Always show the picked coordinates as text (`font-mono`, 5 decimals, `aria-live`) and offer a paste field next to the map. Height `44dvh` on phones, 360 px from `sm`.
 
 ### 5.8 Charts (Recharts)
 - Gridlines `neutral.200` dashed horizontal only; axis labels 12 px secondary; currency axis in lakh format (৳১.২ লাখ).

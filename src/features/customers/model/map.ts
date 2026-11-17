@@ -26,13 +26,21 @@ export interface ProposalVM {
   proposed: LatLng | null;
   /** metres between the current pin and the proposed one; null when the customer has no pin yet */
   movedM: number | null;
-  /** a big move or a poor fix deserves a second look before approving */
+  /** a big move, a poor fix, or a map pin picked far away / with a mock phone position deserves a second look */
   risky: boolean;
+  /** 1.11.0: `map` = picked on a map (Uber style), `gps` = the phone's position */
+  method: 'gps' | 'map';
+  /** metres between a map pin and the phone when it was picked; null when unknown */
+  phoneM: number | null;
 }
 
-export function proposalVM(p: LocationProposal, bigMoveM = 500, poorAccuracyM = 50): ProposalVM {
+export function proposalVM(p: LocationProposal, bigMoveM = 500, poorAccuracyM = 50, farPhoneM = 300): ProposalVM {
   const current = readLatLng(p.customer?.current);
   const proposed = readLatLng(p);
   const movedM = current && proposed ? haversineM(current, proposed) : null;
-  return { current, proposed, movedM, risky: (movedM ?? 0) > bigMoveM || (p.accuracyM ?? 0) > poorAccuracyM };
+  const method = p.method === 'map' ? 'map' : 'gps';
+  const phoneM = method === 'map' ? (p.deviceDistanceM ?? null) : null;
+  const poorFix = method === 'gps' && (p.accuracyM ?? 0) > poorAccuracyM;
+  const farPhone = method === 'map' && !p.direct && ((phoneM ?? 0) > farPhoneM || !!p.deviceMock);
+  return { current, proposed, movedM, risky: (movedM ?? 0) > bigMoveM || poorFix || farPhone, method, phoneM };
 }

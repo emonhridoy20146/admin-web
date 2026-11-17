@@ -612,7 +612,37 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description Staff pin for a customer (FR-CUS-008, FR-CUS-011). Idempotent by `clientId` (a replay answers 200 with the stored status).
+         *     `method: gps` (default) proposes the phone's fix: accuracy must be ≤ 30 m and not mock. `method: map` (1.11.0) proposes a point
+         *     picked on the map (Uber style); `geo` is that point (`accuracyM` 0) and `deviceGeo` is where the phone was, if it had a fix.
+         *     Both must be inside Bangladesh. When the customer has no usable pin and the branch setting `customers.staffPinApproval` is
+         *     `when_missing` (default) the pin is applied at once and the answer is `status: approved`; otherwise it waits for a manager
+         *     (`pending`). A mock `deviceGeo` never applies at once.
+         */
         post: operations["proposeLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 1.11.0 (FR-CUS-011): a manager sets the customer's pin directly, usually by dropping it on a map. It becomes the official FOS
+         *     pin at once (overlay over the ERP coordinates), appears in the pin history as an approved item with `direct: true`, is audited
+         *     as `customer.location.set`, reaches the assignee's phone through sync and recomputes polygon areas. Idempotent by `clientId`.
+         *     Pending staff proposals for the customer stay pending. Permission `customer.location.approve`; out of scope → 404.
+         */
+        post: operations["setCustomerLocation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2404,6 +2434,8 @@ export interface components {
                 id?: string;
                 name?: string;
             };
+            /** @description FOS branch of the customer. Added in 1.11.0 */
+            branchId?: string | null;
             /** Format: date-time */
             erpFetchedAt?: string;
         };
@@ -2802,6 +2834,13 @@ export interface components {
             decisionReason?: string | null;
             createdAt?: string;
             decidedAt?: string | null;
+            /**
+             * @description Added in 1.11.0
+             * @enum {string}
+             */
+            method?: "gps" | "map";
+            /** @description Applied without a manager because the customer had no pin (1.11.0) */
+            autoApplied?: boolean;
         };
         LocationProposal: {
             id?: string;
@@ -2814,6 +2853,7 @@ export interface components {
             };
             lat?: number;
             lng?: number;
+            /** @description GPS accuracy of a gps proposal; 0 for a map pin; absent for a pin a manager set directly */
             accuracyM?: number;
             photoMediaId?: string | null;
             note?: string | null;
@@ -2824,8 +2864,48 @@ export interface components {
             };
             /** @enum {string} */
             status?: "pending" | "approved" | "rejected";
+            /**
+             * @description How the point was chosen (1.11.0)
+             * @enum {string}
+             */
+            method?: "gps" | "map";
+            /** @description Metres between a map pin and where the phone was when it was picked (1.11.0) */
+            deviceDistanceM?: number | null;
+            /** @description The phone reported a mock location when the map pin was picked (1.11.0) */
+            deviceMock?: boolean;
+            /** @description Staff pin applied at once because the customer had no pin (1.11.0) */
+            autoApplied?: boolean;
+            /** @description Set directly by a manager with POST /customers/{id}/location (1.11.0) */
+            direct?: boolean;
+            /** @description Who approved/rejected or set it (1.11.0) */
+            decider?: {
+                id?: string;
+                name?: string;
+            } | null;
+            /**
+             * Format: date-time
+             * @description Added in 1.11.0
+             */
+            decidedAt?: string | null;
             /** Format: date-time */
             createdAt?: string;
+        };
+        /** @description Answer to a staff pin (1.11.0 declares it; the shape is unchanged since 1.0.0) */
+        PinResult: {
+            id: string;
+            /**
+             * @description `approved` when it was applied at once
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+        };
+        /** @description Added in 1.11.0 */
+        SetLocationResult: {
+            /** @description Pin history item id (a location proposal with direct: true) */
+            id: string;
+            /** @enum {string} */
+            status: "approved";
+            location: components["schemas"]["CustomerLocation"];
         };
         AttendanceSummaryRow: {
             userId?: string;
@@ -4639,18 +4719,115 @@ export interface operations {
                     /** Format: uuid */
                     clientId: string;
                     geo: components["schemas"]["GeoFix"];
+                    /**
+                     * @description Added in 1.11.0
+                     * @default gps
+                     * @enum {string}
+                     */
+                    method?: "gps" | "map";
+                    /** @description Phone position when a map pin was picked. Added in 1.11.0 */
+                    deviceGeo?: components["schemas"]["GeoFix"] | null;
                     photoMediaId?: string;
                     note?: string;
                 };
             };
         };
         responses: {
+            /** @description Replay of the same clientId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PinResult"];
+                };
+            };
             /** @description Created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PinResult"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            /** @description BUSINESS_RULE: LOW_ACCURACY, MOCK_LOCATION (gps only), OUTSIDE_BANGLADESH */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setCustomerLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    clientId: string;
+                    lat: number;
+                    lng: number;
+                    /**
+                     * @default map
+                     * @enum {string}
+                     */
+                    method?: "map" | "gps";
+                    /** @description Why the pin was set or moved (kept in the audit log) */
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Replay of the same clientId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetLocationResult"];
+                };
+            };
+            /** @description Pin set */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetLocationResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            /** @description INVALID_STATE CLIENT_ID_REUSED: the clientId belongs to another pin */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description BUSINESS_RULE OUTSIDE_BANGLADESH */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
         };
     };

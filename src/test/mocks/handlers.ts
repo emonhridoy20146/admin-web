@@ -166,12 +166,19 @@ const idem = new Map<string, S["Collection"]>();
 const custBranchOk = (ctx: Ctx, c: db.MockCustomer) => scope(ctx, new URL('http://x/')).includes(c.branchId);
 
 function recomputeCustomer(c: db.MockCustomer) {
+  c.detail.assignee = c.item.assignee;
+  c.detail.location = c.item.location;
   c.detail.pendingFieldPoisha = c.item.pendingFieldPoisha;
   c.detail.tag = c.item.tag;
   c.detail.badges = c.item.badges;
 }
 
 const uploads = new Map<string, boolean>();
+/** Direct (customer) assignments made in this session; `fallback` is the area holder the customer returns to. */
+const directAssignments: (S['Assignment'] & { fallback: S['CustomerListItem']['assignee'] | undefined })[] = [];
+/** clientId → pin history id of a manager's map pin (idempotent replays, contract 1.11.0). */
+const pinClientIds = new Map<string, { id: string; customerId: string }>();
+const inBd = (lat: number, lng: number) => lat >= 20.3 && lat <= 26.8 && lng >= 87.9 && lng <= 92.8;
 const exportJobs = new Map<string, { at: number; type: string; format: string }>();
 
 export const handlers = [
@@ -404,6 +411,26 @@ export const handlers = [
     if (deny) return deny;
     return HttpResponse.json(db.routeHistory(url.searchParams.get('userId') ?? '', url.searchParams.get('date') ?? '').stops);
   })),
+  http.post(`${BASE}/customers/:id/location`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'customer.location.approve');
+    if (deny) return deny;
+    const c = db.customerById(params.id!);
+    if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+    const b = (await request.json()) as { clientId?: string; lat?: number; lng?: number; note?: string };
+    if (!b.clientId || typeof b.lat !== 'number' || typeof b.lng !== 'number') return problem(400, 'VALIDATION_FAILED', 'clientId, lat and lng are required');
+    const seen = pinClientIds.get(b.clientId);
+    if (seen) return seen.customerId === c.item.id ? HttpResponse.json({ id: seen.id, status: 'approved', location: c.item.location }) : problem(409, 'INVALID_STATE', 'This clientId belongs to another pin');
+    if (!inBd(b.lat, b.lng)) return problem(422, 'BUSINESS_RULE', 'The point is outside Bangladesh', undefined, { rule: 'OUTSIDE_BANGLADESH' });
+    const before = c.item.location?.status === 'ok' || c.item.location?.status === 'overridden' ? { lat: c.item.location.lat!, lng: c.item.location.lng! } : null;
+    c.item.location = { lat: b.lat, lng: b.lng, status: 'overridden', source: 'overlay' };
+    recomputeCustomer(c);
+    const id = `pin-${crypto.randomUUID()}`;
+    pinClientIds.set(b.clientId, { id, customerId: c.item.id! });
+    const me = { id: ctx.user.id, name: ctx.user.name?.en ?? '' };
+    db.proposals.unshift({ branchId: c.branchId, row: { id, customer: { id: c.item.id, name: c.item.name, code: c.item.code, current: c.item.location as never }, lat: b.lat, lng: b.lng, photoMediaId: null, note: b.note ?? null, proposedBy: me.id, proposer: me, status: 'approved', method: 'map', deviceDistanceM: null, deviceMock: false, autoApplied: false, direct: true, decider: me, decidedAt: new Date().toISOString(), createdAt: new Date().toISOString() } });
+    db.addAudit({ actor: actor(ctx.user), action: 'customer.location.set', entity: 'customer', entityId: c.item.id, branchId: c.branchId, before: before ?? {}, after: { lat: b.lat, lng: b.lng }, reason: b.note ?? '' });
+    return HttpResponse.json({ id, status: 'approved', location: c.item.location }, { status: 201 });
+  })),
   http.post(`${BASE}/location-proposals/:id/decision`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'customer.location.approve');
     if (deny) return deny;
@@ -612,13 +639,36 @@ export const handlers = [
     if (deny) return deny;
     const sc = scope(ctx, url);
     const userId = url.searchParams.get('userId');
+    const customerId = url.searchParams.get('customerId');
     const out: S['Assignment'][] = db.areas.filter((a) => sc.includes(a.branchId!)).flatMap((a) => (a.assignees ?? []).map((u) => ({ id: `${a.id}~${u}`, userId: u, type: 'area' as const, areaId: a.id, effectiveFrom: '2026-01-01', effectiveTo: null, source: 'manual' })));
-    return HttpResponse.json(out.filter((x) => !userId || x.userId === userId));
+    const direct = directAssignments.filter((d) => d.effectiveTo === null && sc.includes(db.customerById(d.customerId!)?.branchId ?? '')).map(({ fallback: _f, ...d }) => d);
+    return HttpResponse.json([...(customerId ? [] : out), ...direct].filter((x) => (!userId || x.userId === userId) && (!customerId || x.customerId === customerId)));
   })),
   http.post(`${BASE}/assignments`, authed(async ({ request, ctx }) => {
     const deny = need(ctx, 'assignment.manage');
     if (deny) return deny;
-    const b = (await request.json()) as { userId: string; type: string; areaId?: string };
+    const b = (await request.json()) as { userId: string; type: string; areaId?: string; customerId?: string; reason?: string };
+    if (b.type === 'customer') {
+      const c = db.customerById(b.customerId ?? '');
+      if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+      const u = db.userById(b.userId);
+      if (!u || u.role !== 'field_staff') return problem(404, 'NOT_FOUND', 'User not found');
+      if (!u.branchIds?.includes(c.branchId)) return problem(422, 'BUSINESS_RULE', 'The staff member does not work in the customer\'s branch', undefined, { rule: 'USER_NOT_IN_BRANCH' });
+      const at = new Date().toISOString();
+      let fallback = c.item.assignee;
+      for (const d of directAssignments)
+        if (d.customerId === c.item.id && d.effectiveTo === null) {
+          d.effectiveTo = at;
+          fallback = d.fallback;
+        }
+      const row = { id: `cust~${crypto.randomUUID()}`, userId: u.id, type: 'customer' as const, customerId: c.item.id, effectiveFrom: at, effectiveTo: null, source: 'manual', fallback };
+      directAssignments.push(row);
+      c.item.assignee = { id: u.id, name: u.name?.en };
+      recomputeCustomer(c);
+      db.addAudit({ actor: actor(ctx.user), action: 'assignment.created', entity: 'assignment', entityId: row.id, branchId: c.branchId, before: { assignee: fallback?.name ?? null }, after: { user: u.employeeCode, customer: c.item.code }, reason: b.reason ?? '' });
+      const { fallback: _f, ...view } = row;
+      return HttpResponse.json(view, { status: 201 });
+    }
     const a = db.areas.find((x) => x.id === b.areaId);
     if (!a) return problem(404, 'NOT_FOUND', 'Area not found');
     if (a.assignees?.includes(b.userId)) return problem(409, 'ALREADY_ASSIGNED', 'This staff member already holds the area');
@@ -650,6 +700,16 @@ export const handlers = [
   http.delete(`${BASE}/assignments/:id`, authed(({ params, ctx }) => {
     const deny = need(ctx, 'assignment.manage');
     if (deny) return deny;
+    if (params.id!.startsWith('cust~')) {
+      const d = directAssignments.find((x) => x.id === params.id && x.effectiveTo === null);
+      const c = d && db.customerById(d.customerId!);
+      if (!d || !c) return problem(404, 'NOT_FOUND', 'Assignment not found');
+      d.effectiveTo = new Date().toISOString();
+      c.item.assignee = d.fallback;
+      recomputeCustomer(c);
+      db.addAudit({ actor: actor(ctx.user), action: 'assignment.ended', entity: 'assignment', entityId: d.id, branchId: c.branchId, before: { user: db.userById(d.userId)?.employeeCode, customer: c.item.code }, after: { assignee: d.fallback?.name ?? null }, reason: '' });
+      return new HttpResponse(null, { status: 204 });
+    }
     const [areaId, userId] = params.id!.split('~');
     const a = db.areas.find((x) => x.id === areaId);
     if (!a || !a.assignees?.includes(userId!)) return problem(404, 'NOT_FOUND', 'Assignment not found');

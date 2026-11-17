@@ -58,5 +58,21 @@
     "skipped": "{{n}} already belonged to this staff member",
     "tooMany": "At most {{n}} customers can be assigned at once",
     "open": "Assign to staff"
+  },
+  "one": {
+    "title": "Assign {{name}}",
+    "titleChange": "Change staff for {{name}}",
+    "desc": "The customer appears in the chosen staff member's app after their next sync.",
+    "now": "Now",
+    "viaDirect": "Assigned directly",
+    "viaArea": "Through the area {{area}}",
+    "viaAreaUnnamed": "Through an area",
+    "viaNone": "No staff member looks after this customer",
+    "end": "Remove direct assignment",
+    "endHelp": "The customer goes back to the area's staff member, or to nobody.",
+    "ended": "Direct assignment of {{name}} removed",
+    "same": "Already assigned directly to this staff member",
+    "confirm": "Assign",
+    "done": "{{name}} assigned to {{staff}}"
   }
 }
