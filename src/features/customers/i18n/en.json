@@ -171,6 +171,43 @@
     "approved": "Pin approved",
     "rejectTitle": "Reject this proposal?",
     "rejectDesc": "{{name}} keeps the current pin. The staff member will see the reason.",
-    "rejected": "Proposal rejected"
+    "rejected": "Proposal rejected",
+    "method": {
+      "map": "Picked on the map",
+      "gps": "Phone GPS"
+    },
+    "phoneAway": "Phone {{n}} m away",
+    "phoneUnknown": "Phone position unknown",
+    "mockPhone": "Mock location on the phone",
+    "autoApplied": "Applied at once (had no pin)",
+    "direct": "Set by a manager",
+    "setBy": "Set by",
+    "how": "How"
+  },
+  "nobodyAssigned": "Nobody",
+  "setPin": {
+    "openNew": "Set pin on the map",
+    "openMove": "Move pin on the map",
+    "titleNew": "Set the pin for {{name}}",
+    "titleMove": "Move the pin for {{name}}",
+    "desc": "Drag the map until the pin sits on the customer's house. A click or tap brings that spot under the pin.",
+    "mapLabel": "Map for the pin of {{name}}. Arrow keys move the map, plus and minus zoom.",
+    "pinAt": "Pin at",
+    "currentPin": "Current pin",
+    "moved": "{{n}} m from the current pin",
+    "noPinYet": "No pin before",
+    "outside": "This point is outside Bangladesh. Move the map back.",
+    "paste": "Or paste coordinates",
+    "pasteHelp": "From Google Maps or a shared location, e.g. 22.70123, 90.37011",
+    "pasteError": "Could not read two numbers (latitude, longitude)",
+    "go": "Go",
+    "note": "Note (optional)",
+    "notePlaceholder": "e.g. Blue gate behind the mosque",
+    "save": "Save pin",
+    "saved": "Pin saved for {{name}}"
+  },
+  "assign": {
+    "open": "Assign a staff member",
+    "change": "Change staff"
   }
 }

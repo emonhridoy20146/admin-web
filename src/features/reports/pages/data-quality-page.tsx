@@ -45,7 +45,7 @@ export function DataQualityPage() {
       priority: 1,
       mobile: 'title',
       cell: (r) => (
-        <Link href={`/customers/${r.customerId}/`} className="block min-w-0">
+        <Link href={`/customers/${r.customerId}/${fixAction(r.issue)}`} className="block min-w-0">
           <span className="block max-w-[240px] truncate font-medium text-fg hover:text-primary" lang={locale}>{pickText(r.name, locale)}</span>
           <span className="block font-mono text-xs text-fg-tertiary">{r.code}</span>
         </Link>
@@ -210,4 +210,10 @@ export function DataQualityPage() {
  */
 function hasData(detail: string | undefined): detail is string {
   return !!detail && /\d/.test(detail);
+}
+
+/** Opens the customer with the fix ready (customers feature, 1.11.0): the map pin dialog or the assign dialog. */
+function fixAction(issue: string | undefined): string {
+  if (issue === 'no_location' || issue === 'invalid_location' || issue === 'suspect_swapped' || issue === 'far_from_branch') return '?action=pin';
+  return issue === 'unassigned' ? '?action=assign' : '';
 }

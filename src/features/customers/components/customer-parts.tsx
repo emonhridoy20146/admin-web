@@ -1,6 +1,10 @@
 'use client';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloudUpload, Flag, MapPin, Phone, StickyNote, UserRound } from 'lucide-react';
+import { CloudUpload, Flag, MapPin, MapPinPlus, MapPinned, Phone, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
+import { AssignCustomerDialog } from '@/features/assignments';
+import { useGate } from '@/shared/feature/useGate';
+import { useUrlState } from '@/shared/lib/url-state';
 import { cn } from '@/shared/lib/cn';
 import { formatDate, formatMoney, formatNumber, formatRelative, formatPercent, pickText } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
@@ -9,7 +13,9 @@ import { Badge, StatusBadge, StatusBadges } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/feedback';
 import type { components } from '@/shared/api/schema';
 import { sortStatuses } from '../model/customer-row';
+import { currentPin } from '../model/pin';
 import type { CustomerDetail } from '../api/customers';
+import { SetPinDialog } from './set-pin-dialog';
 
 type Plan = components['schemas']['Plan'];
 
@@ -109,7 +115,7 @@ export function PendingCallout({ c }: { c: CustomerDetail }) {
 export function ContactCard({ c }: { c: CustomerDetail }) {
   const { t } = useTranslation('customers');
   const locale = useUi((s) => s.locale);
-  const hasLoc = (c.location?.status === 'ok' || c.location?.status === 'overridden') && c.location.lat != null;
+  const hasLoc = !!currentPin(c);
   return (
     <dl className="space-y-3 text-base">
       <Item icon={Phone} label={t('phones')}>
@@ -125,8 +131,12 @@ export function ContactCard({ c }: { c: CustomerDetail }) {
         <span className={cn('mt-0.5 block text-xs', hasLoc ? 'text-fg-tertiary' : 'text-warning')}>
           {hasLoc ? `${c.location!.lat!.toFixed(5)}, ${c.location!.lng!.toFixed(5)}` : t('locationMissing')}
         </span>
+        <PinAction c={c} hasLoc={hasLoc} />
       </Item>
-      <Item icon={UserRound} label={t('assignedTo')}>{c.assignee?.name ?? '—'}</Item>
+      <Item icon={UserRound} label={t('assignedTo')}>
+        <span className={c.assignee?.name ? undefined : 'text-warning'}>{c.assignee?.name ?? t('nobodyAssigned')}</span>
+        <AssignAction c={c} />
+      </Item>
       {c.guarantor?.name && (
         <Item icon={UserRound} label={t('guarantor')}>
           {c.guarantor.name} <span className="font-mono text-sm text-fg-tertiary">{c.guarantor.phone}</span>
@@ -135,6 +145,44 @@ export function ContactCard({ c }: { c: CustomerDetail }) {
     </dl>
   );
 }
+/** FR-CUS-011: managers set or move the pin on a map. `?action=pin` (from the data-quality list) opens it directly. */
+function PinAction({ c, hasLoc }: { c: CustomerDetail; hasLoc: boolean }) {
+  const { t } = useTranslation('customers');
+  const gate = useGate();
+  const url = useUrlState();
+  const [open, setOpen] = useState(() => url.get('action') === 'pin');
+  if (!gate.can('customer.location.approve')) return null;
+  const Icon = hasLoc ? MapPinned : MapPinPlus;
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-sm text-sm font-medium text-primary hover:underline sm:min-h-8">
+        <Icon className="size-4" aria-hidden />
+        {hasLoc ? t('setPin.openMove') : t('setPin.openNew')}
+      </button>
+      <SetPinDialog open={open} customer={c} onClose={() => (setOpen(false), url.get('action') && url.set({ action: null }))} />
+    </>
+  );
+}
+
+/** FR-ASG-002: give this one customer to a staff member. `?action=assign` opens it directly. */
+function AssignAction({ c }: { c: CustomerDetail }) {
+  const { t } = useTranslation('customers');
+  const gate = useGate();
+  const url = useUrlState();
+  const [open, setOpen] = useState(() => url.get('action') === 'assign');
+  if (!gate.can('assignment.manage') || !gate.flag('module.assignments')) return null;
+  const Icon = c.assignee?.id ? UserPen : UserPlus;
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="mt-1.5 flex min-h-11 items-center gap-1.5 rounded-sm text-sm font-medium text-primary hover:underline sm:min-h-8">
+        <Icon className="size-4" aria-hidden />
+        {c.assignee?.id ? t('assign.change') : t('assign.open')}
+      </button>
+      <AssignCustomerDialog open={open} customer={c} onClose={() => (setOpen(false), url.get('action') && url.set({ action: null }))} />
+    </>
+  );
+}
+
 function Item({ icon: Icon, label, children }: { icon: typeof Phone; label: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3">

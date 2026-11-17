@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bboxParam, boundsOf, haversineM, readLatLng } from '../geo';
+import { bboxParam, boundsOf, formatCoords, haversineM, inBangladesh, parseCoords, readLatLng } from '../geo';
 
 describe('geo helpers', () => {
   it('measures distance in metres', () => {
@@ -20,5 +20,25 @@ describe('geo helpers', () => {
   it('builds padded bounds', () => {
     expect(boundsOf([])).toBeNull();
     expect(boundsOf([{ lat: 1, lng: 2 }, { lat: 3, lng: 1 }], 0)).toEqual({ minLat: 1, maxLat: 3, minLng: 1, maxLng: 2 });
+  });
+  it('reads pasted coordinates (plain, degrees, map links, Bangla digits, swapped)', () => {
+    expect(parseCoords('22.70123, 90.37011')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('  22.70123 90.37011 ')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('22.70123° N, 90.37011° E')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('https://www.google.com/maps/@22.70123,90.37011,17z')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('https://maps.google.com/?q=22.70123,90.37011&z=17')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('২২.৭০১২৩, ৯০.৩৭০১১')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('90.37011, 22.70123')).toEqual({ lat: 22.70123, lng: 90.37011 });
+    expect(parseCoords('51.5, -0.12')).toEqual({ lat: 51.5, lng: -0.12 });
+    expect(parseCoords('')).toBeNull();
+    expect(parseCoords('house near the mosque')).toBeNull();
+    expect(parseCoords('22.7')).toBeNull();
+    expect(parseCoords('1, 2, 3')).toBeNull();
+    expect(parseCoords('200, 300')).toBeNull();
+  });
+  it('knows Bangladesh and formats coordinates to five decimals', () => {
+    expect(inBangladesh({ lat: 22.7, lng: 90.37 })).toBe(true);
+    expect(inBangladesh({ lat: 51.5, lng: -0.12 })).toBe(false);
+    expect(formatCoords({ lat: 22.7, lng: 90.370114 })).toBe('22.70000, 90.37011');
   });
 });

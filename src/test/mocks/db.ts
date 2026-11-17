@@ -237,7 +237,7 @@ branches.forEach((b, bi) => {
       overduePoisha: overdueSeq.reduce((s, x) => s + Math.max(0, (x.amountPoisha ?? 0) - (x.paidPoisha ?? 0)), 0),
       distanceM: null, totalOutstandingPoisha: outstanding, nextDueDate: nextDue, daysOverdue, badges, tag, openPromise,
       lastVisitAt: chance(0.8) ? isoAt(now().minus({ hours: int(2, 24 * 25) })) : null, pendingFieldPoisha: 0,
-      assignee: { id: assignee.id, name: assignee.name?.en }, erpFetchedAt: fetched,
+      assignee: { id: assignee.id, name: assignee.name?.en }, branchId: b.id!, erpFetchedAt: fetched,
     };
     const payments: S['Payment'][] = plans.flatMap((p) =>
       (p.schedule ?? []).filter((s) => (s.paidPoisha ?? 0) > 0).map((s) => ({
@@ -788,6 +788,8 @@ export const proposals: MockProposal[] = [];
         id: oid('6772'), customer: { id: c.item.id, name: c.item.name, code: c.item.code, current: cur as never }, lat: base.lat + off * (i % 2 ? 1 : -0.6), lng: base.lng + off * (i % 3 ? 0.8 : -1),
         accuracyM: far ? i2(40, 90) : i2(5, 24), photoMediaId: null, note: PNOTES[i % PNOTES.length], proposedBy: c.item.assignee?.id, proposer: { id: c.item.assignee?.id, name: c.item.assignee?.name },
         status, createdAt: isoAt(now().minus({ hours: 3 + i * 7 })),
+        // 1.11.0: pins for customers without one were picked on the map; an approved one was applied at once
+        ...(cur ? { method: 'gps' as const } : { method: 'map' as const, accuracyM: 0, deviceDistanceM: far ? i2(700, 1500) : i2(10, 120), deviceMock: false, autoApplied: status === 'approved', decidedAt: status === 'pending' ? null : isoAt(now().minus({ hours: 3 + i * 7 })) }),
       },
     });
   });
