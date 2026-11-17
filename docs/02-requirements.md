@@ -10,9 +10,9 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | RBAC | FR-RBAC-001…005, 007 | Users & roles, Permissions |
 | Users/branches/settings/flags | FR-USER-001/002, FR-BR-001, FR-SET-001…003, FR-FLAG-001/002 | Admin section |
 | ERP status | FR-ERP-003, 004, 005 | Header dot, System health, customer refresh |
-| Customers | FR-CUS-001…010 | Customers, detail, Map, Data quality |
+| Customers | FR-CUS-001…010 | Customers, detail, Map, Data quality (FR-CUS-009, under Reports) |
 | Tags | FR-TAG-002, 003, 005, 006, 007, 008 | Customer detail, Inbox |
-| Collections | FR-COL-005, 006, 007, 009, 010, 013, 014, 015 | Collections, Conflicts, Reconciliation |
+| Collections | FR-COL-005, 006, 007, 009, 010, 013, 014, 015 | Collections, Conflicts, Reconciliation, Daily targets (FR-COL-015: branch default and personal targets with history; progress on Staff and Overview) |
 | Cash | FR-CASH-001, 002, 003, 004, 005 | Cash & deposits |
 | Assignments | FR-ASG-001…005 | Assignments & areas, Map |
 | Handovers | FR-HO-001, 003, 004, 006, 007 | Handovers |
@@ -22,7 +22,7 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | Location | FR-LOC-006, 007, 012 | Live map, Route history |
 | Notifications | FR-NOT-002, 003, 005 | Bell, Broadcasts |
 | Inbox/dashboard/search | FR-INB-001, FR-DSH-001, FR-SRCH-001 | Inbox, Overview, ⌘K |
-| Reports | FR-REP-001…006 | Reports, Exports |
+| Reports | FR-REP-001…006 | Reports, Exports (CSV, XLSX, server PDF), Leaderboard (FR-REP-005), print to PDF (FR-REP-003) |
 | Audit | FR-AUD-003 | Audit log |
 | Devices | FR-AUTH-007, 008 | Devices |
 | Sync health | FR-SYNC-005 | System health |

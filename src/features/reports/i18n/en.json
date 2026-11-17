@@ -90,12 +90,14 @@
       "attendance": "Attendance",
       "overdue_customers": "Overdue customers",
       "cash_positions": "Cash on hand",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "data_quality": "Data quality (customers with problems)"
     },
     "format": "File type",
     "formats": {
       "xlsx": "Excel (.xlsx)",
-      "csv": "CSV"
+      "csv": "CSV",
+      "pdf": "PDF"
     },
     "from": "From",
     "to": "To",
@@ -124,12 +126,126 @@
     "download": "Download",
     "downloadOf": "Download {{name}}",
     "linkNote": "A download link works for 5 minutes",
-    "rangeLabel": "{{from}} to {{to}}"
+    "rangeLabel": "{{from}} to {{to}}",
+    "issue": "Problem",
+    "allIssues": "All problems",
+    "pdfHelp": "A4 landscape with Bangla. For exactly what a page shows, use PDF / Print on that page."
   },
   "pdf": {
-    "title": "PDF (with Bangla)",
+    "title": "Print a page as PDF",
     "how": "Open the report, press 'PDF / Print' at the top, then choose 'Save as PDF' in the print dialog. Bangla conjuncts come out right.",
     "staff": "Staff performance",
-    "attendance": "Monthly attendance"
+    "attendance": "Monthly attendance",
+    "targets": "Daily targets"
+  },
+  "dq": {
+    "title": "Data quality",
+    "subtitle": "Customers whose location, phone, plan or assignment is missing or wrong. Fix them in the ERP or here, then they drop off the list.",
+    "customers": "Active customers",
+    "withIssues": "With a problem",
+    "clean": "Clean",
+    "issues": "Problems",
+    "listTitle": "Customers: {{issue}}",
+    "printNote": "Only the page shown on screen is printed. Use Downloads for the full list.",
+    "none": "No customer has this problem",
+    "noneBody": "Pick another problem above.",
+    "nobody": "Nobody",
+    "byBranch": "By branch",
+    "col": {
+      "customer": "Customer",
+      "detail": "What is wrong",
+      "area": "Area",
+      "assignee": "Assigned to",
+      "others": "Other problems",
+      "branch": "Branch"
+    },
+    "issue": {
+      "no_location": {
+        "label": "No location",
+        "short": "No location",
+        "help": "The ERP has no coordinates, so the customer is not on the map."
+      },
+      "invalid_location": {
+        "label": "Invalid location",
+        "short": "Invalid",
+        "help": "Coordinates are 0,0 or outside Bangladesh."
+      },
+      "suspect_swapped": {
+        "label": "Latitude and longitude swapped",
+        "short": "Swapped",
+        "help": "The two numbers look the wrong way round."
+      },
+      "far_from_branch": {
+        "label": "Far from the branch",
+        "short": "Far",
+        "help": "The pin is more than {{km}} km from the branch."
+      },
+      "missing_phone": {
+        "label": "No phone number",
+        "short": "No phone",
+        "help": "Staff cannot call before a visit."
+      },
+      "invalid_phone": {
+        "label": "Invalid phone number",
+        "short": "Bad phone",
+        "help": "Not an 11-digit Bangladesh mobile number."
+      },
+      "shared_phone": {
+        "label": "Phone shared with others",
+        "short": "Shared phone",
+        "help": "The same number belongs to another customer of the branch."
+      },
+      "plan_without_schedule": {
+        "label": "Plan without installments",
+        "short": "No schedule",
+        "help": "An open plan has no installment schedule, so nothing is ever due."
+      },
+      "unassigned": {
+        "label": "No staff assigned",
+        "short": "Unassigned",
+        "help": "Nobody is responsible for visiting this customer."
+      }
+    },
+    "fix": {
+      "location": "Fix: correct the coordinates in the ERP, or approve a pin from the field.",
+      "phone": "Fix: correct the phone number in the ERP.",
+      "plan": "Fix: add the installment schedule in the ERP.",
+      "assignment": "Fix: assign the customer from Areas."
+    },
+    "download": "Download the full list"
+  },
+  "lb": {
+    "title": "Leaderboard",
+    "subtitle": "Field staff of the branch ranked by one measure. Equal values share a rank.",
+    "period": "Period",
+    "periods": {
+      "day": "Day",
+      "month": "Month"
+    },
+    "when": "Date or month",
+    "by": "Rank by",
+    "metric": {
+      "collected": "Collected",
+      "visit_credit": "Visit credit",
+      "promises_kept": "Promises kept",
+      "target_achievement": "Target achieved"
+    },
+    "top": "Top three",
+    "place": "Place {{n}}",
+    "col": {
+      "rank": "Rank",
+      "staff": "Staff",
+      "present": "Days present"
+    },
+    "tie": "tie",
+    "empty": "No field staff to rank in this period",
+    "unranked": "Staff with fewer than {{n}} days present are listed without a rank.",
+    "unrankedTarget": "Staff with fewer than {{n}} days present, or without a target, are listed without a rank.",
+    "how": {
+      "collected": "Money recorded in the field, not voided or refunded. Not the ERP ledger.",
+      "visit_credit": "Single visits count 1; a joint visit counts the share set in Co-work settings.",
+      "promises_kept": "Promises due in this period that the customer kept.",
+      "target_achievement": "Collected divided by the target for the working days so far."
+    }
   }
 }

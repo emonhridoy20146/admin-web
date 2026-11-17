@@ -49,5 +49,9 @@ describe('reports', () => {
     expect(exportBody(form, 'b1', 'bn')).toEqual({ type: 'collections', format: 'xlsx', params: { from: '2026-11-01', to: '2026-11-16', branchId: 'b1' }, locale: 'bn' });
     expect(exportBody({ ...form, type: 'staff_performance', period: 'monthly' }, undefined, 'en')).toEqual({ type: 'staff_performance', format: 'xlsx', params: { period: 'monthly', date: '2026-11-16' }, locale: 'en' });
     expect(exportBody({ ...form, type: 'overdue_customers', format: 'csv' }, undefined, 'bn')).toEqual({ type: 'overdue_customers', format: 'csv', params: {}, locale: 'bn' });
+    // 1.10.0: the data quality list, optionally one issue, and server-built PDFs
+    expect(exportBody({ ...form, type: 'data_quality', format: 'pdf', issue: 'missing_phone' }, 'b1', 'bn')).toEqual({ type: 'data_quality', format: 'pdf', params: { branchId: 'b1', issue: 'missing_phone' }, locale: 'bn' });
+    expect(exportBody({ ...form, type: 'data_quality', issue: '' }, undefined, 'bn')).toEqual({ type: 'data_quality', format: 'xlsx', params: {}, locale: 'bn' });
+    expect(exportBody({ ...form, issue: 'unassigned' }, undefined, 'bn').params).toEqual({ from: '2026-11-01', to: '2026-11-16' });
   });
 });

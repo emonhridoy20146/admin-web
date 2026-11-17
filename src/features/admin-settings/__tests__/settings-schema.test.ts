@@ -49,4 +49,12 @@ describe('settings schema', () => {
     expect(diff(cur, { 'attendance.selfieRequired': false, 'attendance.selfieEvents': [] })).toEqual({ changes: { 'attendance.selfieRequired': false, 'attendance.selfieEvents': [] }, errors: {} });
     expect(diff(cur, { 'attendance.selfieEvents': ['work_in', 'work_out'] }).changes).toEqual({});
   });
+
+  it('edits the report settings (FR-REP-005, FR-CUS-009)', () => {
+    expect(parse(field('reports.leaderboardMinPresentDays'), '০')).toEqual({ value: 0 });
+    expect(parse(field('reports.leaderboardMinPresentDays'), '32')).toEqual({ error: 'errors.range' });
+    expect(parse(field('reports.dataQualityMaxBranchKm'), '0')).toEqual({ error: 'errors.range' });
+    expect(parse(field('reports.dataQualityMaxBranchKm'), '30')).toEqual({ value: 30 });
+    expect(parse(field('reports.leaderboardVisibleToStaff'), true)).toEqual({ value: true });
+  });
 });

@@ -1127,6 +1127,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Daily targets in force for every active field staff member of a branch on a date (1.10.0, FR-COL-015). A personal target, when one
+         *     is in force, wins over the branch default. Non-working days (weekly off, holiday, approved leave) have no target: their row has
+         *     workingDay false and zeros. Permission target.view. branchId defaults to the caller's first branch; out of scope is 404.
+         */
+        get: operations["listTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The caller's own effective target for a date (1.10.0). Self-service. Also sent as `target` on /sync/pull and /sync/bootstrap. */
+        get: operations["myTarget"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Set a personal daily target for one field staff member from effectiveFrom on (1.10.0). Permission target.manage, audited (target.set).
+         *     422 BUSINESS_RULE TARGET_IN_PAST when effectiveFrom is before today: targets of past days stay as they were, so reports do not change afterwards.
+         *     404 when the user is not active field staff in the caller's scope.
+         */
+        put: operations["setUserTarget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/users/{id}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description From effectiveFrom on, the person follows the branch default again (1.10.0). Permission target.manage, audited (target.cleared). Same 422 / 404 as PUT. */
+        post: operations["clearUserTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/users/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every personal target change of one staff member, newest first (1.10.0). Permission target.view. */
+        get: operations["userTargetHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/targets/branches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Branch default daily target from effectiveFrom on, for everyone without a personal target (1.10.0). Permission target.manage, audited (target.branch_set). Same 422 TARGET_IN_PAST; another branch is 404. */
+        put: operations["setBranchTarget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/handovers": {
         parameters: {
             query?: never;
@@ -1820,6 +1930,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/me/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The caller's own performance for a month, with targets and one row per day (1.10.0, FR-REP-005, FR-M-021). Self-service, online.
+         *     `rank` is filled only when the leaderboard is visible to staff (setting reports.leaderboardVisibleToStaff) and ranks by collected.
+         */
+        get: operations["myPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/leaderboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Field staff ranked for a day or a month (1.10.0, FR-REP-005). Managers with report.view always see it for any branch in scope.
+         *     Field staff see their own branch only, and only when setting reports.leaderboardVisibleToStaff is true (default false, OD-15); otherwise 403 FORBIDDEN.
+         *     Rules: a person needs at least reports.leaderboardMinPresentDays present days in the period (default 1) to be ranked; others follow with rank null.
+         *     Equal values share a rank (1, 2, 2, 4) and are ordered by name. target_achievement ranks amount achieved ÷ amount target; people without a target are not ranked for it.
+         */
+        get: operations["leaderboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/data-quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Customer data problems per branch, one count per issue (1.10.0, FR-CUS-009). Active ERP customers only; a customer can have several issues.
+         *     Issues: no_location, invalid_location (0,0 or outside Bangladesh), suspect_swapped (lat/lng look swapped), far_from_branch (pin more than
+         *     setting reports.dataQualityMaxBranchKm, default 30 km, from the branch), missing_phone, invalid_phone (not an 11-digit Bangladesh mobile),
+         *     shared_phone (same number on another customer of the branch), plan_without_schedule (an open plan with no installment schedule),
+         *     unassigned (no field staff). Permission report.view.
+         */
+        get: operations["dataQuality"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/data-quality/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Customers with one issue, paged (1.10.0). Permission report.view. */
+        get: operations["dataQualityItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports/exports": {
         parameters: {
             query?: never;
@@ -1833,8 +2025,8 @@ export interface paths {
          * @description Async export, built by the worker within about a minute, kept 7 days, visible only to the requester (1.6.0 documents params).
          *     `params` per type: staff_performance → { period, date, branchId?, userId? } · collections → { from, to, branchId? } (≤ 92 days) ·
          *     attendance → { from, to, branchId? } (≤ 62 days) · overdue_customers, cash_positions → { branchId? } ·
-         *     audit → { from, to, branchId? } (≤ 31 days; also needs `audit.view`, else 403) (1.7.1).
-         *     `format: pdf` is answered with 422 BUSINESS_RULE (`export_format_unavailable`) until it is built.
+         *     audit → { from, to, branchId? } (≤ 31 days; also needs `audit.view`, else 403) (1.7.1) · data_quality → { branchId?, issue? } (1.10.0).
+         *     `format: pdf` (1.10.0): A4 landscape PDF with the Bangla font embedded (Noto Sans Bengali, shaped with HarfBuzz) and the table header repeated on every page.
          */
         post: operations["createExport"];
         delete?: never;
@@ -2932,6 +3124,7 @@ export interface components {
                 [key: string]: unknown;
             };
             cash?: components["schemas"]["CashPosition"];
+            target?: components["schemas"]["MyTarget"];
             /** Format: date-time */
             serverTime?: string;
         };
@@ -2950,6 +3143,7 @@ export interface components {
                 [key: string]: unknown;
             };
             cash?: components["schemas"]["CashPosition"];
+            target?: components["schemas"]["MyTarget"];
             /** Format: date-time */
             serverTime?: string;
         };
@@ -2977,11 +3171,16 @@ export interface components {
                 cashPoisha?: number;
                 mobilePoisha?: number;
                 count?: number;
+                /** @description Sum of daily amount targets in force for field staff in scope (filled since 1.10.0) */
                 targetPoisha?: number;
             };
             visits?: {
                 count?: number;
                 uniqueCustomers?: number;
+                /** @description Visit credit of field staff (1.10.0) */
+                credit?: number;
+                /** @description Sum of daily visit targets in force (1.10.0) */
+                target?: number;
             };
             promises?: {
                 dueToday?: number;
@@ -3025,6 +3224,7 @@ export interface components {
             collectedPoisha?: {
                 [key: string]: number;
             };
+            /** @description Sum of daily amount targets over the working days of the period (filled since 1.10.0) */
             targetPoisha?: number;
             promisesDue?: number;
             promisesKept?: number;
@@ -3041,6 +3241,178 @@ export interface components {
             coWorkVisits?: number;
             /** @description soloVisits + coWorkVisits × setting cowork.visitCredit; the figure visit targets use (1.9.0) */
             visitCredit?: number;
+            /** @description Sum of daily visit targets over the working days of the period (1.10.0) */
+            visitTarget?: number;
+            /** @description Amount target up to today when the period is still running, else equal to targetPoisha (1.10.0) */
+            targetToDatePoisha?: number;
+            /** @description Visit target up to today when the period is still running (1.10.0) */
+            visitTargetToDate?: number;
+            /** @description Collected ÷ targetToDatePoisha, 2 decimals; null without a target (1.10.0) */
+            amountAchievement?: number | null;
+            /** @description visitCredit ÷ visitTargetToDate, 2 decimals; null without a target (1.10.0) */
+            visitAchievement?: number | null;
+            /** @description Working days of the period that carry a target (1.10.0) */
+            targetDays?: number;
+        };
+        TargetValue: {
+            /** @description Daily amount target; 0 = none */
+            amountPoisha: number;
+            /** @description Daily visit-credit target; 0 = none */
+            visits: number;
+            /** Format: date */
+            effectiveFrom?: string | null;
+            reason?: string | null;
+            setBy?: {
+                id?: string;
+                name?: string;
+            } | null;
+            /** Format: date-time */
+            setAt?: string | null;
+        };
+        /** @description One person on one date (1.10.0) */
+        StaffTarget: components["schemas"]["TargetValue"] & {
+            userId: string;
+            name?: string;
+            employeeCode?: string;
+            /**
+             * @description personal = a personal target is in force; branch = the branch default (possibly 0)
+             * @enum {string}
+             */
+            source: "personal" | "branch";
+            /** @description false on weekly off, holiday or approved leave; the target is then 0 */
+            workingDay: boolean;
+        };
+        BranchTargets: {
+            branchId?: string;
+            /** Format: date */
+            date?: string;
+            defaults?: components["schemas"]["TargetValue"];
+            items?: components["schemas"]["StaffTarget"][];
+        };
+        /** @description The caller's effective target (1.10.0). Progress is computed on the device from today's collections and visit credit. */
+        MyTarget: {
+            /** Format: date */
+            businessDate?: string;
+            amountPoisha?: number;
+            visits?: number;
+            /** @enum {string} */
+            source?: "personal" | "branch";
+            workingDay?: boolean;
+        };
+        TargetChange: {
+            id?: string;
+            userId?: string | null;
+            branchId?: string;
+            /** @enum {string} */
+            kind?: "set" | "cleared";
+            amountPoisha?: number | null;
+            visits?: number | null;
+            /** Format: date */
+            effectiveFrom?: string;
+            reason?: string;
+            setBy?: {
+                id?: string;
+                name?: string;
+            };
+            /** Format: date-time */
+            setAt?: string;
+        };
+        MyPerformance: {
+            month?: string;
+            row?: components["schemas"]["StaffPerformanceRow"];
+            /** @description All methods; money recorded in FOS, not the ERP balance */
+            collectedTotalPoisha?: number;
+            /** @description Part already posted to the ERP */
+            postedPoisha?: number;
+            /** @description Part still waiting for the ERP (received, posting, failed, conflict) */
+            pendingPoisha?: number;
+            days?: {
+                /** Format: date */
+                date?: string;
+                collectedPoisha?: number;
+                collectionsCount?: number;
+                visits?: number;
+                soloVisits?: number;
+                coWorkVisits?: number;
+                visitCredit?: number;
+                targetPoisha?: number;
+                visitTarget?: number;
+                workingDay?: boolean;
+            }[];
+            rank?: {
+                metric?: string;
+                rank?: number | null;
+                of?: number;
+            } | null;
+        };
+        LeaderboardRow: {
+            /** @description null when not ranked (too few present days, or no target for target_achievement) */
+            rank?: number | null;
+            userId?: string;
+            name?: string;
+            employeeCode?: string;
+            /** @description The ranking metric: poisha for collected, credit for visit_credit, count for promises_kept, ratio for target_achievement */
+            value?: number | null;
+            collectedPoisha?: number;
+            visitCredit?: number;
+            promisesKept?: number;
+            amountAchievement?: number | null;
+            presentDays?: number;
+            eligible?: boolean;
+            /** @description The caller */
+            me?: boolean;
+        };
+        Leaderboard: {
+            /** @description The branch asked for; null when the board covers every branch in the caller's scope. Always the own branch for field staff. */
+            branchId?: string | null;
+            /** @enum {string} */
+            period?: "day" | "month";
+            date?: string;
+            metric?: string;
+            minPresentDays?: number;
+            items?: components["schemas"]["LeaderboardRow"][];
+            me?: {
+                rank?: number | null;
+                of?: number;
+            } | null;
+        };
+        /** @enum {string} */
+        DataQualityIssue: "no_location" | "invalid_location" | "suspect_swapped" | "far_from_branch" | "missing_phone" | "invalid_phone" | "shared_phone" | "plan_without_schedule" | "unassigned";
+        DataQualitySummary: {
+            /** Format: date-time */
+            generatedAt?: string;
+            /** @description System default of reports.dataQualityMaxBranchKm; a branch may override it (see branches[].maxBranchKm) */
+            maxBranchKm?: number;
+            branches?: {
+                branchId?: string;
+                branchName?: components["schemas"]["I18nText"];
+                /** @description Distance used for far_from_branch in this branch */
+                maxBranchKm?: number;
+                /** @description Active customers checked */
+                customers?: number;
+                /** @description Customers with at least one issue */
+                withIssues?: number;
+                /** @description Count per DataQualityIssue; every issue key is present */
+                issues?: {
+                    [key: string]: number;
+                };
+            }[];
+        };
+        DataQualityItem: {
+            customerId?: string;
+            code?: string;
+            name?: components["schemas"]["I18nText"];
+            branchId?: string;
+            areaCode?: string | null;
+            assignee?: {
+                id?: string;
+                name?: string;
+            } | null;
+            issue?: components["schemas"]["DataQualityIssue"];
+            /** @description What is wrong, e.g. the invalid number or the distance in km */
+            detail?: string;
+            /** @description All issues of this customer */
+            issues?: components["schemas"]["DataQualityIssue"][];
         };
         OverdueBucket: {
             count?: number;
@@ -5201,6 +5573,173 @@ export interface operations {
             };
         };
     };
+    listTargets: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                /** @description Default today (Dhaka) */
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchTargets"];
+                };
+            };
+        };
+    };
+    myTarget: {
+        parameters: {
+            query?: {
+                /** @description Default today (Dhaka) */
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTarget"];
+                };
+            };
+        };
+    };
+    setUserTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amountPoisha: number;
+                    /** @description Compared with visitCredit */
+                    visits: number;
+                    /**
+                     * Format: date
+                     * @description Default today
+                     */
+                    effectiveFrom?: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The target row as it applies on effectiveFrom */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTarget"];
+                };
+            };
+        };
+    };
+    clearUserTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    effectiveFrom?: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffTarget"];
+                };
+            };
+        };
+    };
+    userTargetHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetChange"][];
+                };
+            };
+        };
+    };
+    setBranchTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amountPoisha: number;
+                    visits: number;
+                    /** Format: date */
+                    effectiveFrom?: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetValue"];
+                };
+            };
+        };
+    };
     listHandovers: {
         parameters: {
             query?: {
@@ -6570,6 +7109,103 @@ export interface operations {
             };
         };
     };
+    myPerformance: {
+        parameters: {
+            query: {
+                month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPerformance"];
+                };
+            };
+        };
+    };
+    leaderboard: {
+        parameters: {
+            query: {
+                branchId?: components["parameters"]["BranchId"];
+                period: "day" | "month";
+                date?: string;
+                metric?: "collected" | "visit_credit" | "promises_kept" | "target_achievement";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Leaderboard"];
+                };
+            };
+        };
+    };
+    dataQuality: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataQualitySummary"];
+                };
+            };
+        };
+    };
+    dataQualityItems: {
+        parameters: {
+            query: {
+                branchId?: components["parameters"]["BranchId"];
+                issue: components["schemas"]["DataQualityIssue"];
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["DataQualityItem"][];
+                        nextCursor?: string | null;
+                    };
+                };
+            };
+        };
+    };
     createExport: {
         parameters: {
             query?: never;
@@ -6581,7 +7217,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    type: "staff_performance" | "collections" | "attendance" | "overdue_customers" | "cash_positions" | "audit";
+                    type: "staff_performance" | "collections" | "attendance" | "overdue_customers" | "cash_positions" | "audit" | "data_quality";
                     /** @enum {string} */
                     format: "csv" | "xlsx" | "pdf";
                     params?: {

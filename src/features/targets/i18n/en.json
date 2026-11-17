@@ -1,0 +1,71 @@
+{
+  "title": "Daily targets",
+  "subtitle": "How much each field staff member should collect and how many visits they should make in a day. Without a personal target the branch target applies.",
+  "date": "Targets for",
+  "today": "Today",
+  "pickBranch": "Choose a branch",
+  "pickBranchBody": "Targets are set per branch. Pick a branch in the branch switcher at the top.",
+  "branch": {
+    "title": "Branch daily target",
+    "sub": "For everyone without a personal target",
+    "none": "No target has been set for this branch yet."
+  },
+  "kpi": {
+    "amount": "Branch collection target",
+    "visits": "Branch visit target",
+    "working": "Working this day",
+    "personal": "With a personal target"
+  },
+  "col": {
+    "staff": "Staff member",
+    "source": "Target from",
+    "amount": "Collection target",
+    "visits": "Visit target",
+    "from": "Since",
+    "action": "Change"
+  },
+  "source": {
+    "personal": "Personal",
+    "branch": "Branch"
+  },
+  "offDay": "Day off",
+  "visitsN": "{{n}} visits",
+  "since": "since {{date}}",
+  "setBy": "set by {{name}}",
+  "edit": "Change",
+  "editFor": "Change {{name}}'s target",
+  "clear": "Back to branch target",
+  "clearFor": "Put {{name}} back on the branch target",
+  "clearTitle": "Remove {{name}}'s personal target?",
+  "clearBody": "The branch target applies from then on: {{amount}} and {{visits}} visits a day. Past days' reports do not change.",
+  "saved": "Target saved",
+  "history": "Target history",
+  "noHistory": "No changes yet.",
+  "cleared": "Personal target removed; back on the branch target",
+  "empty": "No active field staff in this branch",
+  "dialog": {
+    "branchTitle": "Change the branch daily target",
+    "branchHelp": "For everyone without a personal target. Days off count as zero. Past days' reports do not change.",
+    "userTitle": "{{name}}'s daily target",
+    "userHelp": "For this person only, instead of the branch target. Past days' reports do not change.",
+    "amount": "Collection per day (taka)",
+    "amountHelp": "Whole taka, e.g. 25000",
+    "visits": "Visits per day",
+    "visitsHelp": "Joint visits count as visit credit",
+    "from": "Starting",
+    "fromHelp": "Today or a later day",
+    "save": "Save",
+    "confirm": "Set {{amount}} and {{visits}} visits a day"
+  },
+  "errors": {
+    "number": "Digits only.",
+    "tooBig": "That number looks too large. Please check.",
+    "date": "Enter a date.",
+    "past": "A target cannot start on a past day.",
+    "reason": "Write a reason of at least {{n}} characters."
+  },
+  "kind": {
+    "set": "Personal target set",
+    "cleared": "Back to branch target"
+  }
+}

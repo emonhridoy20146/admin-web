@@ -101,7 +101,7 @@ Type scale (web, px / line-height). Bangla text uses line-height × 1.15 automat
 - **Spacing (4-pt grid):** `0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64` px → tokens `space.0 … space.64`.
 - **Radius:** `xs 4` (badges) · `sm 6` (inputs, buttons) · `md 8` (cards, menus) · `lg 12` (dialogs, drawers) · `xl 16` (app sheets) · `full`.
 - **Elevation (light):** `e0` none; `e1` `0 1px 2px rgb(16 24 40 / .06)`; `e2` `0 2px 8px rgb(16 24 40 / .08)` (popover, card hover); `e3` `0 12px 32px rgb(16 24 40 / .14)` (dialog, drawer). Dark mode uses surface steps instead of shadows.
-- **Motion:** `fast 120ms`, `base 200ms`, `slow 300ms`; easing `standard cubic-bezier(.2,0,0,1)`, `emphasized cubic-bezier(.3,0,0,1)`. Respect `prefers-reduced-motion` (no slide, fade only).
+- **Motion:** `fast 120ms`, `base 200ms`, `slow 300ms`; easing `standard cubic-bezier(.2,0,0,1)`, `emphasized cubic-bezier(.3,0,0,1)`. Respect `prefers-reduced-motion`: no slide, fade only, and colour/opacity transitions are instant.
 - **Focus ring:** 2 px `brand.600` + 2 px offset white (dark: `brand.400` with `neutral.950` offset). Never removed.
 - **Z-index:** base 0 · sticky 10 · header 20 · drawer 40 · dialog 50 · toast 60 · tooltip 70.
 

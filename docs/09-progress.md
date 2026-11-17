@@ -34,7 +34,7 @@ Status (2026-11-16): ◐ Live map at `/live` (30 s polling, freshness filter, mo
 ## Phase 3 — Reports
 Staff performance, branch trends, aging, promise fulfilment, attendance reports, exports center, reconciliation, data quality, saved views. **Acceptance:** W-E12; numbers match API; Bangla PDF correct.
 
-Status (2026-11-16): ◐ `/reports` has Branch trends, ERP reconciliation and Downloads (CSV/XLSX); staff performance lives at `/staff`. Bangla PDF done 2026-11-17 by printing report pages from the browser (owner approved). Left: aging and promise-fulfilment detail reports, attendance report, saved views, export history list (the API has no list endpoint; the page lists files built in the current session). Daily targets, data quality and leaderboard in progress on contract 1.10.0.
+Status (2026-11-16): ◐ `/reports` has Branch trends, ERP reconciliation and Downloads (CSV/XLSX); staff performance lives at `/staff`. Bangla PDF done 2026-11-17 by printing report pages from the browser (owner approved). Left: aging and promise-fulfilment detail reports, attendance report, saved views, export history list (the API has no list endpoint; the page lists files built in the current session). Daily targets (`/targets`), data quality (`/data-quality`) and leaderboard (`/leaderboard`) done 2026-11-17 on contract 1.10.0, with target progress on Staff and Overview, report settings, server PDF exports and the data quality download.
 
 ## Phase 4 — Premium (as approved)
 Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.

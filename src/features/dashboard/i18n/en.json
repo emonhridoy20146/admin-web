@@ -37,5 +37,7 @@
   "erpBody": "Money figures come from the ERP. Field collections waiting to post are shown separately.",
   "waiting": "Waiting to post",
   "failed": "Failed",
-  "lastSync": "Last successful sync"
+  "lastSync": "Last successful sync",
+  "visitTarget": "visit credit {{credit}} of {{target}}",
+  "leaderboard": "Leaderboard"
 }

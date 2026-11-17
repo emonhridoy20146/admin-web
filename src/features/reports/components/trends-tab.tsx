@@ -44,7 +44,7 @@ export function TrendsTab() {
     <>
       <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
         <Segmented label={t('range.label')} value={range} onChange={(v) => url.set({ range: v === '30d' ? null : v })} options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))} />
-        <PrintOnly className="inline">({formatDate(w.from)} – {formatDate(w.to)})</PrintOnly>
+        <PrintOnly className="print:inline">({formatDate(w.from)} – {formatDate(w.to)})</PrintOnly>
       </div>
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
 

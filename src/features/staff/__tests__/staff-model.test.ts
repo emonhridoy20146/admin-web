@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { byMethod, collected, jointWeight, sortRows, targetRatio, totals, visitCredit, visitsTakenPart } from '../model/staff';
+import { byMethod, collected, jointWeight, sortRows, targetRatio, targetToDate, totals, visitCredit, visitRatio, visitsTakenPart } from '../model/staff';
 
 const a = { userId: 'a', name: 'Arif', collectedPoisha: { total: 900000, cash: 600000, bkash: 300000, nagad: 0 }, targetPoisha: 1000000, visits: 12, collectionsCount: 6, promisesDue: 4, promisesKept: 3, promiseFulfilmentRate: 0.75 };
 const b = { userId: 'b', name: 'Babul', collectedPoisha: { total: 1500000, bkash: 500000, cash: 900000, upay: 100000 }, targetPoisha: 1000000, visits: 9, collectionsCount: 8, promisesDue: 2, promisesKept: 1, promiseFulfilmentRate: 0.5 };
@@ -16,7 +16,7 @@ describe('staff performance model', () => {
     expect(byMethod(b).map((x) => x.method)).toEqual(['cash', 'bkash', 'upay']);
   });
   it('sums the branch totals', () => {
-    expect(totals([a, b])).toEqual({ collectedPoisha: 2400000, targetPoisha: 2000000, visits: 21, collections: 14, promisesDue: 6, promisesKept: 4 });
+    expect(totals([a, b])).toEqual({ collectedPoisha: 2400000, targetPoisha: 2000000, targetToDatePoisha: 2000000, visits: 21, visitCredit: 21, visitTargetToDate: 0, collections: 14, promisesDue: 6, promisesKept: 4 });
   });
   it('sorts by the chosen measure', () => {
     expect(sortRows([a, b], 'collected').map((r) => r.userId)).toEqual(['b', 'a']);
@@ -37,5 +37,22 @@ describe('staff performance model', () => {
     // an older server without the split: what the person recorded
     expect(visitsTakenPart({ visits: 6 })).toBe(6);
     expect(visitCredit({ visits: 6 })).toBe(6);
+  });
+  it('measures targets up to today and prefers the server figure (FR-COL-015)', () => {
+    const month = { collectedPoisha: { total: 600000 }, targetPoisha: 3000000, targetToDatePoisha: 1000000, amountAchievement: 0.6, visitCredit: 18, visitTarget: 60, visitTargetToDate: 20, visitAchievement: 0.9 };
+    expect(targetToDate(month)).toBe(1000000);
+    expect(targetRatio(month)).toBe(0.6);
+    expect(visitRatio(month)).toBe(0.9);
+    // no target: the server sends null and nothing is shown
+    expect(targetRatio({ ...month, amountAchievement: null })).toBeNull();
+    expect(visitRatio({ ...month, visitAchievement: null })).toBeNull();
+    // a server without the achievement figures: computed against the target to date
+    expect(targetRatio({ collectedPoisha: { total: 500000 }, targetPoisha: 3000000, targetToDatePoisha: 1000000 })).toBe(0.5);
+    expect(visitRatio({ visitCredit: 10, visitTargetToDate: 20 })).toBe(0.5);
+    expect(visitRatio({ visitCredit: 10 })).toBeNull();
+    const sum = totals([month, { ...month, targetToDatePoisha: undefined }]);
+    expect(sum.targetToDatePoisha).toBe(4000000);
+    expect(sum.visitCredit).toBe(36);
+    expect(sum.visitTargetToDate).toBe(40);
   });
 });

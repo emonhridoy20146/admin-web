@@ -34,6 +34,10 @@
       "title": "Co-work",
       "desc": "How visits count when several staff work together in the field. Collected money is never shared."
     },
+    "reports": {
+      "title": "Reports",
+      "desc": "Leaderboard visibility and the data quality check."
+    },
     "app": {
       "title": "Staff app",
       "desc": "Older app versions are asked to update before they can sync."
@@ -147,6 +151,18 @@
     "cowork.maxMembers": {
       "label": "Largest co-work group",
       "help": "Including the person who asks. People who have not answered yet count too."
+    },
+    "reports.leaderboardVisibleToStaff": {
+      "label": "Field staff can see the leaderboard",
+      "help": "Managers always see it. When on, staff see their own branch in the app."
+    },
+    "reports.leaderboardMinPresentDays": {
+      "label": "Days present to be ranked",
+      "help": "Staff present fewer days in the period are listed without a rank. 0 ranks everyone."
+    },
+    "reports.dataQualityMaxBranchKm": {
+      "label": "Farthest pin from the branch",
+      "help": "A customer pin further than this from its branch is reported in Data quality."
     }
   },
   "units": {
@@ -156,7 +172,8 @@
     "m": "m",
     "pct": "%",
     "taka": "৳",
-    "people": "people"
+    "people": "people",
+    "km": "km"
   },
   "enum": {
     "warn": "Warn only",

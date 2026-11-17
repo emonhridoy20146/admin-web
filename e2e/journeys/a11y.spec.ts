@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { login } from '../fixtures';
 
-const PAGES = ['/', '/handovers/', '/map/', '/pin-approvals/', '/areas/', '/live/', '/routes/', '/promises/', '/visits/', '/visits/?kind=joint&range=30d', '/cowork/?range=30d', '/attendance/', '/staff/', '/reports/', '/reports/?tab=reconciliation', '/reports/?tab=exports', '/attendance/?view=month', '/inbox/', '/customers/', '/collections/', '/collections/conflicts/', '/cash/', '/admin/users/', '/admin/devices/', '/admin/system/', '/admin/permissions/', '/admin/settings/', '/admin/flags/', '/admin/audit/'];
+const PAGES = ['/', '/handovers/', '/map/', '/pin-approvals/', '/areas/', '/live/', '/routes/', '/promises/', '/visits/', '/visits/?kind=joint&range=30d', '/cowork/?range=30d', '/attendance/', '/staff/', '/reports/', '/reports/?tab=reconciliation', '/reports/?tab=exports', '/targets/', '/data-quality/', '/leaderboard/', '/attendance/?view=month', '/inbox/', '/customers/', '/collections/', '/collections/conflicts/', '/cash/', '/admin/users/', '/admin/devices/', '/admin/system/', '/admin/permissions/', '/admin/settings/', '/admin/flags/', '/admin/audit/'];
 
 test('login page has no serious axe violations', async ({ page }) => {
   await page.goto('/login/');
@@ -12,6 +12,8 @@ test('login page has no serious axe violations', async ({ page }) => {
 
 test('main pages have no serious axe violations', async ({ page }) => {
   test.setTimeout(180_000);
+  // reduced motion turns colour transitions off (globals.css), so axe never measures a button halfway through turning enabled
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await login(page);
   const found: string[] = [];
   for (const path of PAGES) {

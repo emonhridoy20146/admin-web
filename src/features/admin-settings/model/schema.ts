@@ -4,7 +4,7 @@
  */
 export type FieldDef =
   | { key: string; type: 'time' }
-  | { key: string; type: 'int'; min: number; max: number; unit?: 'min' | 'sec' | 'days' | 'm' | 'people' }
+  | { key: string; type: 'int'; min: number; max: number; unit?: 'min' | 'sec' | 'days' | 'm' | 'km' | 'people' }
   | { key: string; type: 'money' }
   /** a share shown as whole percent; `min` defaults to 1 % (0 % allowed only where the setting means "nothing") */
   | { key: string; type: 'ratio'; min?: number }
@@ -73,6 +73,16 @@ export const SECTIONS: SectionDef[] = [
       // FR-CW-005: what one joint visit counts for each participant in visit targets (100 % = full credit)
       { key: 'cowork.visitCredit', type: 'ratio', min: 0 },
       { key: 'cowork.maxMembers', type: 'int', min: 2, max: 10, unit: 'people' },
+    ],
+  },
+  {
+    id: 'reports',
+    fields: [
+      // FR-REP-005 / OD-15: managers always see the leaderboard; field staff only when this is on
+      { key: 'reports.leaderboardVisibleToStaff', type: 'bool' },
+      { key: 'reports.leaderboardMinPresentDays', type: 'int', min: 0, max: 31, unit: 'days' },
+      // FR-CUS-009: a pin further than this from its branch is reported as far_from_branch
+      { key: 'reports.dataQualityMaxBranchKm', type: 'int', min: 1, max: 500, unit: 'km' },
     ],
   },
   { id: 'app', fields: [{ key: 'app.minVersion', type: 'version' }] },

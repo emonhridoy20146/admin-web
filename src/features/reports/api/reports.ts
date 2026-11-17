@@ -48,3 +48,47 @@ export function useExportJob(id: string | null) {
     gcTime: 0,
   });
 }
+
+export type DataQuality = components['schemas']['DataQualitySummary'];
+export type DataQualityItem = components['schemas']['DataQualityItem'];
+export type DataQualityIssue = components['schemas']['DataQualityIssue'];
+export type Leaderboard = components['schemas']['Leaderboard'];
+export type LeaderboardRow = components['schemas']['LeaderboardRow'];
+export type LeaderMetric = NonNullable<NonNullable<paths['/reports/leaderboard']['get']['parameters']['query']>['metric']>;
+export type LeaderPeriod = NonNullable<NonNullable<paths['/reports/leaderboard']['get']['parameters']['query']>['period']>;
+
+/** FR-CUS-009: issue counts per branch in scope. */
+export function useDataQuality() {
+  const branchId = useBranchId();
+  return useQuery({
+    queryKey: ['reports', 'data-quality', { branchId }],
+    queryFn: () => unwrap(api.GET('/reports/data-quality', { params: { query: { branchId } } })),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** The customers behind one issue, server-paged. */
+export function useDataQualityItems(issue: DataQualityIssue | undefined, cursor: string | undefined, limit: number) {
+  const branchId = useBranchId();
+  return useQuery({
+    queryKey: ['reports', 'data-quality-items', { branchId, issue, cursor, limit }],
+    queryFn: async () => {
+      const r = await unwrap(api.GET('/reports/data-quality/items', { params: { query: { branchId, issue: issue!, cursor, limit } } }));
+      return { items: r.items ?? [], nextCursor: r.nextCursor ?? null };
+    },
+    enabled: !!issue,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+}
+
+/** FR-REP-005: ranked staff for a day or a month by one measure; ties share a rank (server rules). */
+export function useLeaderboard(period: LeaderPeriod, date: string, metric: LeaderMetric) {
+  const branchId = useBranchId();
+  return useQuery({
+    queryKey: ['reports', 'leaderboard', { branchId, period, date, metric }],
+    queryFn: () => unwrap(api.GET('/reports/leaderboard', { params: { query: { branchId, period, date, metric } } })),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+}

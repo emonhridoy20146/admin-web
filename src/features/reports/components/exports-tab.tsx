@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import { ArrowRight, CircleAlert, CircleCheck, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { useUi, useBranchId } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
 import { useGate } from '@/shared/feature/useGate';
@@ -14,7 +15,8 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Field, Input, Select } from '@/shared/ui/form';
 import { useCreateExport, useExportJob } from '../api/reports';
-import { EXPORT_FORMATS, EXPORT_TYPES, exportBody, MAX_DAYS, TYPE_PERMISSION, needsPeriod, needsRange, validateExport, type ExportForm } from '../model/reports';
+import { EXPORT_FORMATS, EXPORT_TYPES, exportBody, MAX_DAYS, TYPE_PERMISSION, needsPeriod, needsRange, takesIssue, validateExport, type ExportForm } from '../model/reports';
+import { ISSUES } from '../model/data-quality';
 
 interface Job {
   id: string;
@@ -32,7 +34,17 @@ export function ExportsTab() {
   const types = EXPORT_TYPES.filter((x) => !TYPE_PERMISSION[x] || gate.can(TYPE_PERMISSION[x]!));
   const today = todayDhaka();
   const create = useCreateExport();
-  const [f, setF] = useState<ExportForm>({ type: 'collections', format: 'xlsx', from: addDays(today, -29), to: today, period: 'monthly', date: today });
+  // other pages link here with ?type= (and ?issue= for data quality) to start from that data
+  const url = useUrlState();
+  const [f, setF] = useState<ExportForm>(() => ({
+    type: oneOf(url.get('type'), types, 'collections'),
+    format: 'xlsx',
+    from: addDays(today, -29),
+    to: today,
+    period: 'monthly',
+    date: today,
+    issue: oneOf(url.get('issue'), ['', ...ISSUES] as const, ''),
+  }));
   const [tried, setTried] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const set = <K extends keyof ExportForm>(k: K, v: ExportForm[K]) => setF((s) => ({ ...s, [k]: v }));
@@ -45,7 +57,11 @@ export function ExportsTab() {
     setTried(true);
     if (err) return;
     const name = `${t(`exports.types.${f.type}`)} · ${t(`exports.formats.${f.format}`)}`;
-    const detail = needsRange(f.type) ? t('exports.rangeLabel', { from: formatDate(f.from, { withYear: true }), to: formatDate(f.to, { withYear: true }) }) : needsPeriod(f.type) ? (f.period === 'monthly' ? formatMonth(f.date.slice(0, 7)) : formatDate(f.date, { withYear: true })) : '';
+    const detail = needsRange(f.type)
+      ? t('exports.rangeLabel', { from: formatDate(f.from, { withYear: true }), to: formatDate(f.to, { withYear: true }) })
+      : needsPeriod(f.type)
+        ? f.period === 'monthly' ? formatMonth(f.date.slice(0, 7)) : formatDate(f.date, { withYear: true })
+        : takesIssue(f.type) && f.issue ? t(`dq.issue.${f.issue}.label`) : '';
     create.mutate(exportBody(f, branchId, locale), { onSuccess: (r) => r.id && (setJobs((j) => [{ id: r.id!, name, detail }, ...j]), setTried(false)) });
   };
 
@@ -86,9 +102,19 @@ export function ExportsTab() {
               </Field>
             </div>
           )}
-          <Field label={t('exports.format')}>
-            {(id) => (
-              <Select id={id} value={f.format} onChange={(e) => set('format', e.target.value as ExportForm['format'])}>
+          {takesIssue(f.type) && (
+            <Field label={t('exports.issue')}>
+              {(id) => (
+                <Select id={id} value={f.issue ?? ''} onChange={(e) => set('issue', e.target.value as ExportForm['issue'])}>
+                  <option value="">{t('exports.allIssues')}</option>
+                  {ISSUES.map((x) => <option key={x} value={x}>{t(`dq.issue.${x}.label`)}</option>)}
+                </Select>
+              )}
+            </Field>
+          )}
+          <Field label={t('exports.format')} help={f.format === 'pdf' ? t('exports.pdfHelp') : undefined}>
+            {(id, d) => (
+              <Select id={id} aria-describedby={d} value={f.format} onChange={(e) => set('format', e.target.value as ExportForm['format'])}>
                 {EXPORT_FORMATS.map((x) => <option key={x} value={x}>{t(`exports.formats.${x}`)}</option>)}
               </Select>
             )}
@@ -120,7 +146,10 @@ export function ExportsTab() {
   );
 }
 
-/** FR-REP-003 / OD-26: PDFs come from the browser's print dialog, which shapes Bangla correctly. */
+/**
+ * FR-REP-003 / OD-26: any page prints to PDF from the browser (what you see), and since contract 1.10.0 the server also
+ * builds PDF files of whole data sets (the form's file type). This card lists the pages that print well.
+ */
 function PdfCard() {
   const { t } = useTranslation('reports');
   const gate = useGate();
@@ -129,6 +158,9 @@ function PdfCard() {
     { href: '/reports/?tab=reconciliation', label: t('tabs.reconciliation'), show: true },
     { href: '/staff/', label: t('pdf.staff'), show: gate.can('report.view') && gate.flag('module.reports') },
     { href: '/attendance/?view=month', label: t('pdf.attendance'), show: gate.can('attendance.view') && gate.flag('module.attendance') },
+    { href: '/leaderboard/', label: t('lb.title'), show: gate.can('report.view') && gate.flag('module.reports') },
+    { href: '/data-quality/', label: t('dq.title'), show: gate.can('report.view') && gate.flag('module.reports') },
+    { href: '/targets/', label: t('pdf.targets'), show: gate.can('target.view') && gate.flag('module.targets') },
   ].filter((l) => l.show);
   return (
     <Card>

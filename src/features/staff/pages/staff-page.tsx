@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, CalendarCheck, Footprints, Handshake, Info, MapPinCheck, Users, UsersRound, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarCheck, Footprints, Handshake, Info, MapPinCheck, Target, Trophy, Users, UsersRound, Wallet } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
@@ -19,7 +19,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Drawer } from '@/shared/ui/overlay';
 import { PrintButton, PrintOnly } from '@/shared/ui/print';
 import { useAreas, usePerformance, type PerfRow } from '../api/staff';
-import { byMethod, collected, jointWeight, sortRows, SORTS, targetRatio, totals, visitCredit, visitsTakenPart } from '../model/staff';
+import { byMethod, collected, jointWeight, sortRows, SORTS, targetRatio, targetToDate, totals, visitCredit, visitRatio, visitsTakenPart } from '../model/staff';
 
 const PERIODS = ['daily', 'monthly'] as const;
 
@@ -53,10 +53,13 @@ export function StaffPage() {
     collections: gate.can('collection.view') && gate.flag('module.collections'),
     attendance: gate.can('attendance.view') && gate.flag('module.attendance'),
     sessions: gate.can('cowork.view') && gate.flag('module.cowork'),
+    targets: gate.can('target.view') && gate.flag('module.targets'),
+    leaderboard: gate.can('report.view') && gate.flag('module.reports'),
   };
   // FR-CW-005: single and joint visits are shown apart, and targets use the weighted visit credit
   const coworkOn = gate.flag('module.cowork') && gate.flag('module.visits');
-  const credit = (r: PerfRow) => formatNumber(visitCredit(r), { decimals: Number.isInteger(visitCredit(r)) ? 0 : 2 });
+  const num = (n: number) => formatNumber(n, { decimals: Number.isInteger(n) ? 0 : 2 });
+  const credit = (r: PerfRow) => num(visitCredit(r));
   const monthly = period === 'monthly';
   const periodLabel = monthly ? formatMonth(today.slice(0, 7)) : formatDate(today);
 
@@ -90,7 +93,23 @@ export function StaffPage() {
         );
       },
     },
-    { id: 'target', header: t('col.target'), align: 'end', priority: 3, cell: (r) => (targetRatio(r) != null ? <span className={cn('tabular', targetRatio(r)! >= 1 ? 'font-medium text-success' : 'text-fg-secondary')}>{formatPercent(targetRatio(r)!)}</span> : <span className="text-fg-tertiary">—</span>) },
+    {
+      id: 'target',
+      header: t('col.target'),
+      align: 'end',
+      priority: 3,
+      cell: (r) => {
+        const amount = targetRatio(r);
+        const visits = visitRatio(r);
+        if (amount == null && visits == null) return <span className="text-fg-tertiary">—</span>;
+        return (
+          <span className="inline-flex flex-col items-end">
+            {amount != null ? <span className={cn('tabular', amount >= 1 ? 'font-medium text-success' : 'text-fg-secondary')}>{formatPercent(amount)}</span> : <span className="text-fg-tertiary">—</span>}
+            {visits != null && <span className={cn('tabular text-xs', visits >= 1 ? 'text-success' : 'text-fg-tertiary')}>{t('visitOfTarget', { pct: formatPercent(visits) })}</span>}
+          </span>
+        );
+      },
+    },
     { id: 'count', header: t('col.count'), align: 'end', priority: 2, mobile: 'meta', cell: (r) => <span className="tabular">{formatNumber(r.collectionsCount ?? 0)}</span> },
     {
       id: 'visits',
@@ -140,8 +159,13 @@ export function StaffPage() {
   ];
 
   const kpis = [
-    { icon: Wallet, label: t('kpi.collected'), value: formatMoney(sum.collectedPoisha), sub: sum.targetPoisha ? t('ofTarget', { pct: formatPercent(sum.collectedPoisha / sum.targetPoisha) }) : undefined },
-    { icon: MapPinCheck, label: t('kpi.visits'), value: formatNumber(sum.visits), sub: t('kpi.collections', { n: formatNumber(sum.collections) }) },
+    { icon: Wallet, label: t('kpi.collected'), value: formatMoney(sum.collectedPoisha), sub: sum.targetToDatePoisha ? t('ofTarget', { pct: formatPercent(sum.collectedPoisha / sum.targetToDatePoisha) }) : undefined },
+    {
+      icon: MapPinCheck,
+      label: t('kpi.visits'),
+      value: formatNumber(sum.visits),
+      sub: sum.visitTargetToDate ? t('kpiVisitTarget', { credit: num(sum.visitCredit), target: num(sum.visitTargetToDate) }) : t('kpi.collections', { n: formatNumber(sum.collections) }),
+    },
     { icon: Handshake, label: t('kpi.promises'), value: sum.promisesDue ? formatPercent(sum.promisesKept / sum.promisesDue) : '—', sub: sum.promisesDue ? t('keptOf', { kept: formatNumber(sum.promisesKept), due: formatNumber(sum.promisesDue) }) : undefined },
     { icon: UsersRound, label: t('kpi.staff'), value: formatNumber(rows.length), sub: periodLabel },
   ];
@@ -157,7 +181,7 @@ export function StaffPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-baseline gap-x-2">
           <Segmented label={t('period.label')} value={period} onChange={(v) => url.set({ period: v === 'daily' ? null : v })} options={PERIODS.map((p) => ({ value: p, label: t(`period.${p}`) }))} />
-          <PrintOnly className="inline">({periodLabel})</PrintOnly>
+          <PrintOnly className="print:inline">({periodLabel})</PrintOnly>
         </div>
         <Select aria-label={t('sort.label')} value={sort} onChange={(e) => url.set({ sort: e.target.value === 'collected' ? null : e.target.value })} className="h-9 sm:w-60">
           {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
@@ -206,8 +230,17 @@ export function StaffPage() {
               {targetRatio(open) != null && (
                 <>
                   <div className="mt-3"><Progress ratio={targetRatio(open)!} label={t('ofTarget', { pct: formatPercent(targetRatio(open)!) })} /></div>
-                  <p className="mt-1.5 text-sm text-fg-secondary">{t('targetLine', { pct: formatPercent(targetRatio(open)!), target: formatMoney(open.targetPoisha ?? 0) })}</p>
+                  <p className="mt-1.5 text-sm text-fg-secondary">{t('targetLine', { pct: formatPercent(targetRatio(open)!), target: formatMoney(targetToDate(open)) })}</p>
+                  {monthly && (open.targetPoisha ?? 0) > targetToDate(open) && (
+                    <p className="text-xs text-fg-tertiary">{t('targetPeriod', { target: formatMoney(open.targetPoisha ?? 0), days: formatNumber(open.targetDays ?? 0) })}</p>
+                  )}
                 </>
+              )}
+              {visitRatio(open) != null && (
+                <div className="mt-3 border-t border-line pt-3">
+                  <Progress ratio={visitRatio(open)!} label={t('visitOfTarget', { pct: formatPercent(visitRatio(open)!) })} />
+                  <p className="mt-1.5 text-sm text-fg-secondary">{t('visitLine', { credit: credit(open), target: num(open.visitTargetToDate ?? open.visitTarget ?? 0), pct: formatPercent(visitRatio(open)!) })}</p>
+                </div>
               )}
             </div>
 
@@ -277,6 +310,8 @@ export function StaffPage() {
               {links.visits && coworkOn && (open.coWorkVisits ?? 0) > 0 && <Jump href={`/visits/?userId=${open.userId}&kind=joint${monthly ? '&range=30d' : ''}`} icon={Users} label={t('link.jointVisits')} />}
               {links.sessions && <Jump href={`/cowork/?userId=${open.userId}${monthly ? '&range=30d' : '&range=today'}`} icon={UsersRound} label={t('link.sessions')} />}
               {links.attendance && <Jump href={`/attendance/?view=month`} icon={CalendarCheck} label={t('link.attendance')} />}
+              {links.targets && <Jump href={`/targets/?drawer=${open.userId}`} icon={Target} label={t('link.targets')} />}
+              {links.leaderboard && <Jump href={`/leaderboard/${monthly ? '' : '?period=day'}`} icon={Trophy} label={t('link.leaderboard')} />}
             </nav>
           </div>
         )}

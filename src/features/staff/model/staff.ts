@@ -6,9 +6,30 @@ export function collected(r: Pick<PerfRow, 'collectedPoisha'>): number {
   return r.collectedPoisha?.total ?? 0;
 }
 
-/** Share of the target reached, 0…1+ (not clamped: over-achievement is shown as such). null without a target. */
-export function targetRatio(r: Pick<PerfRow, 'collectedPoisha' | 'targetPoisha'>): number | null {
-  return r.targetPoisha ? collected(r) / r.targetPoisha : null;
+type TargetFigures = Pick<PerfRow, 'collectedPoisha' | 'targetPoisha' | 'targetToDatePoisha' | 'amountAchievement'>;
+
+/** The amount target up to today (the whole period once it is over). Servers before 1.10.0 only send the period target. */
+export function targetToDate(r: Pick<PerfRow, 'targetPoisha' | 'targetToDatePoisha'>): number {
+  return r.targetToDatePoisha ?? r.targetPoisha ?? 0;
+}
+
+/**
+ * FR-COL-015: share of the amount target reached so far, 0…1+ (not clamped: over-achievement is shown as such).
+ * The server's figure wins; null without a target.
+ */
+export function targetRatio(r: TargetFigures): number | null {
+  if (r.amountAchievement !== undefined) return r.amountAchievement;
+  const t = targetToDate(r);
+  return t ? collected(r) / t : null;
+}
+
+type VisitTargetFigures = VisitFigures & Pick<PerfRow, 'visitTarget' | 'visitTargetToDate' | 'visitAchievement'>;
+
+/** Share of the visit target reached so far, measured in visit credit (joint visits weighted). null without a target. */
+export function visitRatio(r: VisitTargetFigures): number | null {
+  if (r.visitAchievement !== undefined) return r.visitAchievement;
+  const t = r.visitTargetToDate ?? r.visitTarget ?? 0;
+  return t ? visitCredit(r) / t : null;
 }
 
 /** Collected amount per payment method, in display order, zero amounts dropped. */
@@ -21,19 +42,27 @@ export function byMethod(r: Pick<PerfRow, 'collectedPoisha'>): { method: string;
 
 export interface Totals {
   collectedPoisha: number;
+  /** Amount target of the whole period. */
   targetPoisha: number;
+  /** Amount target up to today: what the progress is measured against. */
+  targetToDatePoisha: number;
   visits: number;
+  visitCredit: number;
+  visitTargetToDate: number;
   collections: number;
   promisesDue: number;
   promisesKept: number;
 }
 
 export function totals(rows: PerfRow[] | undefined): Totals {
-  const t: Totals = { collectedPoisha: 0, targetPoisha: 0, visits: 0, collections: 0, promisesDue: 0, promisesKept: 0 };
+  const t: Totals = { collectedPoisha: 0, targetPoisha: 0, targetToDatePoisha: 0, visits: 0, visitCredit: 0, visitTargetToDate: 0, collections: 0, promisesDue: 0, promisesKept: 0 };
   for (const r of rows ?? []) {
     t.collectedPoisha += collected(r);
     t.targetPoisha += r.targetPoisha ?? 0;
+    t.targetToDatePoisha += targetToDate(r);
     t.visits += r.visits ?? 0;
+    t.visitCredit += visitCredit(r);
+    t.visitTargetToDate += r.visitTargetToDate ?? r.visitTarget ?? 0;
     t.collections += r.collectionsCount ?? 0;
     t.promisesDue += r.promisesDue ?? 0;
     t.promisesKept += r.promisesKept ?? 0;

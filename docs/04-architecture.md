@@ -41,7 +41,7 @@ Extension points let a new feature add a dashboard widget, a customer-detail tab
 | `shell` | — | — | layout, nav, header, branch switcher |
 | `dashboard` | `module.dashboard` | `report.view` | `/` |
 | `inbox` | `module.inbox` | `inbox.view` | `/inbox` |
-| `customers` | `module.customers` | `customer.view`, `customer.export`, `customer.location.approve` | `/customers`, `/customers/[id]`, `/data-quality` |
+| `customers` | `module.customers` | `customer.view`, `customer.export`, `customer.location.approve` | `/customers`, `/customers/[id]`, `/map`, `/pin-approvals` |
 | `map` | `module.customers` | `customer.view`, `assignment.manage` | `/map` |
 | `tags` | `module.tags` | `tag.view`, `tag.set`, `tag.approve` | tab + inbox actions |
 | `collections` | `module.collections` | `collection.view`, `collection.void`, `collection.resolve` | `/collections`, `/collections/conflicts`, `/reconciliation` |
@@ -54,7 +54,8 @@ Extension points let a new feature add a dashboard widget, a customer-detail tab
 | `location` | `module.location` | `location.view`, `location.history.view` | `/live`, `/routes` |
 | `assignments` | `module.assignments` | `assignment.view`, `assignment.manage` | `/assignments` |
 | `handovers` | `module.handovers` | `handover.create` | `/handovers` |
-| `reports` | `module.reports` | `report.view`, `report.export` | `/reports/*` |
+| `reports` | `module.reports` | `report.view`, `report.export` | `/reports` (trends, reconciliation, downloads), `/leaderboard`, `/data-quality` |
+| `targets` | `module.targets` | `target.view`, `target.manage` | `/targets` |
 | `notifications` | `module.notifications` | `notification.broadcast` | bell, `/broadcasts` |
 | `admin-users` | — | `user.view`, `user.manage` | `/admin/users` |
 | `admin-rbac` | — | `rbac.view`, `rbac.manage` | `/admin/permissions` |

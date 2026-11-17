@@ -190,6 +190,8 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-drawer, .animate-pop { animation: fos-fade-in var(--dur-fast) linear; }
   .skeleton { animation: none; }
+  /* colour and opacity changes (hover, a button turning enabled) happen at once */
+  *, *::before, *::after { transition-duration: 0s !important; }
 }
 
 /* Leaflet base (self-hosted, CSP-safe) is imported by the map module only. */

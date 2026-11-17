@@ -572,6 +572,32 @@
     }
   },
   {
+    "key": "target.view",
+    "module": "targets",
+    "description": "See daily targets in scope",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "target.manage",
+    "module": "targets",
+    "description": "Set daily targets for staff and branch defaults",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
     "key": "inbox.view",
     "module": "inbox",
     "description": "\"Needs attention\" exceptions inbox",

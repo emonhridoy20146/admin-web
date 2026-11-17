@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { AlarmClock, Banknote, Flag, GitMerge, Handshake, Wallet } from 'lucide-react';
+import { AlarmClock, Banknote, Flag, GitMerge, Handshake, Trophy, Wallet } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { cn } from '@/shared/lib/cn';
 import { useSession } from '@/shared/auth/session';
@@ -43,6 +43,10 @@ export function OverviewPage() {
   const yesterday = trend[trend.length - 2];
   const target = d?.collected?.targetPoisha ?? 0;
   const progress = target ? (d?.collected?.totalPoisha ?? 0) / target : null;
+  // FR-COL-015: visit targets are measured in visit credit (joint visits weighted)
+  const visitTarget = d?.visits?.target ?? 0;
+  const visitCredit = d?.visits?.credit ?? 0;
+  const num = (n: number) => formatNumber(n, { decimals: Number.isInteger(n) ? 0 : 1 });
   const widgets = dashboardWidgets(gate);
   const conflicts = (d?.exceptions?.conflicts ?? 0) + (d?.exceptions?.postingFailed ?? 0);
   const todayIso = d?.date ?? '';
@@ -65,7 +69,11 @@ export function OverviewPage() {
           sub={progress != null ? t('ofTarget', { pct: formatPercent(progress), target: formatMoneyCompact(target) }) : undefined}
           progress={progress}
           trend={trend.map((p) => p.collectedPoisha ?? 0)}
-          footer={t('receipts', { n: formatNumber(d?.collected?.count ?? 0) })}
+          footer={
+            visitTarget
+              ? `${t('receipts', { n: formatNumber(d?.collected?.count ?? 0) })} · ${t('visitTarget', { credit: num(visitCredit), target: num(visitTarget) })}`
+              : t('receipts', { n: formatNumber(d?.collected?.count ?? 0) })
+          }
         />
         <KpiCard
           loading={q.isLoading}
@@ -239,12 +247,19 @@ function MethodMix({ loading, total, cash, mobile, date, erp }: { loading: boole
 
 function StaffToday({ className }: { className?: string }) {
   const { t } = useTranslation('dashboard');
+  const gate = useGate();
   const q = useStaffToday();
   const rows = q.data ?? [];
-  const max = Math.max(1, ...rows.map((r) => Math.max(r.collectedPoisha?.total ?? 0, r.targetPoisha ?? 0)));
+  const goal = (r: (typeof rows)[number]) => r.targetToDatePoisha ?? r.targetPoisha ?? 0;
+  const max = Math.max(1, ...rows.map((r) => Math.max(r.collectedPoisha?.total ?? 0, goal(r))));
+  const board = gate.can('report.view') && gate.flag('module.reports');
   return (
     <Card className={cn('overflow-hidden', className)}>
-      <CardHeader title={t('leaderTitle')} subtitle={t('leaderSub')} />
+      <CardHeader
+        title={t('leaderTitle')}
+        subtitle={t('leaderSub')}
+        actions={board ? <Link href="/leaderboard/?period=day" className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-primary hover:bg-surface-hover"><Trophy className="size-4" aria-hidden />{t('leaderboard')}</Link> : undefined}
+      />
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} className="m-3" /> : null}
       <div className="scrollbar-thin max-h-[420px] overflow-y-auto">
         <table className="w-full text-sm">
@@ -265,7 +280,7 @@ function StaffToday({ className }: { className?: string }) {
                 ))
               : rows.map((r) => {
                   const total = r.collectedPoisha?.total ?? 0;
-                  const pct = r.targetPoisha ? total / r.targetPoisha : 0;
+                  const pct = goal(r) ? total / goal(r) : 0;
                   return (
                     <tr key={r.userId} className="border-t border-line hover:bg-surface-hover">
                       <td className="px-4 py-2.5">
@@ -277,7 +292,7 @@ function StaffToday({ className }: { className?: string }) {
                       <td className="hidden w-[38%] px-3 py-2.5 sm:table-cell">
                         <div className="relative h-1.5 rounded-full bg-surface-hover" role="img" aria-label={formatPercent(pct)}>
                           <div className={cn('h-full rounded-full', pct >= 1 ? 'bg-success' : 'bg-primary')} style={{ width: `${Math.min(100, (total / max) * 100)}%` }} />
-                          {r.targetPoisha ? <span className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-fg-tertiary" style={{ left: `${(r.targetPoisha / max) * 100}%` }} aria-hidden /> : null}
+                          {goal(r) ? <span className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-fg-tertiary" style={{ left: `${(goal(r) / max) * 100}%` }} aria-hidden /> : null}
                         </div>
                       </td>
                       <td className="tabular px-3 py-2.5 text-end text-fg-secondary">{formatNumber(r.collectionsCount ?? 0)}</td>

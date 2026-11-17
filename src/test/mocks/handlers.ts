@@ -74,6 +74,57 @@ function scope(ctx: Ctx, url: URL): string[] {
   const mine = ctx.user.role === 'super_admin' || ctx.user.role === 'viewer' ? db.branches.map((b) => b.id!) : (ctx.user.branchIds ?? []);
   return req ? mine.filter((b) => b === req) : mine;
 }
+const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Staff performance rows for a day, or for the month of `date` up to `date` (contract 1.10.0: targets summed over the working days,
+ * to date and for the whole period, with achievement against the target to date).
+ */
+function perfRows(sc: string[], monthly: boolean, date: string): S['StaffPerformanceRow'][] {
+  const today = db.today();
+  const from = monthly ? `${date.slice(0, 7)}-01` : date;
+  const periodEnd = monthly ? new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 0)).toISOString().slice(0, 10) : date;
+  const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+  const dates: string[] = [];
+  for (let d = from; d <= date; d = nextDay(d)) dates.push(d);
+  const allDates: string[] = [];
+  for (let d = from; d <= periodEnd; d = nextDay(d)) allDates.push(d);
+  const w = Math.min(1, Math.max(0, Number(db.settings['cowork.visitCredit'] ?? 1)));
+  return db.staff.filter((s) => s.active && sc.includes(s.branchIds?.[0] ?? '')).map((s) => {
+    const mine = db.collections.filter((c) => c.collector?.id === s.id && c.status !== 'voided' && day(c.recordedAt!) >= from && day(c.recordedAt!) <= date);
+    const byMethod: Record<string, number> = {};
+    mine.forEach((c) => (byMethod[c.method!] = (byMethod[c.method!] ?? 0) + c.amountPoisha!));
+    const total = mine.reduce((a, c) => a + c.amountPoisha!, 0);
+    const vis = db.visits.filter((v) => v.row.userId === s.id && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date);
+    // FR-CW-005: joint visits credit every participant, weighted by cowork.visitCredit; money is never shared
+    const soloVisits = vis.filter((v) => !v.row.coWork).length;
+    const coWorkVisits = db.visits.filter((v) => v.row.coWork && (v.row.userId === s.id || v.row.coWork.participantIds?.includes(s.id!)) && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date).length;
+    const visitCredit = round2(soloVisits + coWorkVisits * w);
+    const prom = db.promises.filter((p) => p.row.ownerId === s.id && p.row.promisedDate >= from && p.row.promisedDate <= date);
+    const kept = prom.filter((p) => p.row.status === 'kept' || p.row.status === 'partially_kept').length;
+    const att = dates.map((d) => db.attendanceDay(s, d));
+    const worked = att.filter((a) => a.firstIn);
+    // FR-COL-015: the target in force on each working day of the period
+    const goals = allDates.map((d) => ({ d, t: db.staffTarget(s, d) }));
+    const sumOf = (rows: typeof goals, k: 'amountPoisha' | 'visits') => rows.reduce((a, g) => a + (g.t[k] ?? 0), 0);
+    const toDate = goals.filter((g) => g.d <= (date < today ? date : today));
+    const targetToDatePoisha = sumOf(toDate, 'amountPoisha');
+    const visitTargetToDate = round2(sumOf(toDate, 'visits'));
+    return {
+      userId: s.id, name: s.name?.en, period: monthly ? date.slice(0, 7) : date, visits: vis.length, uniqueCustomers: new Set(vis.map((v) => v.row.customerId)).size,
+      soloVisits, coWorkVisits, visitCredit,
+      collectionsCount: mine.length, collectedPoisha: { total, ...byMethod }, promisesDue: prom.length, promisesKept: kept,
+      targetPoisha: sumOf(goals, 'amountPoisha'), visitTarget: round2(sumOf(goals, 'visits')), targetToDatePoisha, visitTargetToDate,
+      amountAchievement: targetToDatePoisha ? round2(total / targetToDatePoisha) : null, visitAchievement: visitTargetToDate ? round2(visitCredit / visitTargetToDate) : null,
+      targetDays: goals.filter((g) => (g.t.amountPoisha ?? 0) > 0 || (g.t.visits ?? 0) > 0).length,
+      promiseFulfilmentRate: prom.length ? kept / prom.length : undefined, presentDays: worked.length, lateDays: att.filter((a) => (a.lateMin ?? 0) > 0).length,
+      lateMin: att.reduce((a, d) => a + (d.lateMin ?? 0), 0), breakMin: att.reduce((a, d) => a + (d.breakMin ?? 0), 0),
+      fieldMin: Math.round(att.reduce((a, d) => a + (d.dutyMin ?? 0), 0) * 0.72), distanceKm: Math.round(worked.length * 21.5 * 10) / 10,
+    };
+  });
+}
+
 /** Manager views of a co-work session carry how many joint visits it produced. */
 function withVisitsCount(s: S['CoworkSession']): S['CoworkSession'] {
   return { ...s, visitsCount: db.visits.filter((v) => v.row.coWork?.sessionId === s.id).length };
@@ -999,10 +1050,12 @@ export const handlers = [
       return { date: d.toISODate()!, collectedPoisha: sum(dayCol), visits: Math.round(dayCol.length * 1.7) };
     });
     const present = Math.round(staffIn.length * 0.9);
+    const goals = staffIn.map((u) => db.staffTarget(u, db.today()));
+    const perf = perfRows(sc, false, db.today());
     const out: S['DashboardOverview'] = {
       date: db.today(),
-      collected: { totalPoisha: sum(todayCol), cashPoisha: sum(todayCol.filter((c) => c.method === 'cash')), mobilePoisha: sum(todayCol.filter((c) => c.method !== 'cash')), count: todayCol.length, targetPoisha: staffIn.length * 2_500_000 },
-      visits: { count: Math.round(todayCol.length * 1.8), uniqueCustomers: Math.round(todayCol.length * 1.5) },
+      collected: { totalPoisha: sum(todayCol), cashPoisha: sum(todayCol.filter((c) => c.method === 'cash')), mobilePoisha: sum(todayCol.filter((c) => c.method !== 'cash')), count: todayCol.length, targetPoisha: goals.reduce((a, g) => a + (g.amountPoisha ?? 0), 0) },
+      visits: { count: Math.round(todayCol.length * 1.8), uniqueCustomers: Math.round(todayCol.length * 1.5), credit: Math.round(perf.reduce((a, r) => a + (r.visitCredit ?? 0), 0) * 100) / 100, target: goals.reduce((a, g) => a + (g.visits ?? 0), 0) },
       promises: { dueToday: cust.filter((c) => c.item.badges?.includes('promised_today')).length, keptToday: 3, brokenYesterday: 2 },
       attendance: { present, late: Math.max(1, Math.round(staffIn.length * 0.1)), absent: staffIn.length - present, onDutyNow: present - 1 },
       cash: { onHandPoisha: pos.reduce((s, p) => s + p.onHandPoisha!, 0), overLimitStaff: pos.filter((p) => p.state === 'exceeded').length, pendingDeposits: db.deposits.filter((d) => d.status === 'pending' && sc.includes(db.userById(d.userId)?.branchIds?.[0] ?? '')).length },
@@ -1013,39 +1066,122 @@ export const handlers = [
     };
     return HttpResponse.json(out);
   })),
-  http.get(`${BASE}/reports/staff-performance`, authed(({ ctx, url }) => {
+  // ---------- daily targets (FR-COL-015, contract 1.10.0) ----------
+  http.get(`${BASE}/targets`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'target.view');
+    if (deny) return deny;
+    const req = url.searchParams.get('branchId');
     const sc = scope(ctx, url);
-    const monthly = url.searchParams.get('period') === 'monthly';
+    const branchId = req ?? sc[0] ?? '';
+    if (!sc.includes(branchId)) return problem(404, 'NOT_FOUND', 'Branch not found');
     const date = url.searchParams.get('date') ?? db.today();
-    const from = monthly ? `${date.slice(0, 7)}-01` : date;
-    const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
-    const dates: string[] = [];
-    for (let d = from; d <= date; d = new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)) dates.push(d);
-    const rows: S['StaffPerformanceRow'][] = db.staff.filter((s) => s.active && sc.includes(s.branchIds?.[0] ?? '')).map((s) => {
-      const mine = db.collections.filter((c) => c.collector?.id === s.id && c.status !== 'voided' && day(c.recordedAt!) >= from && day(c.recordedAt!) <= date);
-      const byMethod: Record<string, number> = {};
-      mine.forEach((c) => (byMethod[c.method!] = (byMethod[c.method!] ?? 0) + c.amountPoisha!));
-      const total = mine.reduce((a, c) => a + c.amountPoisha!, 0);
-      const vis = db.visits.filter((v) => v.row.userId === s.id && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date);
-      // FR-CW-005: joint visits credit every participant, weighted by cowork.visitCredit; money is never shared
-      const soloVisits = vis.filter((v) => !v.row.coWork).length;
-      const coWorkVisits = db.visits.filter((v) => v.row.coWork && (v.row.userId === s.id || v.row.coWork.participantIds?.includes(s.id!)) && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= date).length;
-      const w = Math.min(1, Math.max(0, Number(db.settings['cowork.visitCredit'] ?? 1)));
-      const prom = db.promises.filter((p) => p.row.ownerId === s.id && p.row.promisedDate >= from && p.row.promisedDate <= date);
-      const kept = prom.filter((p) => p.row.status === 'kept' || p.row.status === 'partially_kept').length;
-      const att = dates.map((d) => db.attendanceDay(s, d));
-      const worked = att.filter((a) => a.firstIn);
-      return {
-        userId: s.id, name: s.name?.en, period: monthly ? date.slice(0, 7) : date, visits: vis.length, uniqueCustomers: new Set(vis.map((v) => v.row.customerId)).size,
-        soloVisits, coWorkVisits, visitCredit: Math.round((soloVisits + coWorkVisits * w) * 100) / 100,
-        collectionsCount: mine.length, collectedPoisha: { total, ...byMethod }, targetPoisha: monthly ? 60_000_000 : 2_500_000, promisesDue: prom.length, promisesKept: kept,
-        promiseFulfilmentRate: prom.length ? kept / prom.length : undefined, presentDays: worked.length, lateDays: att.filter((a) => (a.lateMin ?? 0) > 0).length,
-        lateMin: att.reduce((a, d) => a + (d.lateMin ?? 0), 0), breakMin: att.reduce((a, d) => a + (d.breakMin ?? 0), 0),
-        fieldMin: Math.round(att.reduce((a, d) => a + (d.dutyMin ?? 0), 0) * 0.72), distanceKm: Math.round(worked.length * 21.5 * 10) / 10,
-      };
-    });
+    const items = db.staff.filter((u) => u.active && u.branchIds?.[0] === branchId).map((u) => db.staffTarget(u, date)).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    return HttpResponse.json({ branchId, date, defaults: db.branchDefault(branchId, date), items } satisfies S['BranchTargets']);
+  })),
+  http.get(`${BASE}/targets/users/:id/history`, authed(({ ctx, params }) => {
+    const deny = need(ctx, 'target.view');
+    if (deny) return deny;
+    const u = db.userById(String(params.id));
+    if (!u || !scope(ctx, new URL('http://x/')).includes(u.branchIds?.[0] ?? '')) return problem(404, 'NOT_FOUND', 'Staff not found');
+    const rows = db.targetChanges.filter((t) => t.userId === u.id).sort((a, b) => b.setAt.localeCompare(a.setAt));
+    return HttpResponse.json(rows satisfies S['TargetChange'][]);
+  })),
+  ...(['user', 'clear', 'branch'] as const).map((kind) =>
+    (kind === 'clear' ? http.post : http.put)(`${BASE}/targets/${kind === 'branch' ? 'branches' : 'users'}/:id${kind === 'clear' ? '/clear' : ''}`, authed(async ({ ctx, params, request }) => {
+      const deny = need(ctx, 'target.manage');
+      if (deny) return deny;
+      const b = (await request.json()) as { amountPoisha?: number; visits?: number; effectiveFrom?: string; reason?: string };
+      const sc = scope(ctx, new URL('http://x/'));
+      const u = kind === 'branch' ? undefined : db.userById(String(params.id));
+      const branchId = kind === 'branch' ? String(params.id) : (u?.branchIds?.[0] ?? '');
+      if (!sc.includes(branchId) || (kind !== 'branch' && (!u || u.role !== 'field_staff' || !u.active))) return problem(404, 'NOT_FOUND', kind === 'branch' ? 'Branch not found' : 'Staff not found');
+      const reason = (b.reason ?? '').trim();
+      const errors: Record<string, string> = {};
+      if (reason.length < 3 || reason.length > 300) errors.reason = 'Between 3 and 300 characters';
+      if (kind !== 'clear') {
+        if (!Number.isInteger(b.amountPoisha) || b.amountPoisha! < 0) errors.amountPoisha = 'A whole number of poisha, 0 or more';
+        if (typeof b.visits !== 'number' || b.visits < 0 || b.visits > 100) errors.visits = 'Between 0 and 100';
+      }
+      if (Object.keys(errors).length) return problem(422, 'VALIDATION_FAILED', 'Check the highlighted fields', undefined, { fields: errors });
+      const from = b.effectiveFrom ?? db.today();
+      if (from < db.today()) return problem(422, 'BUSINESS_RULE', 'Targets of past days cannot change', 'TARGET_IN_PAST', { rule: 'TARGET_IN_PAST' });
+      const setBy = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+      const row = db.addTarget({
+        userId: u?.id ?? null, branchId, kind: kind === 'clear' ? 'cleared' : 'set', amountPoisha: kind === 'clear' ? null : b.amountPoisha!, visits: kind === 'clear' ? null : b.visits!,
+        effectiveFrom: from, reason, setBy,
+      });
+      const action = kind === 'branch' ? 'target.branch_set' : kind === 'clear' ? 'target.cleared' : 'target.set';
+      db.addAudit({ actor: actor(ctx.user), action, entity: kind === 'branch' ? 'branch' : 'user', entityId: kind === 'branch' ? branchId : u!.id, after: { amountPoisha: row.amountPoisha, visits: row.visits, effectiveFrom: from }, reason });
+      return HttpResponse.json(kind === 'branch' ? db.branchDefault(branchId, from) : db.staffTarget(u!, from));
+    })),
+  ),
+  http.get(`${BASE}/reports/staff-performance`, authed(({ ctx, url }) => {
+    const rows = perfRows(scope(ctx, url), url.searchParams.get('period') === 'monthly', url.searchParams.get('date') ?? db.today());
     rows.sort((a, b) => (b.collectedPoisha?.total ?? 0) - (a.collectedPoisha?.total ?? 0));
     return HttpResponse.json(rows);
+  })),
+  http.get(`${BASE}/reports/leaderboard`, authed(({ ctx, url }) => {
+    // FR-REP-005: managers with report.view; field staff only when the setting allows it
+    const staffView = ctx.user.role === 'field_staff';
+    if (staffView ? !db.settings['reports.leaderboardVisibleToStaff'] : !perms(ctx.user).has('report.view')) return problem(403, 'FORBIDDEN', 'The leaderboard is not visible to you', 'report.view');
+    // without a branchId the board covers every branch in scope (branchId null); field staff always get their own branch
+    const asked = staffView ? (ctx.user.branchIds?.[0] ?? '') : url.searchParams.get('branchId');
+    const sc = asked ? [asked] : scope(ctx, url);
+    if (asked && !(staffView || scope(ctx, url).includes(asked))) return problem(404, 'NOT_FOUND', 'Branch not found');
+    const branchId = asked || null;
+    const period = url.searchParams.get('period') === 'day' ? 'day' : 'month';
+    const metric = (url.searchParams.get('metric') ?? 'collected') as S['Leaderboard']['metric'];
+    const raw = url.searchParams.get('date');
+    const today = db.today();
+    const date = period === 'month' ? (raw && /^\d{4}-\d{2}$/.test(raw) ? raw : today.slice(0, 7)) : raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : today;
+    const end = period === 'month' ? (date === today.slice(0, 7) ? today : new Date(Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)), 0)).toISOString().slice(0, 10)) : date;
+    if (end > today) return problem(422, 'BUSINESS_RULE', 'Future period', 'DATE_IN_FUTURE');
+    const min = Number(db.settings['reports.leaderboardMinPresentDays'] ?? 1);
+    const rows = perfRows(sc, period === 'month', end);
+    const valueOf = (r: S['StaffPerformanceRow']) =>
+      metric === 'collected' ? (r.collectedPoisha?.total ?? 0) : metric === 'visit_credit' ? (r.visitCredit ?? 0) : metric === 'promises_kept' ? (r.promisesKept ?? 0) : (r.amountAchievement ?? null);
+    const items: S['LeaderboardRow'][] = rows.map((r) => {
+      const value = valueOf(r);
+      const eligible = (r.presentDays ?? 0) >= min && value !== null;
+      return {
+        rank: null, userId: r.userId, name: r.name, employeeCode: db.userById(r.userId)?.employeeCode, value, collectedPoisha: r.collectedPoisha?.total ?? 0, visitCredit: r.visitCredit ?? 0,
+        promisesKept: r.promisesKept ?? 0, amountAchievement: r.amountAchievement ?? null, presentDays: r.presentDays ?? 0, eligible, me: r.userId === ctx.user.id,
+      };
+    });
+    const ranked = items.filter((r) => r.eligible).sort((a, b) => (b.value ?? 0) - (a.value ?? 0) || (a.name ?? '').localeCompare(b.name ?? ''));
+    ranked.forEach((r, i) => (r.rank = i > 0 && ranked[i - 1]!.value === r.value ? ranked[i - 1]!.rank : i + 1));
+    const rest = items.filter((r) => !r.eligible).sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    const all = [...ranked, ...rest];
+    return HttpResponse.json({ branchId, period, date, metric, minPresentDays: min, items: all, me: all.find((r) => r.me) ?? null } satisfies S['Leaderboard']);
+  })),
+  http.get(`${BASE}/reports/data-quality`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'report.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const branches = db.branches.filter((b) => sc.includes(b.id!)).map((b) => {
+      const cs = db.customers.filter((c) => c.branchId === b.id);
+      const found = cs.map((c) => db.qualityFindings(c));
+      const issues = Object.fromEntries(db.DQ_ISSUES.map((k) => [k, found.filter((f) => f.some((x) => x.issue === k)).length]));
+      return { branchId: b.id, branchName: b.name, customers: cs.length, withIssues: found.filter((f) => f.length).length, issues, maxBranchKm: Number(db.settings['reports.dataQualityMaxBranchKm'] ?? 30) };
+    });
+    return HttpResponse.json({ generatedAt: new Date(Date.now() - 6 * 60_000).toISOString(), maxBranchKm: Number(db.settings['reports.dataQualityMaxBranchKm'] ?? 30), branches } satisfies S['DataQualitySummary']);
+  })),
+  http.get(`${BASE}/reports/data-quality/items`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'report.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const issue = url.searchParams.get('issue');
+    const rows: S['DataQualityItem'][] = db.customers
+      .filter((c) => sc.includes(c.branchId))
+      .flatMap((c) => {
+        const f = db.qualityFindings(c);
+        const area = db.areas.find((a) => a.id === c.areaId);
+        return f
+          .filter((x) => !issue || x.issue === issue)
+          .map((x) => ({ customerId: c.item.id, code: c.item.code, name: c.item.name, branchId: c.branchId, areaCode: area?.code ?? null, assignee: c.item.assignee?.id ? c.item.assignee : null, issue: x.issue, detail: x.detail, issues: f.map((y) => y.issue) }));
+      });
+    const pg = page(rows, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
   })),
   http.get(`${BASE}/reports/branch-trends`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'report.view');
@@ -1136,7 +1272,6 @@ export const handlers = [
     const deny = need(ctx, 'report.export');
     if (deny) return deny;
     const b = (await request.json()) as { type?: string; format?: string };
-    if (b.format === 'pdf') return problem(422, 'BUSINESS_RULE', 'export_format_unavailable');
     if (b.type === 'audit') {
       const denyAudit = need(ctx, 'audit.view');
       if (denyAudit) return denyAudit;

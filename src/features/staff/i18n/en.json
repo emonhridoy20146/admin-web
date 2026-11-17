@@ -33,7 +33,7 @@
     "credit": "Visit credit"
   },
   "ofTarget": "{{pct}} of target",
-  "targetLine": "{{pct}} of the {{target}} target",
+  "targetLine": "{{pct}} of the {{target}} target so far",
   "targetMet": "Target met",
   "unique": "{{n}} customers",
   "keptOf": "{{kept}} of {{due}}",
@@ -50,7 +50,9 @@
     "visits": "Visits by this staff member",
     "attendance": "Attendance this month",
     "jointVisits": "This person's joint visits",
-    "sessions": "Who they worked with"
+    "sessions": "Who they worked with",
+    "targets": "Daily targets",
+    "leaderboard": "Leaderboard"
   },
   "empty": "No active field staff in this branch",
   "cowork": {
@@ -60,5 +62,9 @@
     "split": "single {{solo}} · joint {{joint}}",
     "weight": "{{pct}} per joint visit",
     "note": "Everyone in a co-work group gets credit for a joint visit, and targets use this credit. Collected money is never shared: it counts only for the person who took it."
-  }
+  },
+  "targetPeriod": "Target for the whole month: {{target}} over {{days}} working days",
+  "visitLine": "Visit credit {{credit}} of the {{target}} target ({{pct}})",
+  "visitOfTarget": "{{pct}} of visit target",
+  "kpiVisitTarget": "Visit credit {{credit}} of {{target}}"
 }

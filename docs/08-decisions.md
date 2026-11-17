@@ -64,5 +64,10 @@ Only with `NEXT_PUBLIC_API_MOCK=1`: the MSW mock stores the signed-in demo user 
 ## ADR-W13 — Bangla PDF by printing the report page
 - **Decision:** Report pages print to PDF through the browser ("PDF / Print" → "Save as PDF"). A print stylesheet gives A4, the light theme, a masthead with branch, time and user, every table column, repeated headers and charts as tables. Owner approved 2026-11-17 (field-api OD-26).
 - **Reason:** the browser's text engine shapes Bangla conjuncts and embeds the self-hosted Noto Sans Bengali with no extra service. What is printed is what the manager sees, with the same filters.
-- **Consequences:** only the rows on screen are printed: paged lists print the current page. Large files stay CSV/XLSX downloads, and server-side PDF exports can be offered next to printing once field-api supports them.
+- **Consequences:** only the rows on screen are printed: paged lists print the current page. Large files stay CSV/XLSX downloads, and server-side PDF exports can be offered next to printing once field-api supports them (done with contract 1.10.0: "PDF" is a file type in Downloads).
+
+## ADR-W14 — Targets, leaderboard and data quality: the server's numbers, shown as they are
+- **Decision:** Daily targets get their own feature (`targets`, flag `module.targets`) at `/targets`; the leaderboard and data quality are pages of the `reports` feature (`report.view`). Target progress uses the server's `amountAchievement` / `visitAchievement` (collected and visit credit against the target **to date**), falling back to computing them only for an older server. The leaderboard shows ranks exactly as the server gives them (shared ranks marked "tie", unranked people listed after a note naming the minimum present days). Data quality shows the issue's own translated wording; the server's English `detail` is added only when it carries data (a number, a code, a distance). In Bangla the word for target is "লক্ষ্য" everywhere.
+- **Reason:** field-api owns the rules (working days, leave, ties, eligibility), so the panel never disagrees with the app or the exports. A month-to-date target keeps the progress bar honest mid-month.
+- **Alternatives rejected:** ranking or summing targets in the browser; translating server details by pattern (brittle); a separate feature for the leaderboard (it is a report and shares its permission).
 

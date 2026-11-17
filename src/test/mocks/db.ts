@@ -463,7 +463,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -498,6 +498,7 @@ export const settings: Record<string, unknown> = {
   'location.trackingProvider': 'free', 'location.providerConfig': {}, 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
   'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
   'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
+  'reports.leaderboardVisibleToStaff': false, 'reports.leaderboardMinPresentDays': 1, 'reports.dataQualityMaxBranchKm': 30,
   'map.tileProvider': 'protomaps-bd',
 };
 
@@ -921,3 +922,127 @@ export function syncHealth(branchIds: string[]): S['DeviceSyncState'][] {
     };
   });
 }
+
+// ---------- daily targets (FR-COL-015, contract 1.10.0) ----------
+/** One change of a personal target (userId) or a branch default (userId null), as field-api stores them: dated, never edited. */
+export interface TargetEntry {
+  id: string;
+  userId: string | null;
+  branchId: string;
+  kind: 'set' | 'cleared';
+  amountPoisha: number | null;
+  visits: number | null;
+  effectiveFrom: string;
+  reason: string;
+  setBy: { id: string; name: string };
+  setAt: string;
+}
+export const targetChanges: TargetEntry[] = [];
+export function addTarget(e: Omit<TargetEntry, 'id' | 'setAt'> & { setAt?: string }): TargetEntry {
+  const row = { id: oid('6790'), setAt: e.setAt ?? isoAt(now()), ...e };
+  targetChanges.push(row);
+  return row;
+}
+{
+  const by = (u: MockUser) => ({ id: u.id!, name: u.name?.en ?? '' });
+  const ago = (d: number) => now().minus({ days: d }).toISODate()!;
+  const at = (d: number) => isoAt(now().minus({ days: d, hours: 2 }));
+  // branch 3 has no default yet, so its page shows the empty state
+  addTarget({ userId: null, branchId: B[0]!, kind: 'set', amountPoisha: 2_000_000, visits: 8, effectiveFrom: ago(90), reason: 'Opening target for the branch.', setBy: by(managers[0]!), setAt: at(90) });
+  addTarget({ userId: null, branchId: B[0]!, kind: 'set', amountPoisha: 2_500_000, visits: 8, effectiveFrom: ago(40), reason: 'Raised after the Eid sales.', setBy: by(managers[0]!), setAt: at(41) });
+  addTarget({ userId: null, branchId: B[1]!, kind: 'set', amountPoisha: 2_000_000, visits: 6, effectiveFrom: ago(60), reason: 'Opening target for the branch.', setBy: by(managers[1]!), setAt: at(60) });
+  const b0 = staff.filter((u) => u.active && u.branchIds?.[0] === B[0]);
+  addTarget({ userId: b0[0]!.id!, branchId: B[0]!, kind: 'set', amountPoisha: 3_000_000, visits: 10, effectiveFrom: ago(20), reason: 'Senior collector with the largest area.', setBy: by(managers[0]!), setAt: at(21) });
+  addTarget({ userId: b0[1]!.id!, branchId: B[0]!, kind: 'set', amountPoisha: 1_500_000, visits: 5, effectiveFrom: ago(30), reason: 'New joiner, first month.', setBy: by(managers[0]!), setAt: at(31) });
+  addTarget({ userId: b0[1]!.id!, branchId: B[0]!, kind: 'set', amountPoisha: 2_000_000, visits: 6, effectiveFrom: ago(4), reason: 'Second month, closer to the branch target.', setBy: by(managers[0]!), setAt: at(5) });
+  addTarget({ userId: b0[2]!.id!, branchId: B[0]!, kind: 'set', amountPoisha: 1_000_000, visits: 4, effectiveFrom: ago(25), reason: 'Light duty after illness.', setBy: by(managers[0]!), setAt: at(26) });
+  addTarget({ userId: b0[2]!.id!, branchId: B[0]!, kind: 'cleared', amountPoisha: null, visits: null, effectiveFrom: ago(10), reason: 'Back to full duty.', setBy: by(managers[0]!), setAt: at(11) });
+}
+const latest = (rows: TargetEntry[], date: string) =>
+  rows.filter((r) => r.effectiveFrom <= date).sort((a, b) => (a.effectiveFrom === b.effectiveFrom ? a.setAt.localeCompare(b.setAt) : a.effectiveFrom.localeCompare(b.effectiveFrom))).at(-1);
+export function branchDefault(branchId: string, date: string): S['TargetValue'] {
+  const r = latest(targetChanges.filter((x) => x.userId === null && x.branchId === branchId), date);
+  return r ? { amountPoisha: r.amountPoisha ?? 0, visits: r.visits ?? 0, effectiveFrom: r.effectiveFrom, reason: r.reason, setBy: r.setBy, setAt: r.setAt } : { amountPoisha: 0, visits: 0, effectiveFrom: null, reason: null, setBy: null, setAt: null };
+}
+/** No target on the weekly off, a holiday or approved leave. */
+export function isWorkingDay(u: MockUser, date: string): boolean {
+  const off = (settings['duty.weeklyOff'] as number[] | undefined) ?? [5];
+  if (off.includes(DateTime.fromISO(date, { zone: ZONE }).weekday)) return false;
+  return attendanceDay(u, date).status !== 'leave';
+}
+export function staffTarget(u: MockUser, date: string): S['StaffTarget'] {
+  const branchId = u.branchIds?.[0] ?? '';
+  const own = latest(targetChanges.filter((x) => x.userId === u.id), date);
+  const base = { userId: u.id!, name: u.name?.en, employeeCode: u.employeeCode };
+  const v: S['TargetValue'] & { source: 'personal' | 'branch' } =
+    own?.kind === 'set'
+      ? { amountPoisha: own.amountPoisha ?? 0, visits: own.visits ?? 0, effectiveFrom: own.effectiveFrom, reason: own.reason, setBy: own.setBy, setAt: own.setAt, source: 'personal' }
+      : { ...branchDefault(branchId, date), source: 'branch' };
+  return isWorkingDay(u, date) ? { ...base, ...v, workingDay: true } : { ...base, ...v, amountPoisha: 0, visits: 0, workingDay: false };
+}
+
+// ---------- data quality (FR-CUS-009, contract 1.10.0) ----------
+// A few customers per branch get the problems field-api reports, so every issue has rows. Picked from the end of each
+// branch's list, away from the customers the journeys open.
+branches.forEach((b, bi) => {
+  const mine = customers.filter((c) => c.branchId === b.id).reverse();
+  const at = (i: number) => mine[i + bi]!;
+  const setLoc = (c: MockCustomer, loc: S['CustomerListItem']['location']) => {
+    c.item.location = loc;
+    c.detail.location = loc;
+  };
+  setLoc(at(0), { lat: 0, lng: 0, status: 'invalid', source: 'erp' });
+  setLoc(at(1), { lat: null, lng: null, status: 'suspect_swapped', source: 'erp' });
+  if (bi === 0) setLoc(at(2), { lat: (b.lat ?? 22.7) + 0.42, lng: (b.lng ?? 90.37) + 0.05, status: 'ok', source: 'erp' });
+  const setPhone = (c: MockCustomer, p: string | undefined) => {
+    c.item.phone = p;
+    c.detail.phone = p;
+    c.detail.phones = p ? [p] : [];
+  };
+  setPhone(at(3), undefined);
+  setPhone(at(4), undefined);
+  setPhone(at(5), '01712-345');
+  setPhone(at(6), at(8).item.phone);
+  setPhone(at(7), at(8).item.phone);
+  const plan = at(9).detail.plans?.[0];
+  if (plan) Object.assign(plan, { schedule: [], status: 'active', outstandingPoisha: Math.max(plan.outstandingPoisha ?? 0, 1_200_000) });
+  for (const i of [10, 11, 12]) {
+    at(i).item.assignee = undefined;
+    at(i).detail.assignee = undefined;
+  }
+});
+export const DQ_ISSUES = ['no_location', 'invalid_location', 'suspect_swapped', 'far_from_branch', 'missing_phone', 'invalid_phone', 'shared_phone', 'plan_without_schedule', 'unassigned'] as const;
+const bdMobile = (raw: string) => {
+  let d = raw.replace(/\D/g, '');
+  if (d.startsWith('880')) d = d.slice(2);
+  return /^01[3-9]\d{8}$/.test(d) ? d : null;
+};
+const kmBetween = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const r = Math.PI / 180;
+  const h = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lng - a.lng) * r) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+};
+/** Every issue of one customer with the server's English detail, the way field-api's quality rules word it. */
+export function qualityFindings(c: MockCustomer): { issue: (typeof DQ_ISSUES)[number]; detail: string }[] {
+  const out: { issue: (typeof DQ_ISSUES)[number]; detail: string }[] = [];
+  const loc = c.item.location;
+  const b = branches.find((x) => x.id === c.branchId);
+  if (loc?.status === 'missing') out.push({ issue: 'no_location', detail: 'No coordinates' });
+  else if (loc?.status === 'invalid') out.push({ issue: 'invalid_location', detail: `Coordinates ${loc.lat},${loc.lng} are 0,0 or outside Bangladesh` });
+  else if (loc?.status === 'suspect_swapped') out.push({ issue: 'suspect_swapped', detail: 'Latitude and longitude look swapped' });
+  if (loc?.lat != null && loc.lng != null && b?.lat != null && b.lng != null && (loc.status === 'ok' || loc.status === 'overridden')) {
+    const km = kmBetween({ lat: loc.lat, lng: loc.lng }, { lat: b.lat, lng: b.lng });
+    if (km > Number(settings['reports.dataQualityMaxBranchKm'] ?? 30)) out.push({ issue: 'far_from_branch', detail: `${Math.round(km * 10) / 10} km from the branch` });
+  }
+  const phones = (c.detail.phones ?? []).filter(Boolean) as string[];
+  if (!phones.length) out.push({ issue: 'missing_phone', detail: 'No phone number' });
+  const bad = phones.filter((p) => !bdMobile(p));
+  if (bad.length) out.push({ issue: 'invalid_phone', detail: `Not a Bangladesh mobile number: ${bad.join(', ')}` });
+  const shared = customers.filter((o) => o !== c && o.branchId === c.branchId && (o.detail.phones ?? []).some((p) => p && bdMobile(p) && phones.map(bdMobile).includes(bdMobile(p))));
+  if (shared.length) out.push({ issue: 'shared_phone', detail: `Same number as ${shared.slice(0, 3).map((o) => o.item.code).join(', ')}` });
+  const noSchedule = (c.detail.plans ?? []).filter((p) => p.status === 'active' && (p.outstandingPoisha ?? 0) > 0 && !(p.schedule ?? []).length);
+  if (noSchedule.length) out.push({ issue: 'plan_without_schedule', detail: `Open plan without installment schedule: ${noSchedule.map((p) => p.erpPlanId).join(', ')}` });
+  if (!c.item.assignee?.id) out.push({ issue: 'unassigned', detail: 'No field staff assigned' });
+  return out;
+}
+

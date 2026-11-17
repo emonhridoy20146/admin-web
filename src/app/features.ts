@@ -28,8 +28,9 @@ import { adminDevicesManifest } from '@/features/admin-devices';
 import { systemManifest } from '@/features/system';
 import { reportsManifest } from '@/features/reports';
 import { coworkManifest } from '@/features/cowork';
+import { targetsManifest } from '@/features/targets';
 
-export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, coworkManifest, assignmentsManifest, locationManifest, handoversManifest, staffManifest, attendanceManifest, reportsManifest, adminUsersManifest, adminDevicesManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, systemManifest, auditManifest];
+export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, coworkManifest, assignmentsManifest, locationManifest, handoversManifest, staffManifest, targetsManifest, attendanceManifest, reportsManifest, adminUsersManifest, adminDevicesManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, systemManifest, auditManifest];
 
 registerFeatures(features);
 

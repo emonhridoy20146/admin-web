@@ -1,5 +1,5 @@
 import { addDays } from '@/shared/lib/time';
-import type { ExportBody, ExportFormat, ExportType, Granularity, Mismatch, Recon, Trends } from '../api/reports';
+import type { DataQualityIssue, ExportBody, ExportFormat, ExportType, Granularity, Mismatch, Recon, Trends } from '../api/reports';
 
 export const TABS = ['trends', 'reconciliation', 'exports'] as const;
 export type Tab = (typeof TABS)[number];
@@ -84,9 +84,10 @@ export function reconGap(r: Pick<Recon, 'totals'> | undefined): number {
   return (r?.totals?.fosPostedPoisha ?? 0) - (r?.totals?.erpPoisha ?? 0);
 }
 
-export const EXPORT_TYPES = ['collections', 'staff_performance', 'attendance', 'overdue_customers', 'cash_positions', 'audit'] as const satisfies readonly ExportType[];
+export const EXPORT_TYPES = ['collections', 'staff_performance', 'attendance', 'overdue_customers', 'cash_positions', 'data_quality', 'audit'] as const satisfies readonly ExportType[];
 export type OfferedType = (typeof EXPORT_TYPES)[number];
-export const EXPORT_FORMATS = ['xlsx', 'csv'] as const satisfies readonly ExportFormat[];
+/** `pdf` (contract 1.10.0) is built by the server: A4 landscape with the Bangla font embedded. */
+export const EXPORT_FORMATS = ['xlsx', 'csv', 'pdf'] as const satisfies readonly ExportFormat[];
 export type OfferedFormat = (typeof EXPORT_FORMATS)[number];
 
 /** Longest range the server accepts per type, in days (contract 1.6.0). */
@@ -95,6 +96,8 @@ export const MAX_DAYS: Partial<Record<OfferedType, number>> = { collections: 92,
 export const TYPE_PERMISSION: Partial<Record<OfferedType, string>> = { audit: 'audit.view' };
 export const needsRange = (t: OfferedType) => t === 'collections' || t === 'attendance' || t === 'audit';
 export const needsPeriod = (t: OfferedType) => t === 'staff_performance';
+/** data_quality (1.10.0) can be narrowed to one issue; empty means every issue. */
+export const takesIssue = (t: OfferedType) => t === 'data_quality';
 
 export interface ExportForm {
   type: OfferedType;
@@ -103,6 +106,7 @@ export interface ExportForm {
   to: string;
   period: 'daily' | 'monthly';
   date: string;
+  issue?: DataQualityIssue | '';
 }
 
 export type ExportError = 'order' | 'future' | 'tooLong';
@@ -123,6 +127,12 @@ export function validateExport(f: ExportForm, today: string): ExportError | null
 
 export function exportBody(f: ExportForm, branchId: string | undefined, locale: 'bn' | 'en'): ExportBody {
   const scope = branchId ? { branchId } : {};
-  const params = needsRange(f.type) ? { from: f.from, to: f.to, ...scope } : needsPeriod(f.type) ? { period: f.period, date: f.date, ...scope } : scope;
+  const params = needsRange(f.type)
+    ? { from: f.from, to: f.to, ...scope }
+    : needsPeriod(f.type)
+      ? { period: f.period, date: f.date, ...scope }
+      : takesIssue(f.type) && f.issue
+        ? { ...scope, issue: f.issue }
+        : scope;
   return { type: f.type, format: f.format, params, locale };
 }

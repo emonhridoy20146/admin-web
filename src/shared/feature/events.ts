@@ -37,4 +37,5 @@ export const EV = {
   handoverChanged: 'handover.changed',
   promiseChanged: 'promise.changed',
   assignmentChanged: 'assignment.changed',
+  targetChanged: 'target.changed',
 } as const;
