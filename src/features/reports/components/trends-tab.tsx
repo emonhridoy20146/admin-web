@@ -15,6 +15,7 @@ import { ChartCard } from '@/shared/ui/chart-card';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { MoneyText } from '@/shared/ui/money';
 import { Segmented } from '@/shared/ui/primitives';
+import { PrintOnly } from '@/shared/ui/print';
 import { useTrends } from '../api/reports';
 import { collectionTotals, overdueView, RANGES, rangeWindow } from '../model/reports';
 
@@ -41,11 +42,14 @@ export function TrendsTab() {
 
   return (
     <>
-      <Segmented className="mb-4" label={t('range.label')} value={range} onChange={(v) => url.set({ range: v === '30d' ? null : v })} options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))} />
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-3">
+        <Segmented label={t('range.label')} value={range} onChange={(v) => url.set({ range: v === '30d' ? null : v })} options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))} />
+        <PrintOnly className="inline">({formatDate(w.from)} – {formatDate(w.to)})</PrintOnly>
+      </div>
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
 
-      <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line shadow-e1 lg:grid-cols-4 [&>*]:bg-surface">
-        <div className="col-span-2 px-4 py-3 lg:col-span-1">
+      <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line shadow-e1 lg:grid-cols-4 print:grid-cols-4 [&>*]:bg-surface">
+        <div className="col-span-2 px-4 py-3 lg:col-span-1 print:col-span-1">
           <dt className="text-xs text-fg-tertiary">{t('trends.collected')}</dt>
           <dd className="mt-0.5 text-lg font-semibold text-fg">
             {q.isLoading ? <Skeleton className="h-7 w-28" /> : <MoneyText poisha={sum.totalPoisha} />}
@@ -96,7 +100,7 @@ export function TrendsTab() {
             )
           }
           table={
-            <div className="max-h-80 overflow-auto">
+            <div className="max-h-80 overflow-auto print:max-h-none print:overflow-visible">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-start text-xs text-fg-tertiary">

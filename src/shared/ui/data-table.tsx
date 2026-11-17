@@ -39,9 +39,9 @@ export interface Pager {
 const prioClass: Record<number, string> = {
   1: '',
   2: '',
-  3: 'hidden lg:table-cell',
-  4: 'hidden xl:table-cell',
-  5: 'hidden 2xl:table-cell',
+  3: 'hidden lg:table-cell print:table-cell',
+  4: 'hidden xl:table-cell print:table-cell',
+  5: 'hidden 2xl:table-cell print:table-cell',
 };
 
 export function DataTable<T>({
@@ -126,7 +126,7 @@ export function DataTable<T>({
     <div className="relative">
       {error ? <ErrorBanner error={error} onRetry={onRetry} className="mb-3" /> : null}
       <div className="overflow-hidden rounded-md border border-line bg-surface shadow-e1">
-        <div className="flex items-center justify-end gap-1 border-b border-line px-2 py-1.5">
+        <div className="flex items-center justify-end gap-1 border-b border-line px-2 py-1.5 print:hidden">
           <span className="me-auto ps-2 text-sm text-fg-tertiary">
             {pager?.total != null ? t('table.total', { n: formatNumber(pager.total) }) : null}
           </span>
@@ -158,7 +158,7 @@ export function DataTable<T>({
         </div>
 
         {/* ≥ 640 px: table */}
-        <div className="scrollbar-thin hidden overflow-x-auto sm:block">
+        <div className="scrollbar-thin hidden overflow-x-auto sm:block print:block print:overflow-visible">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <caption className="sr-only">{caption}</caption>
             <thead className="sticky top-0 z-10">
@@ -256,7 +256,7 @@ export function DataTable<T>({
         </div>
 
         {/* < 640 px: card list */}
-        <ul className="divide-y divide-line sm:hidden" aria-label={caption}>
+        <ul className="divide-y divide-line sm:hidden print:hidden" aria-label={caption}>
           {loading
             ? Array.from({ length: 5 }).map((_, i) => (
                 <li key={i} className="space-y-2 px-4 py-3">
@@ -307,7 +307,7 @@ export function DataTable<T>({
         {showEmpty && (empty ?? <EmptyState icon={Inbox} title={t('table.empty')} />)}
 
         {pager && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2 text-sm text-fg-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2 text-sm text-fg-secondary print:hidden">
             <label className="hidden items-center gap-2 sm:flex">
               {t('table.perPage')}
               <select

@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, CircleAlert, CircleCheck, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { useUi, useBranchId } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
 import { useGate } from '@/shared/feature/useGate';
@@ -102,6 +103,7 @@ export function ExportsTab() {
         </form>
       </Card>
 
+      <div className="space-y-4">
       <Card>
         <CardHeader title={t('exports.jobs')} subtitle={t('exports.linkNote')} />
         {!jobs.length ? (
@@ -112,7 +114,37 @@ export function ExportsTab() {
           </ul>
         )}
       </Card>
+      <PdfCard />
+      </div>
     </div>
+  );
+}
+
+/** FR-REP-003 / OD-26: PDFs come from the browser's print dialog, which shapes Bangla correctly. */
+function PdfCard() {
+  const { t } = useTranslation('reports');
+  const gate = useGate();
+  const links = [
+    { href: '/reports/', label: t('tabs.trends'), show: true },
+    { href: '/reports/?tab=reconciliation', label: t('tabs.reconciliation'), show: true },
+    { href: '/staff/', label: t('pdf.staff'), show: gate.can('report.view') && gate.flag('module.reports') },
+    { href: '/attendance/?view=month', label: t('pdf.attendance'), show: gate.can('attendance.view') && gate.flag('module.attendance') },
+  ].filter((l) => l.show);
+  return (
+    <Card>
+      <CardHeader title={t('pdf.title')} subtitle={t('pdf.how')} />
+      <ul className="divide-y divide-line">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-sm font-medium text-fg hover:bg-surface-hover">
+              <FileText className="size-4 text-fg-tertiary" aria-hidden />
+              <span className="flex-1">{l.label}</span>
+              <ArrowRight className="size-4 text-fg-tertiary rtl:rotate-180" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 

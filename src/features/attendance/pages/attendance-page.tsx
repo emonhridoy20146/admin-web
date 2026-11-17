@@ -9,6 +9,7 @@ import { formatDate, formatDuration, formatMonth, formatNumber, formatTime, form
 import { addDays, todayDhaka } from '@/shared/lib/time';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader } from '@/shared/ui/page';
+import { PrintButton, PrintOnly } from '@/shared/ui/print';
 import { DataTable, type Column } from '@/shared/ui/data-table';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
@@ -99,7 +100,7 @@ export function AttendancePage() {
           priority: 2 as const,
           hideable: false,
           cell: (r: Row) => (
-            <Button size="sm" variant="ghost" onClick={(e) => (e.stopPropagation(), setTarget({ userId: r.id, name: r.name, date }))} aria-label={t('correctFor', { name: r.name })}>
+            <Button size="sm" variant="ghost" className="print:hidden" onClick={(e) => (e.stopPropagation(), setTarget({ userId: r.id, name: r.name, date }))} aria-label={t('correctFor', { name: r.name })}>
               <PencilLine className="size-3.5" aria-hidden />
               {t('correct')}
             </Button>
@@ -119,7 +120,7 @@ export function AttendancePage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('title')} actions={<PrintButton name={`${t('title')} - ${view === 'day' ? date : month}`} />}>
         <span>{t('subtitle')}</span>
       </PageHeader>
 
@@ -127,16 +128,17 @@ export function AttendancePage() {
         <Segmented label={t('view.label')} value={view} onChange={(v) => url.set({ view: v === 'day' ? null : v })} options={VIEWS.map((v) => ({ value: v, label: t(`view.${v}`) }))} />
         {view === 'day' ? (
           <div className="flex items-center gap-1.5">
-            <Button size="sm" onClick={() => stepDay(-1)} aria-label={t('prevDay')}><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /></Button>
-            <Input type="date" aria-label={t('date')} value={date} max={today} onChange={(e) => ISO_DATE.test(e.target.value) && url.set({ date: e.target.value === today ? null : e.target.value })} className="h-9 w-44" />
-            <Button size="sm" onClick={() => stepDay(1)} disabled={date >= today} aria-label={t('nextDay')}><ChevronRight className="size-4 rtl:rotate-180" aria-hidden /></Button>
-            {date !== today && <Button size="sm" variant="ghost" onClick={() => url.set({ date: null })}>{t('today')}</Button>}
+            <PrintOnly className="text-base font-medium text-fg">{formatWeekday(date)} · {formatDate(date)}</PrintOnly>
+            <Button size="sm" className="print:hidden" onClick={() => stepDay(-1)} aria-label={t('prevDay')}><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /></Button>
+            <Input type="date" aria-label={t('date')} value={date} max={today} onChange={(e) => ISO_DATE.test(e.target.value) && url.set({ date: e.target.value === today ? null : e.target.value })} className="h-9 w-44 print:hidden" />
+            <Button size="sm" className="print:hidden" onClick={() => stepDay(1)} disabled={date >= today} aria-label={t('nextDay')}><ChevronRight className="size-4 rtl:rotate-180" aria-hidden /></Button>
+            {date !== today && <Button size="sm" variant="ghost" className="print:hidden" onClick={() => url.set({ date: null })}>{t('today')}</Button>}
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
-            <Button size="sm" onClick={() => stepMonth(-1)} aria-label={t('prevMonth')}><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /></Button>
+            <Button size="sm" className="print:hidden" onClick={() => stepMonth(-1)} aria-label={t('prevMonth')}><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /></Button>
             <span className="min-w-36 text-center text-base font-medium text-fg" aria-live="polite">{formatMonth(month)}</span>
-            <Button size="sm" onClick={() => stepMonth(1)} disabled={month >= monthOf(today)} aria-label={t('nextMonth')}><ChevronRight className="size-4 rtl:rotate-180" aria-hidden /></Button>
+            <Button size="sm" className="print:hidden" onClick={() => stepMonth(1)} disabled={month >= monthOf(today)} aria-label={t('nextMonth')}><ChevronRight className="size-4 rtl:rotate-180" aria-hidden /></Button>
           </div>
         )}
       </div>

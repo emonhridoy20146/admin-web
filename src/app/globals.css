@@ -231,3 +231,47 @@
   box-shadow: none;
 }
 .fos-map .leaflet-tooltip-top::before { border-top-color: var(--fg); }
+
+/* Print and "Save as PDF" (FR-REP-003, OD-26): A4, light theme (set by the shell on beforeprint), no app chrome,
+   table headers repeated on every page, rows kept whole, colours of badges and bars kept. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 10mm 14mm;
+  }
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    background: var(--surface);
+    zoom: 0.82;
+  }
+  *,
+  ::before,
+  ::after {
+    box-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr,
+  li,
+  dl > div {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  a {
+    text-decoration: none;
+  }
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+}
+

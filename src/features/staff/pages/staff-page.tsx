@@ -17,6 +17,7 @@ import { Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
 import { Badge } from '@/shared/ui/badge';
 import { Drawer } from '@/shared/ui/overlay';
+import { PrintButton, PrintOnly } from '@/shared/ui/print';
 import { useAreas, usePerformance, type PerfRow } from '../api/staff';
 import { byMethod, collected, jointWeight, sortRows, SORTS, targetRatio, totals, visitCredit, visitsTakenPart } from '../model/staff';
 
@@ -149,18 +150,21 @@ export function StaffPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('title')} actions={<PrintButton name={`${t('title')} - ${periodLabel}`} />}>
         <span>{t('subtitle')}</span>
       </PageHeader>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Segmented label={t('period.label')} value={period} onChange={(v) => url.set({ period: v === 'daily' ? null : v })} options={PERIODS.map((p) => ({ value: p, label: t(`period.${p}`) }))} />
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <Segmented label={t('period.label')} value={period} onChange={(v) => url.set({ period: v === 'daily' ? null : v })} options={PERIODS.map((p) => ({ value: p, label: t(`period.${p}`) }))} />
+          <PrintOnly className="inline">({periodLabel})</PrintOnly>
+        </div>
         <Select aria-label={t('sort.label')} value={sort} onChange={(e) => url.set({ sort: e.target.value === 'collected' ? null : e.target.value })} className="h-9 sm:w-60">
           {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
         </Select>
       </div>
 
-      <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line shadow-e1 lg:grid-cols-4 [&>*]:bg-surface">
+      <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line shadow-e1 lg:grid-cols-4 print:grid-cols-4 [&>*]:bg-surface">
         {kpis.map((k) => (
           <div key={k.label} className="px-4 py-3.5">
             <dt className="flex items-center gap-1.5 text-xs font-medium text-fg-tertiary">

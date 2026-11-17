@@ -125,5 +125,11 @@
     "downloadOf": "Download {{name}}",
     "linkNote": "A download link works for 5 minutes",
     "rangeLabel": "{{from}} to {{to}}"
+  },
+  "pdf": {
+    "title": "PDF (with Bangla)",
+    "how": "Open the report, press 'PDF / Print' at the top, then choose 'Save as PDF' in the print dialog. Bangla conjuncts come out right.",
+    "staff": "Staff performance",
+    "attendance": "Monthly attendance"
   }
 }

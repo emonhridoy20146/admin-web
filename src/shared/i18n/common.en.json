@@ -215,5 +215,15 @@
   "chart": {
     "showTable": "View as table",
     "showChart": "View as chart"
+  },
+  "print": {
+    "button": "PDF / Print",
+    "help": "Print, or choose 'Save as PDF' in the print dialog to keep a PDF",
+    "printedAt": "Printed {{time}}",
+    "printedBy": "Printed by {{name}}",
+    "branch": "Branch: {{name}}",
+    "period": "Period: {{period}}",
+    "date": "Date: {{date}}",
+    "note": "Field app records; ERP figures are labelled where shown."
   }
 }

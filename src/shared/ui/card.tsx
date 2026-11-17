@@ -15,7 +15,7 @@ export function CardHeader({ title, subtitle, actions, className }: { title: Rea
         <h2 className="text-md font-semibold text-fg">{title}</h2>
         {subtitle && <p className="text-sm text-fg-tertiary">{subtitle}</p>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-2 print:hidden">{actions}</div>}
     </div>
   );
 }

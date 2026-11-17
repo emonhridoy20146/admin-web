@@ -28,7 +28,7 @@ export function PageHeader({ title, crumbs, asOf, actions, children, className }
           </div>
         )}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 print:hidden">{actions}</div>}
     </header>
   );
 }

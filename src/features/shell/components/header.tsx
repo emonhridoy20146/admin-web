@@ -20,7 +20,7 @@ export function Header({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
   const { t } = useTranslation();
   const { t: ts } = useTranslation('shell');
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-surface/90 px-3 backdrop-blur-md sm:gap-3 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-surface/90 px-3 backdrop-blur-md sm:gap-3 lg:px-6 print:hidden">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenu} aria-label={ts('openMenu')}>
         <Menu className="size-5" />
       </Button>

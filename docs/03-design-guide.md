@@ -227,6 +227,12 @@ Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/
 - Tooltip shows exact values and date in Bangla/English per locale.
 - Every chart has a "view as table" toggle (accessibility + export).
 
+### 5.8a Print and PDF (FR-REP-003)
+- Report pages (Reports trends and reconciliation, Staff, Attendance) carry a secondary **PDF / Print** button in the page header; the browser's "Save as PDF" makes the file, so Bangla conjuncts are shaped and Noto Sans Bengali is embedded.
+- On paper: A4, light theme always, no sidebar, header, toolbars, pagers, drawers or toasts; a masthead with organisation, branch, print time and who printed; every table column is printed (priority classes are ignored); table headers repeat on each page and rows are never split.
+- Controls turn into text: a `Segmented` prints "label: chosen option"; date pickers and arrows are hidden and a `PrintOnly` line states the date or period.
+- Charts print as their data table (charts sized for the screen do not re-layout for the page).
+
 ### 5.9 Toasts & banners
 Toast bottom-right, 4 s, max 3; success/info only. Errors that need action are banners or inline, never toasts.
 

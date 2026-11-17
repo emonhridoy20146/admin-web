@@ -135,14 +135,16 @@ export function Kbd({ children }: { children: React.ReactNode }) {
 /** Segmented control (single choice, few options). Labels and counts come from the caller. */
 export function Segmented<V extends string>({ value, options, onChange, label, className }: { value: V; options: { value: V; label: React.ReactNode; count?: number }[]; onChange: (v: V) => void; label: string; className?: string }) {
   return (
-    <div className={cn('inline-flex w-fit max-w-full overflow-x-auto rounded-md border border-line bg-surface p-0.5 shadow-e1', className)} role="group" aria-label={label}>
+    <div className={cn('inline-flex w-fit max-w-full overflow-x-auto rounded-md border border-line bg-surface p-0.5 shadow-e1 print:items-baseline print:border-0 print:p-0', className)} role="group" aria-label={label}>
+      {/* on paper only the chosen option is printed, after the control's name */}
+      <span className="hidden pe-1.5 text-sm text-fg-tertiary print:inline">{label}:</span>
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cn('inline-flex h-8 items-center gap-1.5 rounded-sm px-3 text-sm font-medium whitespace-nowrap [@media(pointer:coarse)]:h-10', value === o.value ? 'bg-primary-subtle text-primary-subtle-fg' : 'text-fg-secondary hover:text-fg')}
+          className={cn('inline-flex h-8 items-center gap-1.5 rounded-sm px-3 text-sm font-medium whitespace-nowrap [@media(pointer:coarse)]:h-10', value === o.value ? 'bg-primary-subtle text-primary-subtle-fg print:h-auto print:bg-transparent print:px-0 print:text-fg' : 'text-fg-secondary hover:text-fg print:hidden')}
         >
           {o.label}
           {o.count != null && o.count > 0 && <span className="tabular rounded-full bg-surface-subtle px-1.5 text-xs text-fg-secondary">{formatNumber(o.count)}</span>}

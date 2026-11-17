@@ -61,3 +61,8 @@ Only with `NEXT_PUBLIC_API_MOCK=1`: the MSW mock stores the signed-in demo user 
 - **Reason:** field-api ADR-029 credits every participant and lets the business weight joint visits; managers need the per-person picture without inflating branch totals. Money figures are untouched: collections stay with the collector.
 - **Alternatives rejected:** dividing a joint visit between participants in the UI (the server owns the rule); showing only the credit (hides how much was joint work).
 
+## ADR-W13 — Bangla PDF by printing the report page
+- **Decision:** Report pages print to PDF through the browser ("PDF / Print" → "Save as PDF"). A print stylesheet gives A4, the light theme, a masthead with branch, time and user, every table column, repeated headers and charts as tables. Owner approved 2026-11-17 (field-api OD-26).
+- **Reason:** the browser's text engine shapes Bangla conjuncts and embeds the self-hosted Noto Sans Bengali with no extra service. What is printed is what the manager sees, with the same filters.
+- **Consequences:** only the rows on screen are printed: paged lists print the current page. Large files stay CSV/XLSX downloads, and server-side PDF exports can be offered next to printing once field-api supports them.
+

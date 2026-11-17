@@ -23,7 +23,15 @@ export function ChartCard({ title, subtitle, actions, chart, table, className }:
           </>
         }
       />
-      <div className="p-4">{asTable ? table : chart}</div>
+      {asTable ? (
+        <div className="p-4">{table}</div>
+      ) : (
+        <>
+          <div className="p-4 print:hidden">{chart}</div>
+          {/* on paper the data table is printed: charts sized for the screen do not re-layout reliably for the page */}
+          <div className="hidden p-4 print:block">{table}</div>
+        </>
+      )}
     </Card>
   );
 }

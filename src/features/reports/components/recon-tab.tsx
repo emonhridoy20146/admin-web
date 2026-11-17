@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, CircleCheck, Scale, TriangleAlert } from 'lu
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
-import { formatDateTime, formatMoney, formatNumber } from '@/shared/lib/format';
+import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/shared/lib/format';
 import { addDays, todayDhaka } from '@/shared/lib/time';
 import { useUrlState } from '@/shared/lib/url-state';
 import { DataTable, type Column } from '@/shared/ui/data-table';
@@ -15,6 +15,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Field, Input } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
+import { PrintOnly } from '@/shared/ui/print';
 import { useReconciliation, type Mismatch } from '../api/reports';
 import { difference, kindCounts, reconGap } from '../model/reports';
 
@@ -23,6 +24,7 @@ const KIND_TONE: Record<string, 'warning' | 'danger' | 'neutral'> = { not_posted
 
 export function ReconTab() {
   const { t } = useTranslation('reports');
+  const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const gate = useGate();
@@ -65,13 +67,16 @@ export function ReconTab() {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-end gap-2">
-        <Button size="icon" aria-label={t('recon.prevDay')} onClick={() => url.set({ date: addDays(date, -1) })}>
+        <PrintOnly className="mb-1.5 inline text-base font-medium text-fg">{tc('print.date', { date: formatDate(date) })}</PrintOnly>
+        <Button size="icon" className="print:hidden" aria-label={t('recon.prevDay')} onClick={() => url.set({ date: addDays(date, -1) })}>
           <ChevronLeft className="size-4" aria-hidden />
         </Button>
-        <Field label={t('recon.date')}>
-          {(id) => <Input id={id} type="date" max={today} value={date} onChange={(e) => e.target.value && url.set({ date: e.target.value })} className="w-44" />}
-        </Field>
-        <Button size="icon" aria-label={t('recon.nextDay')} disabled={date >= today} onClick={() => url.set({ date: addDays(date, 1) })}>
+        <div className="print:hidden">
+          <Field label={t('recon.date')}>
+            {(id) => <Input id={id} type="date" max={today} value={date} onChange={(e) => e.target.value && url.set({ date: e.target.value })} className="w-44" />}
+          </Field>
+        </div>
+        <Button size="icon" className="print:hidden" aria-label={t('recon.nextDay')} disabled={date >= today} onClick={() => url.set({ date: addDays(date, 1) })}>
           <ChevronRight className="size-4" aria-hidden />
         </Button>
         {r && !q.isLoading ? (
@@ -79,7 +84,7 @@ export function ReconTab() {
         ) : null}
       </div>
 
-      <dl className="mb-2 grid gap-px overflow-hidden rounded-md border border-line bg-line shadow-e1 sm:grid-cols-2 lg:grid-cols-4 [&>*]:bg-surface">
+      <dl className="mb-2 grid gap-px overflow-hidden rounded-md border border-line bg-line shadow-e1 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4 [&>*]:bg-surface">
         {([
           ['fosPosted', tot?.fosPostedPoisha, tot?.fosPostedCount, false],
           ['fosWaiting', tot?.fosWaitingPoisha, tot?.fosWaitingCount, (tot?.fosWaitingCount ?? 0) > 0],

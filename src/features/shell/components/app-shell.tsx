@@ -20,6 +20,7 @@ import { BrandMark } from '@/features/auth';
 import { Header } from './header';
 import { IdleWatcher } from './idle-watcher';
 import { CommandPalette } from './command-palette';
+import { PrintMasthead } from './print-masthead';
 import { useBranchSync } from './branch-switcher';
 import { useBranchFlags, useMe } from '../api/queries';
 
@@ -103,13 +104,13 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="min-h-dvh bg-bg print:bg-surface">
       <a href="#main" className="sr-only z-[80] rounded-sm bg-primary px-3 py-2 text-primary-fg focus:not-sr-only focus:fixed focus:start-3 focus:top-3">
         {t('skip')}
       </a>
       <aside
         className={cn(
-          'fixed inset-y-0 start-0 z-20 hidden flex-col border-e border-line bg-surface transition-[width] duration-[var(--dur-base)] ease-standard md:flex',
+          'fixed inset-y-0 start-0 z-20 hidden flex-col border-e border-line bg-surface transition-[width] duration-[var(--dur-base)] ease-standard md:flex print:hidden',
           collapsed ? 'w-16' : 'w-16 lg:w-[248px]',
         )}
       >
@@ -126,15 +127,16 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
         </D.Portal>
       </D.Root>
 
-      <div className={cn('transition-[padding] duration-[var(--dur-base)] ease-standard md:ps-16', !collapsed && 'lg:ps-[248px]')}>
+      <div className={cn('transition-[padding] duration-[var(--dur-base)] ease-standard md:ps-16 print:ps-0', !collapsed && 'lg:ps-[248px]')}>
         <Header onMenu={() => setMobileOpen(true)} onSearch={() => setPaletteOpen(true)} />
         {!online && (
-          <div role="status" className="flex items-center justify-center gap-2 border-b border-warning/30 bg-warning-bg px-4 py-2 text-sm font-medium text-warning">
+          <div role="status" className="flex items-center justify-center gap-2 border-b border-warning/30 bg-warning-bg px-4 py-2 text-sm font-medium text-warning print:hidden">
             <WifiOff className="size-4" aria-hidden />
             {t('offline')}
           </div>
         )}
-        <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-16 sm:pt-6 lg:px-6" data-offline={!online || undefined}>
+        <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-16 sm:pt-6 lg:px-6 print:max-w-none print:p-0" data-offline={!online || undefined}>
+          <PrintMasthead />
           <ModuleGate>{children}</ModuleGate>
         </main>
       </div>

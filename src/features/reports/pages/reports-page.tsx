@@ -2,6 +2,8 @@
 import { useTranslation } from 'react-i18next';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader } from '@/shared/ui/page';
+import { PrintButton } from '@/shared/ui/print';
+import { todayDhaka } from '@/shared/lib/time';
 import { Segmented } from '@/shared/ui/primitives';
 import { ExportsTab } from '../components/exports-tab';
 import { ReconTab } from '../components/recon-tab';
@@ -14,7 +16,7 @@ export function ReportsPage() {
   const tab = oneOf(url.get('tab'), TABS, 'trends');
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('title')} actions={tab === 'exports' ? undefined : <PrintButton name={`${t('title')} - ${t(`tabs.${tab}`)} - ${todayDhaka()}`} />}>
         <span>{t('subtitle')}</span>
       </PageHeader>
       <Segmented className="mb-5" label={t('tabs.label')} value={tab} onChange={(v) => url.set({ tab: v === 'trends' ? null : v, date: null, range: null })} options={TABS.map((x) => ({ value: x, label: t(`tabs.${x}`) }))} />
