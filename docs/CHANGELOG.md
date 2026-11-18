@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.13.0** from field-api `main` (merge c69ed55, PR #10; 1.12.0 → 1.13.0; types regenerated with `pnpm gen:api`).
+### Fixed (hosting, owner report 2026-11-18: Vercel test deploy)
+- Customer detail pages (`/customers/<id>/`) returned 404 on Vercel: the Build Output rewrites to `/customers/view/` now carry `check: true`, so Vercel looks the destination up in the static files (what `vercel.json` rewrites compile to).
+- Maps were blank on Vercel because `img-src` only allowed `'self' data: blob:`. `TILE_ORIGIN` now defaults to `https://tile.openstreetmap.org https://*.tile.openstreetmap.org` (field-api's default tile provider) for `img-src` and `connect-src`; set `TILE_ORIGIN` to override.
+- The routes moved to `scripts/lib/vercel-config.mjs` with unit tests (`scripts/lib/vercel-config.test.mjs`): API origin taken from `NEXT_PUBLIC_API_BASE_URL`, tile hosts on every page, customer rewrites. `vercel-output.mjs` warns when `NEXT_PUBLIC_API_BASE_URL` is missing at build time.
+- Typos in the page title template ("Eletronics") and `CLAUDE.md`; duplicate `.vercel` line in `.gitignore`.
 ### Added (hosting, owner request 2026-11-18: test the admin on Vercel)
 - `vercel.json` with the customer page rewrites (ADR-W02), the same rules as Cloudflare `_redirects`, Nginx and `scripts/serve-static.mjs`. README notes the Vercel env, redeploy and same-parent-domain needs.
 - Vercel production headers (ADR-W09): `scripts/vercel-output.mjs` runs after `next build` on Vercel and writes the Build Output API v3 (`.vercel/output`): the customer rewrites, trailing-slash redirect, 404 page, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, long cache for `_next/static`, and a CSP per page with that build's inline-script hashes (no `'unsafe-inline'`). `vercel.json` now only sets the install and build commands. The CSP and headers code moved to `scripts/lib/csp.mjs`, shared with `scripts/serve-static.mjs`, so the E2E host and Vercel send the same headers. `API_ORIGIN` defaults to the origin of `NEXT_PUBLIC_API_BASE_URL`.
