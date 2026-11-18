@@ -1,5 +1,5 @@
 /*
- * Shared design tokens v1.0 — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
+ * Shared design tokens v1.1 — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
  * Any change here must also be applied to staff-app/docs/03-design-guide.md §2 and both CHANGELOGs.
  * Components never use raw hex values: they use the semantic variables below via the Tailwind theme.
  */
@@ -98,10 +98,31 @@
   --st-mock-fg: #9d174d;
   --st-mock-bg: #fce7f3;
 
+  /* pay state (v1.1, ADR-W18): map pin fill / text and outline / soft background */
+  --ps-bad-pin: #dc2626;
+  --ps-bad-fg: #b91c1c;
+  --ps-bad-bg: #fdecec;
+  --ps-missed-many-pin: #ea580c;
+  --ps-missed-many-fg: #c2410c;
+  --ps-missed-many-bg: #fff1e8;
+  --ps-missed-one-pin: #eab308;
+  --ps-missed-one-fg: #854d0e;
+  --ps-missed-one-bg: #fef9c3;
+  --ps-due-today-pin: #2563eb;
+  --ps-due-today-fg: #1d4ed8;
+  --ps-due-today-bg: #e8f0fe;
+  --ps-on-track-pin: #16a34a;
+  --ps-on-track-fg: #166534;
+  --ps-on-track-bg: #e8f6ec;
+  --ps-paid-off-pin: #64748b;
+  --ps-paid-off-fg: #475569;
+  --ps-paid-off-bg: #eef1f5;
+
   /* elevation (light) */
   --e1: 0 1px 2px rgb(16 24 40 / 0.06);
   --e2: 0 2px 8px rgb(16 24 40 / 0.08);
   --e3: 0 12px 32px rgb(16 24 40 / 0.14);
+  --pin-shadow: rgb(16 24 40 / 0.35);
 
   /* motion */
   --dur-fast: 120ms;
@@ -162,6 +183,25 @@
   --st-pending-bg: #1a2030;
   --st-mock-fg: #f472b6;
   --st-mock-bg: #2e1020;
+
+  --ps-bad-pin: #ef4444;
+  --ps-bad-fg: #f87171;
+  --ps-bad-bg: #2d1212;
+  --ps-missed-many-pin: #f97316;
+  --ps-missed-many-fg: #fb923c;
+  --ps-missed-many-bg: #2e1a0c;
+  --ps-missed-one-pin: #facc15;
+  --ps-missed-one-fg: #fde047;
+  --ps-missed-one-bg: #2e2a08;
+  --ps-due-today-pin: #60a5fa;
+  --ps-due-today-fg: #93c5fd;
+  --ps-due-today-bg: #0f1f3d;
+  --ps-on-track-pin: #4ade80;
+  --ps-on-track-fg: #4ade80;
+  --ps-on-track-bg: #0f2a1a;
+  --ps-paid-off-pin: #94a3b8;
+  --ps-paid-off-fg: #a9b1bf;
+  --ps-paid-off-bg: #1a2030;
 
   --chart-1: #5f7df7;
   --pay-cash: #5f7df7;

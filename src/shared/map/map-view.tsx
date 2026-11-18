@@ -1,9 +1,10 @@
 'use client';
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import { cn } from '@/shared/lib/cn';
 import type { Bounds, LatLng } from './geo';
+import { pinIconHtml, pinSize, type PinLook } from './pin-icon';
 import { useTileProvider } from './use-tiles';
 
 export interface MapMarker extends LatLng {
@@ -15,12 +16,20 @@ export interface MapMarker extends LatLng {
   strong?: boolean;
   /** hollow marker (e.g. "current" pin next to a proposed one) */
   hollow?: boolean;
+  /** drawn as a map pin (round head, point on the spot) instead of a dot; `token` is then unused */
+  pin?: PinLook;
+  /** higher draws on top (worst state over calm ones) */
+  z?: number;
 }
 
 export interface MapCluster extends LatLng {
   count: number;
   token: string;
   label: string;
+  /** share of each colour in the cluster, drawn as a ring around the count */
+  ring?: { token: string; n: number }[];
+  /** hover text */
+  title?: string;
 }
 
 export interface MapPath {
@@ -34,14 +43,34 @@ export interface MapViewState {
   zoom: number;
 }
 
+const esc = (v: string) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/** conic-gradient stops for a cluster ring: `var(--a) 0% 40%, var(--b) 40% 100%` */
+export function ringGradient(ring: { token: string; n: number }[]): string | null {
+  const total = ring.reduce((s, r) => s + Math.max(0, r.n), 0);
+  if (!total) return null;
+  let at = 0;
+  const stops = ring
+    .filter((r) => r.n > 0)
+    .map((r) => {
+      const from = at;
+      at += (r.n / total) * 100;
+      return `var(${r.token.replace(/[^a-z0-9-]/gi, '')}) ${from.toFixed(2)}% ${at.toFixed(2)}%`;
+    });
+  return `conic-gradient(${stops.join(', ')})`;
+}
+
 /**
- * Leaflet wrapper (loaded on the client only: Leaflet touches `window` at import). Markers are vector circles
- * coloured from design tokens, so no marker images and no extra CSP hosts beyond the tile origin.
+ * Leaflet wrapper (loaded on the client only: Leaflet touches `window` at import). Markers are vector circles or
+ * SVG pins coloured from design tokens, so no marker images and no extra CSP hosts beyond the tile origin.
  * The map is a visual aid; every page that uses it also lists the same items as text (keyboard / screen reader).
+ * The user moves it freely: the page only moves it on purpose through `fit` (a new branch, a cluster click).
  */
-export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fit, onView, onMarkerClick, onClusterClick, className, label }: {
+export function MapView({ center, zoom = 13, initialBounds, markers, clusters, lines, paths, fit, onView, onMarkerClick, onClusterClick, className, label }: {
   center: LatLng;
   zoom?: number;
+  /** opens on these bounds instead of `center`/`zoom` (read once, when the map is created) */
+  initialBounds?: Bounds | null;
   markers?: MapMarker[];
   clusters?: MapCluster[];
   lines?: [LatLng, LatLng][];
@@ -64,6 +93,7 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fi
   cb.current = { onView, onMarkerClick, onClusterClick };
   const provider = useTileProvider().data;
   const ready = useRef(false);
+  const [created, setCreated] = useState(false);
   const redraw = useRef<() => void>(() => undefined);
 
   const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || 'currentColor';
@@ -76,10 +106,24 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fi
     for (const [a, b] of lines ?? []) lf.polyline([[a.lat, a.lng], [b.lat, b.lng]], { color: token('--fg-secondary'), weight: 2, dashArray: '4 6' }).addTo(layer.current);
     for (const c of clusters ?? []) {
       const size = c.count > 200 ? 46 : c.count > 50 ? 40 : 34;
-      const icon = lf.divIcon({ className: '', iconSize: [size, size], html: `<span class="fos-cluster" style="--c:${token(c.token)};width:${size}px;height:${size}px">${c.label}</span>` });
-      lf.marker([c.lat, c.lng], { icon, keyboard: false, title: c.label }).on('click', () => cb.current.onClusterClick?.(c)).addTo(layer.current);
+      const ring = c.ring ? ringGradient(c.ring) : null;
+      const label = esc(c.label);
+      const html = ring
+        ? `<span class="fos-cluster has-ring" style="--c:var(${c.token.replace(/[^a-z0-9-]/gi, '')});--ring:${ring};width:${size + 6}px;height:${size + 6}px"><span>${label}</span></span>`
+        : `<span class="fos-cluster" style="--c:${token(c.token)};width:${size}px;height:${size}px">${label}</span>`;
+      const icon = lf.divIcon({ className: '', iconSize: ring ? [size + 6, size + 6] : [size, size], html });
+      lf.marker([c.lat, c.lng], { icon, keyboard: false, title: c.title ?? c.label, zIndexOffset: 5000 }).on('click', () => cb.current.onClusterClick?.(c)).addTo(layer.current);
     }
     for (const m of markers ?? []) {
+      if (m.pin) {
+        const [w, h] = pinSize(m.strong);
+        const icon = lf.divIcon({ className: '', iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4], html: pinIconHtml(m.pin, m.strong) });
+        lf.marker([m.lat, m.lng], { icon, keyboard: false, riseOnHover: true, zIndexOffset: (m.z ?? 0) * 1000 + (m.strong ? 10_000 : 0) })
+          .bindTooltip(m.title, { direction: 'top' })
+          .on('click', () => cb.current.onMarkerClick?.(m.id))
+          .addTo(layer.current);
+        continue;
+      }
       const color = token(m.token);
       lf.circleMarker([m.lat, m.lng], { radius: m.strong ? 9 : 6, color: m.hollow ? color : token('--surface'), weight: m.hollow ? 2.5 : 1.5, fillColor: color, fillOpacity: m.hollow ? 0.12 : 0.95 })
         .bindTooltip(m.title, { direction: 'top', offset: [0, -6] })
@@ -94,7 +138,9 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fi
       if (dead || !el.current || map.current) return;
       const lf = (mod as unknown as { default?: typeof Leaflet }).default ?? mod;
       L.current = lf;
-      const m = lf.map(el.current, { center: [center.lat, center.lng], zoom, zoomControl: true, attributionControl: true });
+      const m = initialBounds
+        ? lf.map(el.current, { zoomControl: true, attributionControl: true }).fitBounds([[initialBounds.minLat, initialBounds.minLng], [initialBounds.maxLat, initialBounds.maxLng]], { animate: false })
+        : lf.map(el.current, { center: [center.lat, center.lng], zoom, zoomControl: true, attributionControl: true });
       m.attributionControl.setPrefix(false);
       map.current = m;
       layer.current = lf.layerGroup().addTo(m);
@@ -104,6 +150,7 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fi
       };
       m.on('moveend', emit);
       ready.current = true;
+      setCreated(true);
       redraw.current();
       emit();
     });
@@ -112,17 +159,22 @@ export function MapView({ center, zoom = 13, markers, clusters, lines, paths, fi
       map.current?.remove();
       map.current = null;
       ready.current = false;
+      setCreated(false);
     };
     // the map is created once; later centre changes go through `fit`
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tiles are (re)made only when the map appears or the provider changes. This used to run after every render, so
+  // each pan or zoom (a new view, a re-render) dropped and reloaded all tiles and the map felt stuck while moving.
+  const tileKey = provider?.urlTemplate ? [provider.urlTemplate, provider.apiKeyRef ?? '', provider.attribution ?? '', provider.maxZoom ?? 19, (provider.subdomains ?? []).join('')].join('|') : '';
   useEffect(() => {
     const lf = L.current;
-    if (!lf || !map.current || !provider?.urlTemplate) return;
+    if (!created || !lf || !map.current || !provider?.urlTemplate) return;
     tiles.current?.remove();
     tiles.current = lf.tileLayer(provider.urlTemplate.replace('{key}', provider.apiKeyRef ?? ''), { attribution: provider.attribution ?? '', maxZoom: provider.maxZoom ?? 19, subdomains: provider.subdomains?.length ? provider.subdomains : 'abc' }).addTo(map.current);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [created, tileKey]);
 
   useEffect(() => {
     if (ready.current) redraw.current();

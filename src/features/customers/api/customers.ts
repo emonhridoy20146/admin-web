@@ -65,13 +65,23 @@ export function useContactAttempts(id: string) {
 export type MapPin = components['schemas']['MapPin'];
 export type LocationProposal = components['schemas']['LocationProposal'];
 
-/** FR-CUS-008: pins in the visible box (max 2000) or clusters when zoomed out. */
-export function useCustomerMap(bbox: string | null, zoom: number, filter: string) {
+export type MapQuery = NonNullable<operations['customerMap']['parameters']['query']>;
+export type MapCluster = NonNullable<Awaited<ReturnType<typeof fetchMap>>['clusters']>[number];
+const fetchMap = (query: MapQuery) => unwrap(api.GET('/customers/map', { params: { query } }));
+
+/**
+ * FR-CUS-008: pins in the visible box (max 2000) or clusters when zoomed out. 1.14.0: `payState` (pin colours, OR)
+ * and `invoiceKind` (customers with an open installment or credit invoice) narrow it on the server.
+ */
+export function useCustomerMap(bbox: string | null, zoom: number, opts: { filter?: string[]; payState?: MapQuery['payState']; invoiceKind?: MapQuery['invoiceKind'] } = {}) {
   const branchId = useBranchId();
   useInvalidateOn([EV.customerTagged], [['customers', 'map']]);
+  const filter = opts.filter?.length ? opts.filter.join(',') : undefined;
+  const payState = opts.payState?.length ? opts.payState : undefined;
+  const invoiceKind = opts.invoiceKind;
   return useQuery({
-    queryKey: ['customers', 'map', { branchId, bbox, zoom, filter }],
-    queryFn: () => unwrap(api.GET('/customers/map', { params: { query: { bbox: bbox!, zoom, filter: filter || undefined, branchId } } })),
+    queryKey: ['customers', 'map', { branchId, bbox, zoom, filter, payState, invoiceKind }],
+    queryFn: () => fetchMap({ bbox: bbox!, zoom, filter, payState, invoiceKind, branchId }),
     enabled: !!bbox,
     placeholderData: keepPreviousData,
     staleTime: 60_000,

@@ -6,7 +6,7 @@ import { Crosshair, LocateFixed } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { formatNumber, pickText } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatCoords, haversineM, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
+import { DEFAULT_POINT, formatCoords, haversineM, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
 import { MapPicker } from '@/shared/map/map-picker';
 import { Button } from '@/shared/ui/button';
 import { ErrorBanner } from '@/shared/ui/feedback';
@@ -15,7 +15,8 @@ import { Dialog } from '@/shared/ui/overlay';
 import { useSetLocation, type CustomerDetail } from '../api/customers';
 import { currentPin } from '../model/pin';
 
-const FALLBACK: LatLng = { lat: 22.7022, lng: 90.3696 };
+/** No branch point yet (the ERP has none): start in Patuakhali town (ADR-W18). */
+const FALLBACK: LatLng = DEFAULT_POINT;
 
 /**
  * FR-CUS-011: set a customer's pin by moving the map under a fixed pin (ride-app style), or by pasting coordinates.

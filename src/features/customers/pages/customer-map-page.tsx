@@ -1,57 +1,116 @@
 'use client';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { List, ZoomIn } from 'lucide-react';
 import { useBranches } from '@/features/shell';
+import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatNumber } from '@/shared/lib/format';
-import { listOf, useUrlState } from '@/shared/lib/url-state';
-import { bboxParam, type Bounds } from '@/shared/map/geo';
+import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
+import { bboxParam, boxAround, branchPoint, centerOf, DEFAULT_AREA, parseViewpoint, viewpointParam, type Bounds, type MapViewpoint } from '@/shared/map/geo';
 import { MapView, type MapCluster, type MapMarker, type MapViewState } from '@/shared/map/map-view';
+import { PinIcon } from '@/shared/map/pin-icon';
 import { PageHeader } from '@/shared/ui/page';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
-import { FilterChip } from '@/shared/ui/primitives';
+import { FilterChip, Segmented } from '@/shared/ui/primitives';
 import { MoneyText } from '@/shared/ui/money';
-import { StatusBadge } from '@/shared/ui/badge';
 import { useCustomerMap } from '../api/customers';
-import { MAP_FILTERS, PIN_ZOOM, statusToken } from '../model/map';
+import { MAP_FILTERS, PIN_ZOOM } from '../model/map';
+import { isPayState, PAY_STATES, PS_CLASS, payLook, payRank, payStateOf, psToken, type PayState } from '../model/pay-state';
 import { CustomerDrawer } from '../components/customer-drawer';
+import { payLabel, PayLegend, PayStateBadge } from '../components/pay-state';
 
 const LIST_MAX = 60;
+const KINDS = ['all', 'installment', 'credit'] as const;
+type Start = { bounds: Bounds } | MapViewpoint;
+
+/** Keeps the map's place in the address bar without a router round trip (it changes on every pan). */
+function writeViewpoint(at: string) {
+  const sp = new URLSearchParams(window.location.search);
+  if (sp.get('at') === at) return;
+  sp.set('at', at);
+  // Next.js syncs its router with a native replaceState when the state passed is not its own (null)
+  window.history.replaceState(null, '', `${window.location.pathname}?${sp.toString()}`);
+}
 
 export function CustomerMapPage() {
   const { t } = useTranslation('customers');
-  const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const branchId = useUi((s) => s.branchId);
+  const hydrated = useUi((s) => s.hydrated);
   const branches = useBranches();
   const url = useUrlState();
   const filters = listOf(url.getList('filter'), MAP_FILTERS);
+  const pay = listOf(url.getList('pay'), PAY_STATES);
+  const kind = oneOf(url.get('kind'), KINDS, 'all');
   const [view, setView] = useState<MapViewState | null>(null);
   const [fit, setFit] = useState<Bounds | null>(null);
-  const q = useCustomerMap(view ? bboxParam(view.bounds) : null, view?.zoom ?? PIN_ZOOM, filters.join(','));
+  const q = useCustomerMap(view ? bboxParam(view.bounds) : null, view?.zoom ?? PIN_ZOOM, { filter: filters, payState: pay, invoiceKind: kind === 'all' ? undefined : kind });
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('customer:') ? drawer.slice(9) : null;
+  const fmt = useCallback((n: number) => formatNumber(n), []);
 
-  const branch = branches.data?.find((b) => b.id === branchId) ?? branches.data?.[0];
-  const center = useMemo(() => ({ lat: branch?.lat ?? 22.7022, lng: branch?.lng ?? 90.3696 }), [branch?.lat, branch?.lng]);
+  // Where the map opens: the view kept in the link (reload, Back, a shared link), else the chosen branch's point,
+  // else Patuakhali district. Decided once, after the branches are known, so it never jumps back later.
+  const [start, setStart] = useState<Start | null>(null);
+  const lastBranch = useRef(branchId);
+  useEffect(() => {
+    if (start || !hydrated || branches.isPending) return;
+    const home = branchPoint(branches.data, branchId);
+    lastBranch.current = branchId;
+    setStart(parseViewpoint(url.get('at')) ?? (home ? { center: home, zoom: PIN_ZOOM } : { bounds: DEFAULT_AREA }));
+  }, [start, hydrated, branches.isPending, branches.data, branchId, url]);
+  // The user moves the map wherever they like; it only moves by itself when they pick another branch.
+  useEffect(() => {
+    if (!start || lastBranch.current === branchId) return;
+    lastBranch.current = branchId;
+    const home = branchPoint(branches.data, branchId);
+    setFit(home ? boxAround(home, 3) : DEFAULT_AREA);
+  }, [start, branchId, branches.data]);
 
   const pins = useMemo(() => q.data?.pins ?? [], [q.data?.pins]);
   const markers: MapMarker[] = useMemo(
-    () => pins.filter((p) => p.lat != null && p.lng != null).map((p) => ({ id: p.id!, lat: p.lat!, lng: p.lng!, token: statusToken(p.tagged ? 'tagged_bad' : p.status), title: p.name ?? '', strong: p.id === drawerId })),
-    [pins, drawerId],
+    () =>
+      pins
+        .filter((p) => p.lat != null && p.lng != null)
+        .map((p) => {
+          const s = payStateOf(p);
+          return { id: p.id!, lat: p.lat!, lng: p.lng!, token: psToken(s, 'pin'), title: `${p.name ?? ''} · ${payLabel(t, s, p.missedCount)}`, strong: p.id === drawerId, pin: payLook(s, p.missedCount, fmt), z: PAY_STATES.length - payRank(s) };
+        }),
+    [pins, drawerId, t, fmt],
   );
-  const clusters: MapCluster[] = useMemo(
-    () => (q.data?.clusters ?? []).filter((c) => c.lat != null && c.lng != null).map((c) => ({ lat: c.lat!, lng: c.lng!, count: c.count ?? 0, token: statusToken(c.worstStatus), label: formatNumber(c.count ?? 0) })),
-    [q.data?.clusters],
+  const rawClusters = useMemo(() => (q.data?.clusters ?? []).filter((c) => c.lat != null && c.lng != null), [q.data?.clusters]);
+  const clusters: (MapCluster & { worst: PayState; mix: Partial<Record<PayState, number>> | null })[] = useMemo(
+    () =>
+      rawClusters.map((c) => {
+        const worst = isPayState(c.worstPayState) ? c.worstPayState : payStateOf({ status: c.worstStatus });
+        const mix = c.payStates ? (Object.fromEntries(PAY_STATES.map((s) => [s, c.payStates?.[s] ?? 0])) as Record<PayState, number>) : null;
+        const title = mix ? PAY_STATES.filter((s) => mix[s]).map((s) => `${t(`pay.state.${s}`)}: ${formatNumber(mix[s])}`).join(' · ') : undefined;
+        return { lat: c.lat!, lng: c.lng!, count: c.count ?? 0, token: psToken(worst, 'pin'), label: formatNumber(c.count ?? 0), ring: mix ? PAY_STATES.map((s) => ({ token: psToken(s, 'pin'), n: mix[s] })) : undefined, title, worst, mix };
+      }),
+    [rawClusters, t],
   );
   const total = clusters.reduce((s, c) => s + c.count, 0);
-  const onView = useCallback((v: MapViewState) => setView(v), []);
+  // how many of each colour are on the map now (clusters from an older server carry no mix: no counts then)
+  const counts = useMemo(() => {
+    const n = Object.fromEntries(PAY_STATES.map((s) => [s, 0])) as Record<PayState, number>;
+    if (clusters.length) {
+      if (clusters.some((c) => !c.mix)) return null;
+      for (const c of clusters) for (const s of PAY_STATES) n[s] += c.mix?.[s] ?? 0;
+    } else for (const p of pins) n[payStateOf(p)] += 1;
+    return n;
+  }, [clusters, pins]);
+
+  const onView = useCallback((v: MapViewState) => {
+    setView(v);
+    writeViewpoint(viewpointParam({ center: centerOf(v.bounds), zoom: v.zoom }));
+  }, []);
   const open = useCallback((id: string) => url.set({ drawer: `customer:${id}` }, { push: true }), [url]);
   const zoomTo = useCallback((c: { lat: number; lng: number }) => setFit({ minLat: c.lat - 0.012, maxLat: c.lat + 0.012, minLng: c.lng - 0.016, maxLng: c.lng + 0.016 }), []);
-  const sorted = useMemo(() => [...pins].sort((a, b) => (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
+  const sorted = useMemo(() => [...pins].sort((a, b) => payRank(payStateOf(a)) - payRank(payStateOf(b)) || (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
+  const togglePay = (s: PayState) => url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s] });
 
   return (
     <>
@@ -67,21 +126,46 @@ export function CustomerMapPage() {
         <span>{t('map.subtitle')}</span>
       </PageHeader>
 
-      <div className="scrollbar-thin -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-        {MAP_FILTERS.map((f) => (
-          <FilterChip key={f} selected={filters.includes(f)} onClick={() => url.set({ filter: filters.includes(f) ? filters.filter((x) => x !== f) : [...filters, f] })}>
-            {t(`filters.${f}`)}
-          </FilterChip>
-        ))}
+      <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center">
+        <Segmented
+          label={t('invoiceKind.label')}
+          value={kind}
+          onChange={(v) => url.set({ kind: v === 'all' ? null : v })}
+          options={KINDS.map((k) => ({ value: k, label: t(`invoiceKind.${k}`) }))}
+        />
+        <div className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
+          {MAP_FILTERS.map((f) => (
+            <FilterChip key={f} selected={filters.includes(f)} onClick={() => url.set({ filter: filters.includes(f) ? filters.filter((x) => x !== f) : [...filters, f] })}>
+              {t(`filters.${f}`)}
+            </FilterChip>
+          ))}
+        </div>
       </div>
+
+      <PayLegend selected={pay} counts={counts} onToggle={togglePay} onClear={() => url.set({ pay: null })} />
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="h-[52vh] min-h-80 lg:h-[calc(100vh-15rem)]">
-          <MapView label={t('map.title')} center={center} zoom={13} markers={markers} clusters={clusters} fit={fit} onView={onView} onMarkerClick={open} onClusterClick={zoomTo} />
+        <div className="h-[52vh] min-h-80 lg:h-[calc(100vh-17rem)]">
+          {start ? (
+            <MapView
+              label={t('map.title')}
+              center={'center' in start ? start.center : centerOf(start.bounds)}
+              zoom={'zoom' in start ? start.zoom : PIN_ZOOM}
+              initialBounds={'bounds' in start ? start.bounds : null}
+              markers={markers}
+              clusters={clusters}
+              fit={fit}
+              onView={onView}
+              onMarkerClick={open}
+              onClusterClick={zoomTo}
+            />
+          ) : (
+            <Skeleton className="h-full w-full" />
+          )}
         </div>
 
-        <section aria-label={t('map.inView')} className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-e1 lg:h-[calc(100vh-15rem)]">
+        <section aria-label={t('map.inView')} className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-e1 lg:h-[calc(100vh-17rem)]">
           <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
             <h2 className="text-sm font-semibold text-fg">{t('map.inView')}</h2>
             <span className="tabular text-xs text-fg-tertiary" aria-live="polite">
@@ -98,11 +182,17 @@ export function CustomerMapPage() {
                   {t('map.zoomHint')}
                 </p>
                 <ul className="space-y-1.5">
-                  {[...clusters].sort((a, b) => b.count - a.count).slice(0, 12).map((c, i) => (
+                  {[...clusters].sort((a, b) => payRank(a.worst) - payRank(b.worst) || b.count - a.count).slice(0, 12).map((c, i) => (
                     <li key={i}>
-                      <button type="button" onClick={() => zoomTo(c)} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-sm border border-line px-3 py-2 text-start text-sm hover:bg-surface-hover">
-                        <span className="font-medium text-fg">{t('map.cluster', { n: formatNumber(i + 1) })}</span>
-                        <span className="tabular text-fg-secondary">{t('map.nCustomers', { n: c.label })}</span>
+                      <button type="button" onClick={() => zoomTo(c)} className="flex min-h-11 w-full flex-col gap-1.5 rounded-sm border border-line px-3 py-2 text-start text-sm hover:bg-surface-hover">
+                        <span className="flex w-full items-center justify-between gap-3">
+                          <span className="inline-flex items-center gap-1.5 font-medium text-fg">
+                            <PinIcon look={payLook(c.worst, null, fmt)} size={16} />
+                            {t('map.cluster', { n: formatNumber(i + 1) })}
+                          </span>
+                          <span className="tabular text-fg-secondary">{t('map.nCustomers', { n: c.label })}</span>
+                        </span>
+                        {c.mix && <MixBar mix={c.mix} label={c.title ?? ''} />}
                       </button>
                     </li>
                   ))}
@@ -114,10 +204,10 @@ export function CustomerMapPage() {
               <ul className="divide-y divide-line">
                 {sorted.slice(0, LIST_MAX).map((p) => (
                   <li key={p.id}>
-                    <button type="button" onClick={() => open(p.id!)} className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start hover:bg-surface-hover">
+                    <button type="button" onClick={() => open(p.id!)} className={cn('flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start hover:bg-surface-hover', p.id === drawerId && 'bg-surface-hover')}>
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-medium text-fg" lang={locale}>{p.name}</span>
-                        <span className="mt-0.5 block"><StatusBadge status={p.tagged ? 'tagged_bad' : (p.status ?? 'current')} /></span>
+                        <span className="mt-0.5 block"><PayStateBadge state={payStateOf(p)} missed={p.missedCount} /></span>
                       </span>
                       <MoneyText poisha={p.outstandingPoisha ?? 0} className="shrink-0 text-sm font-medium" />
                     </button>
@@ -127,14 +217,7 @@ export function CustomerMapPage() {
               </ul>
             )}
           </div>
-          <footer className="flex flex-wrap gap-x-3 gap-y-1 border-t border-line px-4 py-2.5 text-xs text-fg-secondary">
-            {(['overdue', 'due_today', 'promised_today', 'current', 'paid_up', 'tagged_bad'] as const).map((s) => (
-              <span key={s} className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full" style={{ background: `var(${statusToken(s)})` }} aria-hidden />
-                {tc(`status.${s}`)}
-              </span>
-            ))}
-          </footer>
+          <footer className="border-t border-line px-4 py-2.5 text-xs text-fg-secondary">{t('pay.glyphHint')}</footer>
         </section>
       </div>
 
@@ -148,5 +231,18 @@ export function CustomerMapPage() {
         }
       />
     </>
+  );
+}
+
+/** Share of each colour in a cluster, as a thin stacked bar (the counts are in its label). */
+function MixBar({ mix, label }: { mix: Partial<Record<PayState, number>>; label: string }) {
+  const total = PAY_STATES.reduce((s, x) => s + (mix[x] ?? 0), 0);
+  if (!total) return null;
+  return (
+    <span className="flex h-1.5 w-full gap-px overflow-hidden rounded-full" role="img" aria-label={label}>
+      {PAY_STATES.filter((s) => mix[s]).map((s) => (
+        <span key={s} className={PS_CLASS[s].bar} style={{ width: `${((mix[s] ?? 0) / total) * 100}%` }} />
+      ))}
+    </span>
   );
 }

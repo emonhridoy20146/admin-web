@@ -30,7 +30,9 @@ async function authFetch(input: Request): Promise<Response> {
   return globalThis.fetch(withAuth(retry));
 }
 
-export const api = createClient<paths>({ baseUrl: apiBaseUrl(), fetch: authFetch });
+// Array query parameters are `form` + `explode: false` in the contract (`filter=overdue,due_today`); openapi-fetch
+// repeats the key by default, which field-api refuses (and the mock read only the first value).
+export const api = createClient<paths>({ baseUrl: apiBaseUrl(), fetch: authFetch, querySerializer: { array: { style: 'form', explode: false } } });
 
 /** Unwraps an openapi-fetch result: returns data or throws ApiError (for TanStack Query). */
 export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
