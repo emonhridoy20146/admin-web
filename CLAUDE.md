@@ -3,7 +3,7 @@
 Rules for AI coding agents. Read fully before changing anything.
 
 ## 1. What this repo is
-The admin panel of the Howlader Elecronics Field Operations System for super admins, branch managers and viewers. Next.js 15 + TypeScript, **static export, client-side rendering only** (no SSR, no API routes, no server actions, no middleware). Talks **only** to field-api `/api/v1`.
+The admin panel of the Howlader Electronics Field Operations System for super admins, branch managers and viewers. Next.js 15 + TypeScript, **static export, client-side rendering only** (no SSR, no API routes, no server actions, no middleware). Talks **only** to field-api `/api/v1`.
 
 Read first: `docs/01-system-analysis.md`, `docs/02-requirements.md`, `docs/03-design-guide.md` (tokens + layout rules), `docs/04-architecture.md`, then field-api's `docs/02-requirements.md` (master catalog) and `docs/openapi.yaml`.
 

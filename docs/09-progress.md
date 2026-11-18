@@ -6,7 +6,7 @@ Phases match `field-api/docs/09-progress.md`. admin-web can start each phase aga
 | Item | FR | Status |
 |---|---|---|
 | Repo, CI (lint, boundaries, typecheck, unit, Playwright, axe, Lighthouse), tokens.css, fonts | NFR-W-* | ◐ all local checks run; CI workflow and Lighthouse not yet added |
-| Vercel hosting: rewrites, 404, security headers and hashed CSP per page (`scripts/vercel-output.mjs`) | NFR-W-002, ADR-W02/W09 | ◐ routes checked locally against `serve-static.mjs`; first real Vercel deploy and `E2E_BASE_URL` run pending |
+| Vercel hosting: rewrites, 404, security headers and hashed CSP per page (`scripts/vercel-output.mjs`) | NFR-W-002, ADR-W02/W09 | ◐ routes unit-tested (`scripts/lib/vercel-config.test.mjs`); test deploy at a `*.vercel.app` address: login works, customer pages 404 until the `check: true` fix is deployed; `E2E_BASE_URL` run pending |
 | Auth: login, change password, refresh, idle timeout | FR-AUTH-001..004, FR-W-002 | ☑ (W-E2 journey not yet automated) |
 | Shell: header, sidebar, branch switcher, feature registry, `<Can>` | FR-W-001, FR-W-003 | ☑ |
 | Users & roles, Permissions matrix, Settings, Flags, Audit | FR-USER-*, FR-RBAC-*, FR-SET-*, FR-FLAG-*, FR-AUD-003, FR-W-009 | ☑ |

@@ -12,5 +12,3 @@ coverage/
 
 # Vercel Build Output (scripts/vercel-output.mjs)
 .vercel
-
-.vercel
