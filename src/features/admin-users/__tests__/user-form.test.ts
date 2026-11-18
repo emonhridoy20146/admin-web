@@ -4,6 +4,7 @@ import {
   emptyForm,
   fromUser,
   normalizePhone,
+  orderErpEmployees,
   toCreate,
   toPoisha,
   toUpdate,
@@ -79,5 +80,28 @@ describe('user form model', () => {
     expect(fromUser(before).shiftId).toBe('sh-day');
     expect(changedKeys(toUpdate(before, { ...fromUser(before), shiftId: 'sh-market' }, 'r'))).toEqual(['shiftId']);
     expect(changedKeys(toUpdate(before, fromUser(before), 'r'))).toEqual([]);
+  });
+
+  it('links, changes and unlinks the ERP employee on edit (1.13.0)', () => {
+    const u = { id: 'u1', name: { bn: 'রহিম', en: 'Rahim' }, phone: '01712345678', role: 'field_staff' as const, branchIds: ['b1'], employeeCode: 'FS-01', erpEmployeeId: null, version: 1 };
+    expect(toUpdate(u, { ...fromUser(u), erpEmployeeId: '7' }, 'link')).toEqual({ reason: 'link', erpEmployeeId: '7' });
+    const linked = { ...u, erpEmployeeId: '7' };
+    expect(toUpdate(linked, fromUser(linked), 'same')).toEqual({ reason: 'same' });
+    expect(toUpdate(linked, { ...fromUser(linked), erpEmployeeId: '8' }, 'fix')).toEqual({ reason: 'fix', erpEmployeeId: '8' });
+    expect(toUpdate(linked, { ...fromUser(linked), erpEmployeeId: '' }, 'left')).toEqual({ reason: 'left', erpEmployeeId: null });
+    expect(changedKeys({ reason: 'x', erpEmployeeId: null })).toEqual(['erpEmployeeId']);
+  });
+
+  it("lists the ERP employees of the user's branches first, active before inactive", () => {
+    const list = [
+      { erpEmployeeId: '1', code: 'EMP-1', name: 'Zia', erpBranchIds: ['3'], active: true },
+      { erpEmployeeId: '2', code: 'EMP-2', name: 'Anis', erpBranchIds: ['5'], active: true },
+      { erpEmployeeId: '3', code: 'EMP-3', name: 'Babu', erpBranchIds: ['3'], active: false },
+      { erpEmployeeId: '4', code: 'EMP-4', name: 'Arif', erpBranchIds: ['3'], active: true },
+    ];
+    const { mine, others } = orderErpEmployees(list, ['3']);
+    expect(mine.map((e) => e.erpEmployeeId)).toEqual(['4', '1', '3']);
+    expect(others.map((e) => e.erpEmployeeId)).toEqual(['2']);
+    expect(orderErpEmployees(list, []).mine).toEqual([]);
   });
 });

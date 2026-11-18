@@ -15,7 +15,8 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
-import { useResetPassword, useSetActive, useUser } from '../api/users';
+import { useErpEmployees, useResetPassword, useSetActive, useUser } from '../api/users';
+import { erpEmployeeLabel } from '../model/user-form';
 import { UserFormDialog } from './user-form-dialog';
 import { TempPasswordDialog } from './temp-password-dialog';
 
@@ -29,6 +30,7 @@ export function UserDrawer({ id, onClose }: { id: string | null; onClose: () => 
   const q = useUser(id);
   const branches = useBranches();
   const shifts = useShifts();
+  const erpStaff = useErpEmployees(canManage && !!id);
   const reset = useResetPassword();
   const setActive = useSetActive();
   const [edit, setEdit] = useState(false);
@@ -125,7 +127,16 @@ export function UserDrawer({ id, onClose }: { id: string | null; onClose: () => 
                     { label: t('col.phone'), value: <span className="font-mono">{u.phone}</span> },
                     {
                       label: t('form.erpId'),
-                      value: <span className="font-mono">{u.erpEmployeeId ?? '—'}</span>,
+                      value: u.erpEmployeeId ? (
+                        <span>
+                          {(() => {
+                            const e = erpStaff.data?.items?.find((x) => x.erpEmployeeId === u.erpEmployeeId);
+                            return e ? erpEmployeeLabel(e) : <span className="font-mono">{u.erpEmployeeId}</span>;
+                          })()}
+                        </span>
+                      ) : (
+                        <span className={u.role === 'field_staff' ? 'text-warning' : 'text-fg-tertiary'}>{t('form.erpNone')}</span>
+                      ),
                     },
                   ]}
                 />

@@ -66,6 +66,25 @@ export function ConflictsPage() {
   );
 }
 
+/** What to do next for the conflict codes of the real ERP (contract 1.13.0); unknown codes show only the message. */
+const HINTS = new Set(['DUPLICATE_SAME_DAY', 'COLLECTOR_NOT_LINKED', 'METHOD_NOT_AVAILABLE', 'PLAN_CLOSED']);
+function ConflictHint({ c }: { c: Collection }) {
+  const { t } = useTranslation('collections');
+  const canLink = useCan('user.manage');
+  const code = c.conflict?.code ?? '';
+  if (!HINTS.has(code)) return null;
+  return (
+    <p className="mt-1 text-sm text-fg-secondary">
+      {t(`conflictHint.${code}`, { name: c.collector?.name ?? '' })}
+      {code === 'COLLECTOR_NOT_LINKED' && canLink && c.collector?.id && (
+        <Link href={`/admin/users/?drawer=user:${c.collector.id}`} className="ms-1.5 inline-flex min-h-11 items-center font-medium text-primary hover:underline sm:min-h-0">
+          {t('conflictHint.linkStaff', { name: c.collector?.name ?? '' })}
+        </Link>
+      )}
+    </p>
+  );
+}
+
 function ConflictCard({ c }: { c: Collection }) {
   const { t } = useTranslation('collections');
   const { t: tc } = useTranslation();
@@ -118,6 +137,7 @@ function ConflictCard({ c }: { c: Collection }) {
             {pickText(c.conflict?.message, locale)}{' '}
             <span className="font-mono text-xs text-fg-tertiary">· {c.conflict?.code}</span>
           </p>
+          <ConflictHint c={c} />
         </div>
         <div className="text-end">
           <MoneyText poisha={c.amountPoisha} className="text-xl font-semibold" />
@@ -146,7 +166,7 @@ function ConflictCard({ c }: { c: Collection }) {
                 : []),
               { label: t('col.collector'), value: c.collector?.name ?? '—' },
               { label: t('detail.recorded'), value: c.recordedAt ? formatDateTime(c.recordedAt) : '—' },
-              { label: t('detail.plan'), value: <span className="font-mono">{c.erpPlanId ?? '—'}</span> },
+              { label: t('detail.plan'), value: <span className="font-mono">{plans.find((p) => p.erpPlanId === c.erpPlanId)?.invoiceNo ?? c.erpPlanId ?? '—'}</span> },
             ]}
           />
         </section>
@@ -180,7 +200,7 @@ function ConflictCard({ c }: { c: Collection }) {
                     )}
                   >
                     <span className="min-w-0 truncate">
-                      <span className="font-mono text-xs">{p.erpPlanId}</span>{' '}
+                      <span className="font-mono text-xs">{p.invoiceNo ?? p.erpPlanId}</span>{' '}
                       <span className="text-fg-secondary">{p.product}</span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
@@ -261,7 +281,7 @@ function ConflictCard({ c }: { c: Collection }) {
                       <option
                         key={p.erpPlanId}
                         value={p.erpPlanId}
-                      >{`${p.erpPlanId} · ${p.product ?? ''} · ${formatMoney(p.outstandingPoisha ?? 0)}`}</option>
+                      >{`${p.invoiceNo ?? p.erpPlanId} · ${p.product ?? ''} · ${formatMoney(p.outstandingPoisha ?? 0)}`}</option>
                     ))}
                   </Select>
                 )}

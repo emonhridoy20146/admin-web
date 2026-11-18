@@ -243,6 +243,7 @@ export const handlers = [
     }),
   ),
   http.get(`${BASE}/system/erp-status`, authed(() => HttpResponse.json({ ...db.erpStatus, lastSuccessAt: new Date(Date.now() - 3 * 60_000).toISOString() }))),
+  http.get(`${BASE}/system/erp-employees`, authed(({ ctx }) => need(ctx, 'user.manage') ?? HttpResponse.json({ items: db.erpEmployees }))),
   http.get(`${BASE}/system/health`, () => HttpResponse.json({ status: 'ok', version: '1.6.0', mongo: 'ok', erp: 'ok' })),
   http.get(`${BASE}/system/sync-health`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'settings.manage');
@@ -280,6 +281,20 @@ export const handlers = [
     return HttpResponse.json({});
   })),
   http.get(`${BASE}/branches`, authed(({ ctx, url }) => HttpResponse.json(db.branches.filter((b) => scope(ctx, url).includes(b.id!))))),
+  http.put(`${BASE}/branches/:id/location`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'settings.manage');
+    if (deny) return deny;
+    const b = db.branches.find((x) => x.id === params.id);
+    if (!b) return problem(404, 'NOT_FOUND', 'Branch not found');
+    const body = (await request.json()) as { lat: number | null; lng: number | null };
+    const clear = body.lat === null && body.lng === null;
+    if (!clear && (typeof body.lat !== 'number' || typeof body.lng !== 'number')) return problem(400, 'VALIDATION_FAILED', 'lat and lng are required');
+    if (!clear && !(body.lat! >= 20.5 && body.lat! <= 26.8 && body.lng! >= 88 && body.lng! <= 92.8)) return problem(422, 'BUSINESS_RULE', 'Location outside Bangladesh', undefined, { rule: 'LOCATION_OUTSIDE_BANGLADESH' });
+    const before = { lat: b.lat, lng: b.lng };
+    Object.assign(b, clear ? { lat: null, lng: null } : { lat: body.lat, lng: body.lng });
+    db.addAudit({ actor: actor(ctx.user), action: 'branch.location_set', entity: 'branch', entityId: b.id, before, after: { lat: b.lat, lng: b.lng }, reason: '' });
+    return HttpResponse.json(b);
+  })),
 
   // ---------- users ----------
   http.get(`${BASE}/users`, authed(({ ctx, url }) => {

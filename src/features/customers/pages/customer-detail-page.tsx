@@ -16,6 +16,7 @@ import { isApiError } from '@/shared/api/problem';
 import { useCustomer, useRefreshCustomer } from '../api/customers';
 import { ContactAttempts } from '../components/contact-attempts';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from '../components/customer-parts';
+import { sortPlans } from '../model/plan';
 import { PaymentsTab } from '../components/payments-tab';
 import { TimelineTab } from '../components/timeline-tab';
 
@@ -95,7 +96,7 @@ export function CustomerDetailPage() {
             <TabsContent value="overview">
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="space-y-4">
-                  {c.plans?.map((p) => <PlanCard key={p.erpPlanId} plan={p} showSchedule />)}
+                  {sortPlans(c.plans ?? []).map((p) => <PlanCard key={p.erpPlanId} plan={p} showSchedule />)}
                 </div>
                 <div className="space-y-4">
                   <Card className="h-fit p-4">

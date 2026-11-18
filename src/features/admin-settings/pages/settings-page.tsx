@@ -15,6 +15,7 @@ import { Switch } from '@/shared/ui/primitives';
 import { StagedBar } from '@/shared/ui/staged-bar';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useSaveSettings, useSettings } from '../api/settings';
+import { BranchLocations } from '../components/branch-locations';
 import { diff, KNOWN, SECTIONS, toDraft, type Draft, type FieldDef } from '../model/schema';
 
 export function SettingsPage() {
@@ -45,7 +46,7 @@ export function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
         <nav aria-label={t('title')} className="hidden lg:block">
           <ul className="sticky top-20 space-y-0.5 text-sm">
-            {[...SECTIONS.map((s) => s.id), ...(others.length ? ['other'] : [])].map((id) => (
+            {[...SECTIONS.map((s) => s.id), 'branches', ...(others.length ? ['other'] : [])].map((id) => (
               <li key={id}>
                 <a href={`#set-${id}`} className="block rounded-sm px-3 py-1.5 text-fg-secondary hover:bg-surface-hover hover:text-fg">{t(`sections.${id}.title`)}</a>
               </li>
@@ -68,6 +69,7 @@ export function SettingsPage() {
                   </div>
                 </Card>
               ))}
+          <BranchLocations canManage={canManage} />
           {others.length > 0 && (
             <Card id="set-other" className="scroll-mt-20 p-0">
               <div className="border-b border-line px-5 py-4">

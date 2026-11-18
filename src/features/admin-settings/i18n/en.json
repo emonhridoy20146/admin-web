@@ -45,6 +45,10 @@
     "other": {
       "title": "Other settings",
       "desc": "Read-only here; managed by the system team."
+    },
+    "branches": {
+      "title": "Branch map points",
+      "desc": "The ERP keeps no coordinates for branches. Set each branch's point here: maps open there and the data-quality check measures customers' distance from it."
     }
   },
   "fields": {
@@ -217,5 +221,28 @@
   "fixErrors": "Fix the highlighted fields first.",
   "on": "On",
   "off": "Off",
-  "none": "None"
+  "none": "None",
+  "branchPoint": {
+    "missingCount_one": "{{n}} location has no map point yet.",
+    "missingCount_other": "{{n}} locations have no map point yet.",
+    "warehouse": "Warehouse",
+    "inactive": "Inactive",
+    "none": "No map point",
+    "set": "Set map point",
+    "move": "Move",
+    "title": "Map point of {{name}}",
+    "desc": "Move the map under the pin to the branch office, or paste its coordinates.",
+    "current": "Current point",
+    "mapLabel": "Map to set the point of {{name}}",
+    "pinAt": "Point at",
+    "outside": "This point is outside Bangladesh.",
+    "paste": "Coordinates",
+    "pasteHelp": "For example 22.70123, 90.37011 or a map link.",
+    "pasteError": "These are not coordinates we can read.",
+    "go": "Go",
+    "save": "Save point",
+    "saved": "Map point of {{name}} saved",
+    "remove": "Remove point",
+    "removed": "Map point of {{name}} removed"
+  }
 }

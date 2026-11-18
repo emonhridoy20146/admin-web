@@ -165,6 +165,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/system/erp-employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Added in 1.13.0. ERP employees, read live from the ERP, to link a staff user (`erpEmployeeId`).
+         *     The ERP requires a collector employee on every payment; an unlinked collector gets the
+         *     `COLLECTOR_NOT_LINKED` conflict. 503 `ERP_UNAVAILABLE` when the ERP cannot be reached.
+         */
+        get: operations["listErpEmployees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/system/sync-health": {
         parameters: {
             query?: never;
@@ -402,6 +423,27 @@ export interface paths {
         };
         get: operations["listBranches"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/branches/{id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Added in 1.13.0. The ERP has no branch coordinates, so the map point of a branch is set in FOS
+         *     (used by the data-quality "far from branch" check and map centring). ERP sync never clears it.
+         *     Send `{lat: null, lng: null}` to clear. Must be inside Bangladesh (422 `BUSINESS_RULE`).
+         */
+        put: operations["setBranchLocation"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2288,6 +2330,8 @@ export interface components {
             branchIds?: string[];
             shiftId?: string;
             cashLimitPoisha?: number;
+            /** @description Documented in 1.13.0 (already accepted). Links the user to an ERP employee (GET /system/erp-employees); null unlinks */
+            erpEmployeeId?: string | null;
             reason?: string;
         };
         UserPage: {
@@ -2344,10 +2388,23 @@ export interface components {
             /** @enum {string} */
             effect: "allow" | "deny" | "inherit";
         };
+        /** @description Added in 1.13.0 */
+        ErpEmployee: {
+            erpEmployeeId?: string;
+            code?: string;
+            name?: string;
+            erpBranchIds?: string[];
+            active?: boolean;
+        };
         Branch: {
             id?: string;
             erpBranchId?: string;
             code?: string;
+            /**
+             * @description Added in 1.13.0. ERP location type; a warehouse can hold receivables too
+             * @enum {string}
+             */
+            kind?: "branch" | "warehouse";
             name?: components["schemas"]["I18nText"];
             district?: string;
             address?: string;
@@ -2530,6 +2587,10 @@ export interface components {
             nextCursor?: string | null;
             total?: number;
         };
+        /**
+         * @description One collectable ERP receivable. Since 1.13.0 this is documented as one ERP invoice
+         *     (installment or credit sale); `erpPlanId` is the invoice id (ADR-033).
+         */
         Plan: {
             erpPlanId?: string;
             product?: string;
@@ -2542,19 +2603,62 @@ export interface components {
             downPaymentPoisha?: number;
             paidPoisha?: number;
             outstandingPoisha?: number;
-            /** @enum {string} */
+            /**
+             * @description `closed` = returned in the ERP; closed and cancelled plans are not collectable and not counted in totals
+             * @enum {string}
+             */
             status?: "active" | "completed" | "closed" | "defaulted" | "cancelled";
             badSuggested?: boolean;
             schedule?: {
                 seq?: number;
                 /** Format: date */
                 dueDate?: string;
+                /** @description Due amount including any late fee */
                 amountPoisha?: number;
                 paidPoisha?: number;
                 /** @enum {string} */
                 status?: "paid" | "partial" | "due" | "overdue" | "upcoming";
                 estimated?: boolean;
+                /** @description Added in 1.13.0. Late fee included in amountPoisha */
+                lateFeePoisha?: number;
+                /** @description Added in 1.13.0. The ERP moved this line's balance to a later line (amount 0). Apps hide it */
+                rolled?: boolean;
             }[];
+            /**
+             * @description Added in 1.13.0. Credit = pay-later sale with one due date
+             * @enum {string}
+             */
+            kind?: "installment" | "credit";
+            /** @description Added in 1.13.0. ERP invoice number */
+            invoiceNo?: string;
+            /**
+             * Format: date
+             * @description Added in 1.13.0
+             */
+            saleDate?: string;
+            /**
+             * @description Added in 1.13.0. Installment plans only
+             * @enum {string}
+             */
+            frequency?: "monthly" | "weekly" | "daily" | "custom";
+            /** @description Added in 1.13.0. Days between lines when frequency is custom */
+            customDays?: number;
+            /** @description Added in 1.13.0. Products on the invoice */
+            items?: {
+                name?: string;
+                model?: string | null;
+                qty?: number;
+                serials?: string[];
+            }[];
+            /** @description Added in 1.13.0. Guarantor of this plan (never an ID number) */
+            guarantor?: {
+                name?: string;
+                phone?: string;
+                phones?: string[];
+                address?: string;
+            };
+            /** @description Added in 1.13.0. Amount the office wrote off (already out of outstanding) */
+            writtenOffPoisha?: number;
         };
         Payment: {
             erpPaymentId?: string;
@@ -2564,14 +2668,39 @@ export interface components {
             method?: string;
             /** @enum {string} */
             source?: "office" | "field";
+            /** @description ERP payment number (PAY-YYYYMMDD-NNNNN) */
             receiptNo?: string;
+            /** @description The office removed this payment in the ERP */
             reversed?: boolean;
+            /** @description Added in 1.13.0. Plan (invoice) the payment went to */
+            erpPlanId?: string;
+            /** @description Added in 1.13.0. ERP payment method name, e.g. Cash-03 */
+            methodLabel?: string;
+            /** @description Added in 1.13.0. ERP employee recorded as collector */
+            collectorName?: string;
+            /** @description Added in 1.13.0. Down-payment advance */
+            advance?: boolean;
+            /** @description Added in 1.13.0. Settlement discount given with the payment */
+            discountPoisha?: number;
         };
         CustomerDetail: components["schemas"]["CustomerListItem"] & {
             phones?: string[];
             guarantor?: {
                 name?: string;
                 phone?: string;
+            };
+            /** @description Added in 1.13.0. ERP detailed address */
+            detailedAddress?: string;
+            /** @description Added in 1.13.0. How to find the house (ERP location instructions) */
+            directions?: string;
+            /** @description Added in 1.13.0. ERP customer risk snapshot, read-only, shown next to FOS tags */
+            erpRisk?: {
+                grade?: string | null;
+                level?: string | null;
+                classification?: string | null;
+                overdueCount?: number;
+                maxDaysLate?: number;
+                computedAt?: string | null;
             };
             plans?: components["schemas"]["Plan"][];
             payments?: components["schemas"]["Payment"][];
@@ -2660,6 +2789,13 @@ export interface components {
             /** Format: date-time */
             receivedAt?: string;
             status?: components["schemas"]["CollectionStatus"];
+            /**
+             * @description `code` is one of PLAN_SETTLED, AMOUNT_EXCEEDS_OUTSTANDING, PLAN_NOT_FOUND, CUSTOMER_INACTIVE, PERIOD_LOCKED,
+             *     ERP_VALIDATION, GAVE_UP and, since 1.13.0, PLAN_CLOSED (invoice returned/cancelled in the ERP),
+             *     DUPLICATE_SAME_DAY (the ERP already has a payment on that invoice that day), METHOD_NOT_AVAILABLE
+             *     (no ERP payment method of that kind at the branch), COLLECTOR_NOT_LINKED (staff user has no ERP employee).
+             *     Show `message` (bn/en); unknown codes are possible.
+             */
             conflict?: {
                 code?: string;
                 message?: components["schemas"]["I18nText"];
@@ -3978,6 +4114,29 @@ export interface operations {
             };
         };
     };
+    listErpEmployees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items?: components["schemas"]["ErpEmployee"][];
+                    };
+                };
+            };
+            503: components["responses"]["Problem"];
+        };
+    };
     syncHealth: {
         parameters: {
             query?: {
@@ -4438,6 +4597,37 @@ export interface operations {
                     "application/json": components["schemas"]["Branch"][];
                 };
             };
+        };
+    };
+    setBranchLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    lat: number | null;
+                    lng: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Branch"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     getSettings: {

@@ -1,4 +1,4 @@
-import type { Role, User, UserCreate, UserUpdate } from '../api/users';
+import type { ErpEmployee, Role, User, UserCreate, UserUpdate } from '../api/users';
 
 export const ROLES = [
   'super_admin',
@@ -115,6 +115,9 @@ export function toUpdate(before: User, v: UserFormValues, reason: string): UserU
     out.branchIds = v.branchIds;
   const limit = toPoisha(v.cashLimitTaka);
   if (limit != null && !Number.isNaN(limit) && limit !== before.cashLimitPoisha) out.cashLimitPoisha = limit;
+  // 1.13.0: link or unlink the ERP employee (the ERP records a collector on every payment)
+  const erp = v.erpEmployeeId.trim();
+  if (erp !== (before.erpEmployeeId ?? '')) out.erpEmployeeId = erp || null;
   // a shift can be changed to another one; going back to the branch hours is not in the contract
   if (v.shiftId && v.shiftId !== (before.shiftId ?? '')) out.shiftId = v.shiftId;
   return out;
@@ -123,3 +126,18 @@ export function toUpdate(before: User, v: UserFormValues, reason: string): UserU
 export function changedKeys(u: UserUpdate): string[] {
   return Object.keys(u).filter((k) => k !== 'reason');
 }
+
+/**
+ * ERP employees for the picker: those of the user's branches first (by the branches' ERP ids), then the rest;
+ * active before inactive, then by name. `branchErpIds` are the ERP ids of the branches ticked in the form.
+ */
+export function orderErpEmployees(list: ErpEmployee[], branchErpIds: string[]): { mine: ErpEmployee[]; others: ErpEmployee[] } {
+  const set = new Set(branchErpIds);
+  const sort = (a: ErpEmployee, b: ErpEmployee) => Number(b.active ?? true) - Number(a.active ?? true) || (a.name ?? '').localeCompare(b.name ?? '');
+  const mine = list.filter((e) => (e.erpBranchIds ?? []).some((b) => set.has(b))).sort(sort);
+  const others = list.filter((e) => !mine.includes(e)).sort(sort);
+  return { mine, others };
+}
+
+/** "EMP-00007 · Rakib Hasan" (+ " · inactive" label added by the caller). */
+export const erpEmployeeLabel = (e: ErpEmployee) => [e.code, e.name].filter(Boolean).join(' · ');

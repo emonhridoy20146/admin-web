@@ -7,6 +7,7 @@ export type User = components['schemas']['User'];
 export type UserCreate = components['schemas']['UserCreate'];
 export type UserUpdate = components['schemas']['UserUpdate'];
 export type Role = components['schemas']['Role'];
+export type ErpEmployee = components['schemas']['ErpEmployee'];
 export type UserQuery = NonNullable<operations['listUsers']['parameters']['query']>;
 
 export function useUsers(params: Omit<UserQuery, 'branchId'>) {
@@ -24,6 +25,17 @@ export function useUser(id: string | null) {
     queryKey: ['admin-users', 'detail', id],
     queryFn: () => unwrap(api.GET('/users/{id}', { params: { path: { id: id! } } })),
     enabled: !!id,
+  });
+}
+
+/** ERP employees, read live from the ERP (1.13.0). The ERP needs one as collector on every payment. */
+export function useErpEmployees(enabled = true) {
+  return useQuery({
+    queryKey: ['admin-users', 'erp-employees'],
+    queryFn: () => unwrap(api.GET('/system/erp-employees')),
+    staleTime: 5 * 60_000,
+    retry: false,
+    enabled,
   });
 }
 
