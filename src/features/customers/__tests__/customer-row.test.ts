@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sortStatuses, toCustomerRow } from '../model/customer-row';
+import { extraStatuses, sortStatuses, toCustomerRow } from '../model/customer-row';
 
 const base = {
   id: 'c1', code: 'BRL01-100245', name: { bn: 'মোঃ করিম উদ্দিন', en: 'Md Karim Uddin' }, phone: '01711000000',
@@ -31,6 +31,12 @@ describe('customer row view model', () => {
     const r = toCustomerRow({ ...base, areaName: { bn: 'রূপাতলী', en: 'Rupatoli' }, installmentPoisha: 250000, overduePoisha: 500000 }, 'bn');
     expect(r).toMatchObject({ areaName: 'রূপাতলী', installmentPoisha: 250000, overduePoisha: 500000 });
     expect(toCustomerRow(base, 'en')).toMatchObject({ areaName: null, installmentPoisha: null, overduePoisha: 0 });
+  });
+  it('1.14.0: carries the pin colour, missed count and open invoices; older servers fall back to the status', () => {
+    const r = toCustomerRow({ ...base, payState: 'missed_many', missedCount: 3, openInvoices: { installment: 2, credit: 1 } }, 'bn');
+    expect(r).toMatchObject({ payState: 'missed_many', missedCount: 3, openInvoices: { installment: 2, credit: 1 } });
+    expect(toCustomerRow({ ...base, badges: ['overdue'] }, 'bn')).toMatchObject({ payState: 'missed_one', missedCount: null, openInvoices: null });
+    expect(extraStatuses(['tagged_bad', 'overdue', 'promised_today', 'due_today', 'paid_up', 'current'])).toEqual(['tagged_bad', 'promised_today']);
   });
   it('flags missing location', () => {
     expect(toCustomerRow({ ...base, location: { lat: null, lng: null, status: 'missing' } }, 'bn').hasLocation).toBe(false);

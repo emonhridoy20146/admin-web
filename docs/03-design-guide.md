@@ -1,4 +1,4 @@
-# 03 — Design Guide (admin-web) and Shared Design Tokens v1.0
+# 03 — Design Guide (admin-web) and Shared Design Tokens v1.1
 
 Design intent: **calm, dense, trustworthy.** This is a money-and-people control room used for hours a day. It should feel like Linear / Stripe Dashboard quality: quiet neutrals, one confident brand colour, status colours that carry meaning, generous but efficient spacing, crisp tables, zero decoration that does not inform. Bangla is a first-class script, not a translation afterthought.
 
@@ -15,7 +15,7 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 6. **Reversible by default.** Confirm only destructive or money actions; everything else is undoable or audited.
 7. **Bilingual parity.** Every layout tested with Bangla (longer, taller glyphs) and English.
 
-## 2. Shared design tokens v1.0 (identical in staff-app)
+## 2. Shared design tokens v1.1 (identical in staff-app)
 
 > Canonical source: this section. `staff-app/docs/03-design-guide.md §2` must hold the same values. Token changes bump the version in both files and both CHANGELOGs.
 
@@ -70,7 +70,21 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 
 All fg/bg pairs meet WCAG AA 4.5:1, most ≥ 6:1 (computed values in `07-test-plan.md §4`). `brand.400` (3.6:1 on white) is for dark mode and large graphics only, never body text on light surfaces.
 
-Map pins use `status.*` fg as fill, white 2 px stroke, and a glyph inside (so they work for colour-blind users). Cluster bubbles take the **worst** status in the cluster.
+Customer map pins have the familiar map-pin shape (round head, point on the spot; `shared/map/pin-icon.tsx`) and use the **pay-state** colours of §2.3a with a glyph inside (so they work for colour-blind users); other maps (live staff, routes) keep `status.*` dots. Cluster bubbles take the **worst** state in the cluster and show the mix of states as a ring.
+
+### 2.3a Colour — pay state (map pins, v1.1)
+The colour of a customer's map pin and pay-state badge (field-api `PayState`, ADR-035; admin ADR-W18). CSS variables `--ps-<state>-pin|fg|bg` (`bad`, `missed-many`, `missed-one`, `due-today`, `on-track`, `paid-off`); `--pin-shadow` `rgb(16 24 40 / 0.35)` for the pin's drop shadow.
+
+| Token | Pin (light) | Fg (light) | Bg (light) | Pin (dark) | Fg (dark) | Bg (dark) | Glyph | Meaning |
+|---|---|---|---|---|---|---|---|---|
+| `payState.bad` | `#DC2626` | `#B91C1C` | `#FDECEC` | `#EF4444` | `#F87171` | `#2D1212` | alert (!) | tagged bad, or full term over with money left |
+| `payState.missedMany` | `#EA580C` | `#C2410C` | `#FFF1E8` | `#F97316` | `#FB923C` | `#2E1A0C` | number missed | 2+ installments missed |
+| `payState.missedOne` | `#EAB308` | `#854D0E` | `#FEF9C3` | `#FACC15` | `#FDE047` | `#2E2A08` | 1 | one installment missed |
+| `payState.dueToday` | `#2563EB` | `#1D4ED8` | `#E8F0FE` | `#60A5FA` | `#93C5FD` | `#0F1F3D` | dot | installment due today, nothing missed |
+| `payState.onTrack` | `#16A34A` | `#166534` | `#E8F6EC` | `#4ADE80` | `#4ADE80` | `#0F2A1A` | check | everything due so far paid |
+| `payState.paidOff` | `#64748B` | `#475569` | `#EEF1F5` | `#94A3B8` | `#A9B1BF` | `#1A2030` | check | nothing left to pay |
+
+Fg on bg ≥ 4.6:1 in both themes. The pin body takes the pin colour with a 1.25 px outline in the fg colour (so yellow still stands out on light tiles; dark mode mixes the pin colour with `neutral.950`), a white face and a glyph in the fg colour (`neutral.900` in dark mode).
 
 ### 2.4 Chart palette (categorical, colour-blind safe order)
 `#2C44CC` · `#0EA5A4` · `#F59E0B` · `#DB2777` · `#7C3AED` · `#65A30D` · `#0284C7` · `#EA580C`. Payment methods fixed: cash `#2C44CC`, bKash `#DB2777`, Nagad `#EA580C`, Rocket `#7C3AED`, bank `#0EA5A4`, other `#64748B`.

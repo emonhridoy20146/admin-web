@@ -6,7 +6,7 @@ import { Crosshair, LocateFixed, MapPinOff, MapPinPlus, MapPinned, Warehouse } f
 import { useBranches } from '@/features/shell';
 import { formatNumber, pickText } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatCoords, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
+import { DEFAULT_POINT, formatCoords, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
 import { MapPicker } from '@/shared/map/map-picker';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -19,7 +19,8 @@ import { useSetBranchLocation } from '../api/settings';
 
 type Branch = components['schemas']['Branch'];
 /** Map centre when a branch has no point yet (Barishal). */
-const FALLBACK: LatLng = { lat: 22.7022, lng: 90.3696 };
+/** No branch point yet (the ERP has none): start in Patuakhali town (ADR-W18). */
+const FALLBACK: LatLng = DEFAULT_POINT;
 
 /**
  * FR-BR-002 (contract 1.13.0): the ERP keeps no branch coordinates, so the map point of each branch is set here.

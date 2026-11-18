@@ -1081,6 +1081,104 @@ customers.forEach((c, ci) => {
   }
 });
 
+// ---------- pay state and invoice viewer fields (contract 1.14.0, field-api ADR-035) ----------
+// Derived from the data above without random draws. Mirrors field-api `customers/domain/status.ts`.
+type PayState = S['PayState'];
+const PAY_ORDER: PayState[] = ['bad', 'missed_many', 'missed_one', 'due_today', 'on_track', 'paid_off'];
+const dayDiff = (a: string, b: string) => Math.round(dDate(a).diff(dDate(b), 'days').days);
+const collectable = (p: S['Plan']) => p.status !== 'closed' && p.status !== 'cancelled';
+/** fills line extras, plan pay state and the plan money fields of one plan */
+export function derivePlan(p: S['Plan'], branchId: string | undefined, today = T) {
+  const lines = p.schedule ?? [];
+  lines.forEach((l, i) => {
+    const left = Math.max(0, (l.amountPoisha ?? 0) - (l.paidPoisha ?? 0));
+    l.outstandingPoisha = left;
+    // a rolled line (amount 0) is missed while the line that took its balance is still unpaid
+    const carrier = l.rolled ? lines.slice(i + 1).find((x) => !x.rolled) : undefined;
+    const carrierLeft = carrier ? Math.max(0, (carrier.amountPoisha ?? 0) - (carrier.paidPoisha ?? 0)) : 0;
+    l.missed = collectable(p) && l.dueDate! < today && (left > 0 || (!!l.rolled && carrierLeft > 0 && carrier!.dueDate! <= today));
+    const last = l.payments?.length ? l.payments[l.payments.length - 1]!.date : undefined;
+    if (left === 0 && (l.paidPoisha ?? 0) > 0 && last) l.paidOn = last;
+    else delete l.paidOn;
+    l.daysLate = l.paidOn ? Math.max(0, dayDiff(l.paidOn, l.dueDate!)) : left > 0 && l.dueDate! < today ? dayDiff(today, l.dueDate!) : 0;
+  });
+  const missed = lines.filter((l) => l.missed);
+  const open = collectable(p) && (p.outstandingPoisha ?? 0) > 0;
+  const next = lines.filter((l) => l.dueDate! >= today && (l.outstandingPoisha ?? 0) > 0).sort((a, b) => a.dueDate!.localeCompare(b.dueDate!))[0];
+  p.missedCount = missed.length;
+  p.daysOverdue = missed.length ? dayDiff(today, missed.map((l) => l.dueDate!).sort()[0]!) : 0;
+  if (next) Object.assign(p, { nextDueDate: next.dueDate, nextDuePoisha: next.outstandingPoisha });
+  p.payState = !open ? 'paid_off' : p.badSuggested ? 'bad' : missed.length >= 2 ? 'missed_many' : missed.length === 1 ? 'missed_one' : lines.some((l) => l.dueDate === today && (l.outstandingPoisha ?? 0) > 0) ? 'due_today' : 'on_track';
+  const total = p.totalPayablePoisha ?? 0;
+  const discount = Math.round(total * 0.02 / 100) * 100;
+  Object.assign(p, {
+    branchId,
+    subtotalPoisha: total + discount,
+    discountPoisha: discount,
+    taxPoisha: 0,
+    settlementDiscountPoisha: 0,
+    refundedPoisha: p.status === 'closed' ? 200_000 : 0,
+    invoiceStatus: p.status === 'closed' ? 'returned' : p.status === 'cancelled' ? 'cancelled' : 'posted',
+    paymentStatus: (p.outstandingPoisha ?? 0) <= 0 ? 'paid' : (p.paidPoisha ?? 0) > 0 ? 'partial' : 'unpaid',
+    ...(p.kind === 'credit' ? { creditDueDate: p.finalDueDate } : { financedPoisha: total - (p.downPaymentPoisha ?? 0), penalty: { enabled: true, rate: '0.0200' } }),
+  } satisfies Partial<S['Plan']>);
+  p.items?.forEach((it) => {
+    const qty = it.qty ?? 1;
+    Object.assign(it, { unitPricePoisha: Math.round((total + discount) / qty), discountPoisha: discount, serviceChargePoisha: 0, lineTotalPoisha: total });
+  });
+}
+export function deriveCustomer(c: MockCustomer, today = T) {
+  const d = c.detail;
+  d.plans?.forEach((p) => derivePlan(p, c.branchId, today));
+  const open = (d.plans ?? []).filter((p) => collectable(p) && (p.outstandingPoisha ?? 0) > 0);
+  const missedCount = open.reduce((s, p) => s + (p.missedCount ?? 0), 0);
+  const tagBad = c.item.tag?.state === 'tagged' && c.item.tag.severity !== 'watch';
+  const worst = PAY_ORDER.find((s) => open.some((p) => p.payState === s));
+  const payState: PayState = tagBad ? 'bad' : (c.item.totalOutstandingPoisha ?? 0) <= 0 || !worst ? 'paid_off' : worst;
+  const openInvoices = { installment: open.filter((p) => p.kind !== 'credit').length, credit: open.filter((p) => p.kind === 'credit').length };
+  for (const x of [c.item, d]) Object.assign(x, { payState, missedCount, openInvoices });
+}
+customers.forEach((c, ci) => {
+  const d = c.detail;
+  // link each paid line to the ERP payment that paid it (same amount, near the due date), as the ERP allocations do
+  const unused = (d.payments ?? []).filter((p) => !p.reversed);
+  (d.plans ?? []).forEach((p) => {
+    (p.schedule ?? []).forEach((l) => {
+      if (!(l.paidPoisha ?? 0)) return;
+      const i = unused.findIndex((pay) => pay.amountPoisha === l.paidPoisha && Math.abs(dayDiff(pay.date!, l.dueDate!)) <= 7);
+      if (i === -1) return;
+      const [pay] = unused.splice(i, 1);
+      pay!.erpPlanId = p.erpPlanId;
+      l.payments = [{ erpPaymentId: pay!.erpPaymentId, date: pay!.date, amountPoisha: pay!.amountPoisha, receiptNo: pay!.receiptNo }];
+    });
+  });
+  // open credit sales (pay later, one due date): one not due yet, one overdue
+  if (ci % 17 === 4 || ci % 29 === 9) {
+    const late = ci % 29 === 9;
+    const sale = now().minus({ days: late ? 60 : 20 }).toISODate()!;
+    const due = now().plus({ days: late ? -25 : 12 }).toISODate()!;
+    const amount = late ? 780_000 : 1_250_000;
+    const paid = late ? 200_000 : 0;
+    d.plans?.push({
+      erpPlanId: `P-${92000 + ci}`, kind: 'credit', invoiceNo: `INV-C${92000 + ci}`, product: late ? 'Blender 1.5 L' : 'Air cooler 40 L', saleDate: sale, startDate: sale, finalDueDate: due,
+      installmentCount: 1, totalPayablePoisha: amount, downPaymentPoisha: 0, paidPoisha: paid, outstandingPoisha: amount - paid, status: 'active', badSuggested: false,
+      items: [{ name: late ? 'Blender' : 'Air cooler', model: late ? '1.5 L' : '40 L', qty: 1, serials: [] }],
+      schedule: [{ seq: 1, dueDate: due, amountPoisha: amount, paidPoisha: paid, status: late ? 'overdue' : 'upcoming', estimated: false }],
+    });
+    for (const x of [c.item, d]) {
+      x.totalOutstandingPoisha = (x.totalOutstandingPoisha ?? 0) + amount - paid;
+      if (late) {
+        x.overduePoisha = (x.overduePoisha ?? 0) + amount - paid;
+        x.daysOverdue = Math.max(x.daysOverdue ?? 0, 25);
+      }
+      x.badges = (x.badges ?? []).filter((b) => b !== 'paid_up' && (!late || b !== 'current'));
+      if (late && !x.badges.includes('overdue')) x.badges.push('overdue');
+      if (!late && !x.badges.length) x.badges.push('current');
+    }
+  }
+  deriveCustomer(c);
+});
+
 // ERP employees: the ERP needs a collector employee on every payment. Staff and managers are linked (numeric ids, as
 // in the ERP); one ERP employee is not linked to anybody yet and one has left. The collector of the
 // COLLECTOR_NOT_LINKED conflict is not linked, so that conflict is what it says.

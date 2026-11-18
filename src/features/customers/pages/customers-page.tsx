@@ -12,17 +12,20 @@ import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState } from '@/shared/ui/feedback';
-import { FilterChip, Tooltip } from '@/shared/ui/primitives';
+import { FilterChip, Segmented, Tooltip } from '@/shared/ui/primitives';
 import { SearchInput, Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
 import { StatusBadges } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { useCustomers, type CustomerQuery } from '../api/customers';
-import { toCustomerRow, type CustomerRowVM } from '../model/customer-row';
+import { extraStatuses, toCustomerRow, type CustomerRowVM } from '../model/customer-row';
+import { PAY_STATES, PS_CLASS } from '../model/pay-state';
 import { CustomerDrawer } from '../components/customer-drawer';
+import { PayLegend, PayStateBadge } from '../components/pay-state';
 
 const FILTERS = ['overdue', 'due_today', 'promised_today', 'bad_suggested', 'tagged_bad', 'no_location', 'unassigned', 'paid_up'] as const;
 const SORTS = ['-daysOverdue', '-totalOutstanding', 'nextDueDate', 'name'] as const;
+const KINDS = ['all', 'installment', 'credit'] as const;
 
 export function CustomersPage() {
   const { t } = useTranslation('customers');
@@ -30,6 +33,8 @@ export function CustomersPage() {
   useUi((s) => s.bnDigits);
   const url = useUrlState();
   const filters = listOf(url.getList('filter'), FILTERS);
+  const pay = listOf(url.getList('pay'), PAY_STATES);
+  const kind = oneOf(url.get('kind'), KINDS, 'all');
   const sort = oneOf(url.get('sort'), SORTS, '-daysOverdue');
   const qParam = url.get('q');
   const cursor = url.get('cursor');
@@ -41,7 +46,15 @@ export function CustomersPage() {
     return () => clearTimeout(id);
   }, [q, qParam, url]);
 
-  const params: Omit<CustomerQuery, 'branchId'> = { filter: filters.length ? filters : undefined, sort, q: qParam || undefined, cursor: cursor || undefined, limit };
+  const params: Omit<CustomerQuery, 'branchId'> = {
+    filter: filters.length ? filters : undefined,
+    payState: pay.length ? pay : undefined,
+    invoiceKind: kind === 'all' ? undefined : kind,
+    sort,
+    q: qParam || undefined,
+    cursor: cursor || undefined,
+    limit,
+  };
   const query = useCustomers(params);
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
   const rows = useMemo(() => query.data?.items?.map((c) => toCustomerRow(c, locale)), [query.data, locale]);
@@ -66,7 +79,7 @@ export function CustomersPage() {
       mobile: 'title',
       cell: (r) => (
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className={cn('h-8 w-[3px] shrink-0 rounded-full', ['bg-transparent', 'bg-warning', 'bg-st-overdue', 'bg-st-tagged-bg'][r.urgency])} aria-hidden />
+          <span className={cn('h-8 w-[3px] shrink-0 rounded-full', PS_CLASS[r.payState].bar)} aria-hidden />
           <div className="min-w-0">
             <Link href={`/customers/${r.id}/`} onClick={(e) => !(e.metaKey || e.ctrlKey) && e.preventDefault()} className="block max-w-[260px] truncate font-medium text-fg hover:text-primary" lang={locale}>
               {r.name}
@@ -76,7 +89,18 @@ export function CustomersPage() {
         </div>
       ),
     },
-    { id: 'status', header: t('col.status'), priority: 1, mobile: 'badges', cell: (r) => <StatusBadges statuses={r.statuses} /> },
+    {
+      id: 'status',
+      header: t('col.status'),
+      priority: 1,
+      mobile: 'badges',
+      cell: (r) => (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <PayStateBadge state={r.payState} missed={r.missedCount} />
+          <StatusBadges statuses={extraStatuses(r.statuses)} max={1} />
+        </span>
+      ),
+    },
     {
       id: 'outstanding',
       header: t('col.outstanding'),
@@ -102,6 +126,20 @@ export function CustomersPage() {
       cell: (r) => (r.daysOverdue > 0 ? <span className={cn('font-medium', r.daysOverdue > 30 ? 'text-st-overdue' : 'text-fg')}>{t('days', { n: formatNumber(r.daysOverdue) })}</span> : <span className="text-fg-tertiary">—</span>),
     },
     { id: 'installment', header: t('col.installment'), align: 'end', priority: 4, cell: (r) => (r.installmentPoisha != null ? <MoneyText poisha={r.installmentPoisha} /> : <span className="text-fg-tertiary">—</span>) },
+    {
+      id: 'invoices',
+      header: t('col.invoices'),
+      priority: 3,
+      cell: (r) =>
+        r.openInvoices && (r.openInvoices.installment || r.openInvoices.credit) ? (
+          <span className="inline-flex flex-wrap gap-1 text-xs">
+            {r.openInvoices.installment > 0 && <span className="rounded-xs bg-surface-hover px-1.5 py-0.5 text-fg-secondary">{t('openInv.installment', { n: formatNumber(r.openInvoices.installment) })}</span>}
+            {r.openInvoices.credit > 0 && <span className="rounded-xs bg-info-bg px-1.5 py-0.5 text-info">{t('openInv.credit', { n: formatNumber(r.openInvoices.credit) })}</span>}
+          </span>
+        ) : (
+          <span className="text-fg-tertiary">—</span>
+        ),
+    },
     { id: 'nextDue', header: t('col.nextDue'), priority: 3, mobile: 'meta', cell: (r) => (r.nextDue ? formatDate(r.nextDue, { withYear: false }) : <span className="text-fg-tertiary">—</span>) },
     {
       id: 'promise',
@@ -162,13 +200,27 @@ export function CustomersPage() {
           </Select>
         </label>
       </div>
-      <div className="scrollbar-thin -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-        {FILTERS.map((f) => (
-          <FilterChip key={f} selected={filters.includes(f)} onClick={() => toggleFilter(f)}>
-            {t(`filters.${f}`)}
-          </FilterChip>
-        ))}
+      <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center">
+        <Segmented
+          label={t('invoiceKind.label')}
+          value={kind}
+          onChange={(v) => (pager.reset(), url.set({ kind: v === 'all' ? null : v, cursor: null }))}
+          options={KINDS.map((k) => ({ value: k, label: t(`invoiceKind.${k}`) }))}
+        />
+        <div className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
+          {FILTERS.map((f) => (
+            <FilterChip key={f} selected={filters.includes(f)} onClick={() => toggleFilter(f)}>
+              {t(`filters.${f}`)}
+            </FilterChip>
+          ))}
+        </div>
       </div>
+      <PayLegend
+        selected={pay}
+        counts={null}
+        onToggle={(s) => (pager.reset(), url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s], cursor: null }))}
+        onClear={() => (pager.reset(), url.set({ pay: null, cursor: null }))}
+      />
 
       <DataTable
         tableId="customers"
@@ -209,10 +261,10 @@ export function CustomersPage() {
         }}
         empty={
           <EmptyState
-            icon={filters.length || qParam ? SearchX : Users}
+            icon={filters.length || pay.length || kind !== 'all' || qParam ? SearchX : Users}
             title={t('emptyTitle')}
             body={t('emptyBody')}
-            action={(filters.length > 0 || !!qParam) && <Button size="sm" onClick={() => (setQ(''), url.set({ filter: null, q: null, cursor: null }))}>{t('clearFilters')}</Button>}
+            action={(filters.length > 0 || pay.length > 0 || kind !== 'all' || !!qParam) && <Button size="sm" onClick={() => (setQ(''), url.set({ filter: null, pay: null, kind: null, q: null, cursor: null }))}>{t('clearFilters')}</Button>}
           />
         }
       />

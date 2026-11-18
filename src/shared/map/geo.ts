@@ -101,3 +101,49 @@ export function parseCoords(text: string): LatLng | null {
 export function formatCoords(p: LatLng): string {
   return `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
 }
+
+/**
+ * Where a map opens when nothing better is known (no saved view, no branch point): Patuakhali district, the owner's
+ * home area (Kuakata to Bauphal). The ERP has no branch coordinates, so maps used to open on Barishal city (ADR-W18).
+ */
+export const DEFAULT_AREA: Bounds = { minLat: 21.78, maxLat: 22.62, minLng: 90.02, maxLng: 90.72 };
+/** Patuakhali town: the starting point of a pin picker with nothing better to start from. */
+export const DEFAULT_POINT: LatLng = { lat: 22.3596, lng: 90.3299 };
+
+export interface MapViewpoint {
+  center: LatLng;
+  zoom: number;
+}
+
+/** `22.35960,90.32990,12` → view; null for anything outside Bangladesh or an unusable zoom (the param is user-editable). */
+export function parseViewpoint(v: string | null | undefined): MapViewpoint | null {
+  const m = /^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?),(\d{1,2})$/.exec((v ?? '').trim());
+  if (!m) return null;
+  const center = { lat: Number(m[1]), lng: Number(m[2]) };
+  const zoom = Number(m[3]);
+  return inBangladesh(center) && zoom >= 6 && zoom <= 19 ? { center, zoom } : null;
+}
+
+export function viewpointParam(v: MapViewpoint): string {
+  return `${v.center.lat.toFixed(5)},${v.center.lng.toFixed(5)},${Math.round(v.zoom)}`;
+}
+
+export function centerOf(b: Bounds): LatLng {
+  return { lat: (b.minLat + b.maxLat) / 2, lng: (b.minLng + b.maxLng) / 2 };
+}
+
+/** A box of about `km` around a point (for "go to this branch"). */
+export function boxAround(p: LatLng, km = 3): Bounds {
+  const dLat = km / 111;
+  const dLng = km / (111 * Math.cos((p.lat * Math.PI) / 180));
+  return { minLat: p.lat - dLat, maxLat: p.lat + dLat, minLng: p.lng - dLng, maxLng: p.lng + dLng };
+}
+
+/**
+ * The map point of the branch being looked at: the chosen branch when it has one, or the only branch of someone who
+ * works in one branch. Null otherwise (all branches, or a branch without a point) — then maps open on DEFAULT_AREA.
+ */
+export function branchPoint(list: { id?: string; lat?: number | null; lng?: number | null }[] | undefined, branchId: string | undefined): LatLng | null {
+  const pick = branchId ? list?.find((b) => b.id === branchId) : list?.length === 1 ? list[0] : undefined;
+  return pick && typeof pick.lat === 'number' && typeof pick.lng === 'number' ? { lat: pick.lat, lng: pick.lng } : null;
+}

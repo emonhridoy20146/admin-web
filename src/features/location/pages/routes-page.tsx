@@ -10,7 +10,7 @@ import { useGate } from '@/shared/feature/useGate';
 import { formatDuration, formatNumber, formatTime, pickText } from '@/shared/lib/format';
 import { addDays, todayDhaka } from '@/shared/lib/time';
 import { useUrlState } from '@/shared/lib/url-state';
-import { boundsOf, decodePolyline, type Bounds } from '@/shared/map/geo';
+import { branchPoint, boundsOf, decodePolyline, DEFAULT_AREA, DEFAULT_POINT, type Bounds } from '@/shared/map/geo';
 import { MapView, type MapMarker, type MapPath } from '@/shared/map/map-view';
 import { PageHeader } from '@/shared/ui/page';
 import { Card } from '@/shared/ui/card';
@@ -41,8 +41,8 @@ export function RoutesPage() {
   const [fit, setFit] = useState<Bounds | null>(null);
   const [stopAt, setStopAt] = useState<number | null>(null);
 
-  const branch = branches.data?.find((b) => b.id === branchId) ?? branches.data?.[0];
-  const center = useMemo(() => ({ lat: branch?.lat ?? 22.7022, lng: branch?.lng ?? 90.3696 }), [branch?.lat, branch?.lng]);
+  const home = branchPoint(branches.data, branchId);
+  const center = useMemo(() => home ?? DEFAULT_POINT, [home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
   const track = useMemo(() => decodePolyline(q.data?.polyline), [q.data?.polyline]);
   const stops = useMemo(() => sortStops(q.data?.stops), [q.data?.stops]);
   const lost = useMemo(() => gaps(q.data?.segments), [q.data?.segments]);
@@ -125,7 +125,7 @@ export function RoutesPage() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="h-[46vh] min-h-72 lg:h-[calc(100vh-22rem)] lg:min-h-96">
-              <MapView label={t('routes.map', { name })} center={center} zoom={13} paths={paths} markers={markers} fit={fit} onMarkerClick={(id) => !id.startsWith('c') && showStop(Number(id))} />
+              <MapView label={t('routes.map', { name })} center={center} zoom={13} initialBounds={home ? null : DEFAULT_AREA} paths={paths} markers={markers} fit={fit} onMarkerClick={(id) => !id.startsWith('c') && showStop(Number(id))} />
             </div>
 
             <div className="flex min-h-0 flex-col gap-4 lg:h-[calc(100vh-22rem)] lg:min-h-96 lg:overflow-y-auto">

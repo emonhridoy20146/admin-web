@@ -1,5 +1,6 @@
 import type { Locale } from '@/shared/lib/format';
 import type { CustomerListItem } from '../api/customers';
+import { payStateOf, type PayState } from './pay-state';
 
 /** Status display order: most urgent / most consequential first (03 §1 "status first"). */
 export const STATUS_ORDER = ['tagged_bad', 'bad_suggested', 'overdue', 'promised_today', 'due_today', 'current', 'paid_up'] as const;
@@ -29,6 +30,17 @@ export interface CustomerRowVM {
   asOf: string | null;
   /** 0 (calm) … 3 (most urgent), drives row emphasis */
   urgency: 0 | 1 | 2 | 3;
+  /** 1.14.0: the colour of the customer's map pin (read from the old status on an older server) */
+  payState: PayState;
+  missedCount: number | null;
+  /** open invoices by kind; null when the server does not send them yet */
+  openInvoices: { installment: number; credit: number } | null;
+}
+
+/** Statuses the pay-state badge already says (overdue, due today, paid up, current) are left out next to it. */
+const SAID_BY_PAY_STATE = new Set(['overdue', 'due_today', 'paid_up', 'current']);
+export function extraStatuses(statuses: string[]): string[] {
+  return statuses.filter((s) => !SAID_BY_PAY_STATE.has(s));
 }
 
 export function sortStatuses(badges: string[]): string[] {
@@ -66,5 +78,8 @@ export function toCustomerRow(c: CustomerListItem, locale: Locale): CustomerRowV
     hasLocation: (c.location?.status === 'ok' || c.location?.status === 'overridden') && c.location.lat != null,
     asOf: c.erpFetchedAt ?? null,
     urgency,
+    payState: payStateOf(c),
+    missedCount: c.missedCount ?? null,
+    openInvoices: c.openInvoices ? { installment: c.openInvoices.installment ?? 0, credit: c.openInvoices.credit ?? 0 } : null,
   };
 }

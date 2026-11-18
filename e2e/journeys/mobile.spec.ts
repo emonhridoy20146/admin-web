@@ -3,6 +3,7 @@ import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'js
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import inboxBn from '../../src/features/inbox/i18n/bn.json' with { type: 'json' };
 import shellBn from '../../src/features/shell/i18n/bn.json' with { type: 'json' };
+import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import { confirmWithReason, login } from '../fixtures';
 
 async function openMenuAndGo(page: import('@playwright/test').Page, name: string) {
@@ -29,6 +30,25 @@ test('W-E13 at 390 px: inbox → resolve a conflict → verify a deposit, with �
   await page.getByRole('dialog').getByRole('button', { name: /যাচাই করুন/ }).click();
   await expect(page.getByText(cashBn.verified).first()).toBeVisible();
 
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('invoice viewer at 390 px: one card per installment, no sideways scroll', async ({ page }) => {
+  await login(page);
+  await openMenuAndGo(page, custBn.title);
+  await page.goto('/customers/?pay=missed_many');
+  const first = page.locator('main a[href^="/customers/"][href$="/"]:visible').first();
+  await expect(first).toBeVisible();
+  const href = (await first.getAttribute('href'))!;
+  await page.goto(`${href}?tab=invoices`);
+  await page.getByRole('list', { name: custBn.tabs.invoices }).getByRole('button').first().click();
+  const cards = page.getByRole('list', { name: custBn.invoice.schedule });
+  await expect(cards).toBeVisible();
+  expect(await cards.locator('li').count()).toBeGreaterThan(1);
+  await expect(page.getByRole('table', { name: new RegExp(custBn.invoice.schedule) })).toBeHidden();
+  const back = page.getByRole('button', { name: custBn.invoice.back });
+  expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });

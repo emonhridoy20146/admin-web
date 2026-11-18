@@ -2479,6 +2479,16 @@ export interface components {
         };
         /** @enum {string} */
         CustomerStatus: "overdue" | "due_today" | "promised_today" | "paid_up" | "current" | "bad_suggested" | "tagged_bad";
+        /**
+         * @description Added in 1.14.0 (FR-CUS-012, ADR-035). Payment state, the colour of the customer's map pin, worst first:
+         *     `bad` = tagged bad/legal in FOS, or a plan's full term is over (final due date passed) with money left;
+         *     `missed_many` = two or more missed installments (term not over); `missed_one` = one missed installment;
+         *     `due_today` = an installment falls due today, nothing missed; `on_track` = everything due so far is paid;
+         *     `paid_off` = nothing left to pay. A missed installment is a past-due line with money left, or a line the ERP
+         *     rolled forward while the line that took its balance is still unpaid.
+         * @enum {string}
+         */
+        PayState: "bad" | "missed_many" | "missed_one" | "due_today" | "on_track" | "paid_off";
         CustomerLocation: {
             lat?: number | null;
             lng?: number | null;
@@ -2579,6 +2589,14 @@ export interface components {
             };
             /** @description FOS branch of the customer. Added in 1.11.0 */
             branchId?: string | null;
+            payState?: components["schemas"]["PayState"];
+            /** @description Added in 1.14.0. Missed installments across open plans */
+            missedCount?: number;
+            /** @description Added in 1.14.0. Open (balance due) invoices by kind */
+            openInvoices?: {
+                installment?: number;
+                credit?: number;
+            };
             /** Format: date-time */
             erpFetchedAt?: string;
         };
@@ -2623,6 +2641,28 @@ export interface components {
                 lateFeePoisha?: number;
                 /** @description Added in 1.13.0. The ERP moved this line's balance to a later line (amount 0). Apps hide it */
                 rolled?: boolean;
+                /** @description Added in 1.14.0. Left to pay on this line */
+                outstandingPoisha?: number;
+                /**
+                 * Format: date
+                 * @description Added in 1.14.0. Date of the payment that finished the line (ERP allocations). Absent when unpaid or not known
+                 */
+                paidOn?: string;
+                /** @description Added in 1.14.0. Days after the due date it was paid (paid lines) or is still unpaid (overdue lines); 0 otherwise */
+                daysLate?: number;
+                /** @description Added in 1.14.0. A missed installment not made up yet (see PayState) */
+                missed?: boolean;
+                /** @description Added in 1.14.0. Part of paidPoisha the office wrote off (not cash) */
+                writtenOffPoisha?: number;
+                /** @description Added in 1.14.0. ERP payments that went to this line, oldest first. Absent when the ERP does not send them */
+                payments?: {
+                    erpPaymentId?: string;
+                    /** Format: date */
+                    date?: string;
+                    /** @description Part of the payment that went to this line */
+                    amountPoisha?: number;
+                    receiptNo?: string;
+                }[];
             }[];
             /**
              * @description Added in 1.13.0. Credit = pay-later sale with one due date
@@ -2649,6 +2689,14 @@ export interface components {
                 model?: string | null;
                 qty?: number;
                 serials?: string[];
+                /** @description Added in 1.14.0 */
+                unitPricePoisha?: number;
+                /** @description Added in 1.14.0. Line discount */
+                discountPoisha?: number;
+                /** @description Added in 1.14.0 */
+                serviceChargePoisha?: number;
+                /** @description Added in 1.14.0 */
+                lineTotalPoisha?: number;
             }[];
             /** @description Added in 1.13.0. Guarantor of this plan (never an ID number) */
             guarantor?: {
@@ -2659,6 +2707,46 @@ export interface components {
             };
             /** @description Added in 1.13.0. Amount the office wrote off (already out of outstanding) */
             writtenOffPoisha?: number;
+            payState?: components["schemas"]["PayState"];
+            /** @description Added in 1.14.0. Missed installments on this plan */
+            missedCount?: number;
+            /** @description Added in 1.14.0. Days since the oldest missed installment */
+            daysOverdue?: number;
+            /**
+             * Format: date
+             * @description Added in 1.14.0. Next date with money due (today or later)
+             */
+            nextDueDate?: string;
+            /** @description Added in 1.14.0. Left to pay on that date */
+            nextDuePoisha?: number;
+            /** @description Added in 1.14.0. FOS branch the invoice was sold at */
+            branchId?: string;
+            /** @description Added in 1.14.0. Installment invoices: total minus down payment */
+            financedPoisha?: number;
+            /** @description Added in 1.14.0. Invoice subtotal (before invoice discount and tax) */
+            subtotalPoisha?: number;
+            /** @description Added in 1.14.0. Invoice discount */
+            discountPoisha?: number;
+            /** @description Added in 1.14.0 */
+            taxPoisha?: number;
+            /** @description Added in 1.14.0. Discounts given with payments (count as paid in the ERP) */
+            settlementDiscountPoisha?: number;
+            /** @description Added in 1.14.0. Cash refunded for returns */
+            refundedPoisha?: number;
+            /** @description Added in 1.14.0. ERP invoice status as stored (active, posted, returned, ...) */
+            invoiceStatus?: string;
+            /** @description Added in 1.14.0. ERP payment status (unpaid, partial, paid) */
+            paymentStatus?: string;
+            /**
+             * Format: date
+             * @description Added in 1.14.0. Credit sales: the due date
+             */
+            creditDueDate?: string;
+            /** @description Added in 1.14.0. Installment invoices: ERP late-fee setting */
+            penalty?: {
+                enabled?: boolean;
+                rate?: string;
+            };
         };
         Payment: {
             erpPaymentId?: string;
@@ -2723,6 +2811,9 @@ export interface components {
             name?: string;
             outstandingPoisha?: number;
             tagged?: boolean;
+            payState?: components["schemas"]["PayState"];
+            /** @description Added in 1.14.0 */
+            missedCount?: number;
         };
         TimelineItem: {
             /** @enum {string} */
@@ -3857,6 +3948,10 @@ export interface components {
     parameters: {
         Id: string;
         BranchId: string;
+        /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
+        PayStateFilter: components["schemas"]["PayState"][];
+        /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
+        InvoiceKind: "installment" | "credit";
         Limit: number;
         Cursor: string;
         IdempotencyKey: string;
@@ -4913,6 +5008,10 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Return `total` (capped at 10,000). Added in 1.1.0 */
                 includeTotal?: boolean;
+                /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
+                payState?: components["parameters"]["PayStateFilter"];
+                /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
+                invoiceKind?: components["parameters"]["InvoiceKind"];
             };
             header?: never;
             path?: never;
@@ -4939,6 +5038,10 @@ export interface operations {
                 zoom?: number;
                 filter?: string;
                 branchId?: components["parameters"]["BranchId"];
+                /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
+                payState?: components["parameters"]["PayStateFilter"];
+                /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
+                invoiceKind?: components["parameters"]["InvoiceKind"];
             };
             header?: never;
             path?: never;
@@ -4959,6 +5062,11 @@ export interface operations {
                             lng?: number;
                             count?: number;
                             worstStatus?: components["schemas"]["CustomerStatus"];
+                            worstPayState?: components["schemas"]["PayState"];
+                            /** @description Added in 1.14.0. Customers per pin colour in this cluster */
+                            payStates?: {
+                                [key: string]: number;
+                            };
                         }[];
                     };
                 };

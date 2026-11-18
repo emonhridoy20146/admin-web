@@ -392,7 +392,8 @@ test('attendance photos: open a staff member\'s day, see each event with its pho
   await login(page, 'manager');
   await nav(page, attendanceBn.title);
   // go back until a worked day is found (today may not have started, Friday is the weekly off)
-  const worked = page.locator('tbody tr').filter({ hasText: new RegExp(`${attendanceBn.status.present}|${attendanceBn.status.late}`) });
+  // an auto-closed day has no work-out event by design, so pick a day the person closed themselves
+  const worked = page.locator('tbody tr').filter({ hasText: new RegExp(`${attendanceBn.status.present}|${attendanceBn.status.late}`) }).filter({ hasNotText: attendanceBn.autoClosed });
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: attendanceBn.prevDay }).click();
     // the previous day's rows stay on screen while the new day loads, so wait for a worked row instead of counting at once

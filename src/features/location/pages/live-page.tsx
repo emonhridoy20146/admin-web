@@ -10,7 +10,7 @@ import { useGate } from '@/shared/feature/useGate';
 import { formatNumber, formatRelative, formatTime } from '@/shared/lib/format';
 import { todayDhaka } from '@/shared/lib/time';
 import { listOf, useUrlState } from '@/shared/lib/url-state';
-import { boundsOf, type Bounds } from '@/shared/map/geo';
+import { branchPoint, boundsOf, DEFAULT_AREA, DEFAULT_POINT, type Bounds } from '@/shared/map/geo';
 import { MapView, type MapMarker } from '@/shared/map/map-view';
 import { PageHeader } from '@/shared/ui/page';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
@@ -46,8 +46,8 @@ export function LivePage() {
   const n = useMemo(() => counts(all), [all]);
   const rows = useMemo(() => sortLatest(all.filter((r) => !show.length || show.includes(freshnessOf(r)) || (r.mock && show.includes('mock')))), [all, show]);
   const selected = rows.find((r) => r.userId === selectedId) ?? null;
-  const branch = branches.data?.find((b) => b.id === branchId) ?? branches.data?.[0];
-  const center = useMemo(() => ({ lat: branch?.lat ?? 22.7022, lng: branch?.lng ?? 90.3696 }), [branch?.lat, branch?.lng]);
+  const home = branchPoint(branches.data, branchId);
+  const center = useMemo(() => home ?? DEFAULT_POINT, [home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // first answer: frame everyone (or the person in the link); later refreshes keep the manager's own view
   useEffect(() => {
@@ -99,7 +99,7 @@ export function LivePage() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="h-[46vh] min-h-72 lg:h-[calc(100vh-15rem)]">
-          <MapView label={t('live.title')} center={center} zoom={13} markers={markers} fit={fit} onMarkerClick={onMarker} />
+          <MapView label={t('live.title')} center={center} zoom={13} initialBounds={home ? null : DEFAULT_AREA} markers={markers} fit={fit} onMarkerClick={onMarker} />
         </div>
 
         <section aria-label={t('live.list')} className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-e1 lg:h-[calc(100vh-15rem)]">

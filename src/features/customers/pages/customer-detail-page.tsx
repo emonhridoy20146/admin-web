@@ -18,6 +18,7 @@ import { ContactAttempts } from '../components/contact-attempts';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from '../components/customer-parts';
 import { sortPlans } from '../model/plan';
 import { PaymentsTab } from '../components/payments-tab';
+import { InvoicesTab } from '../components/invoices-tab';
 import { TimelineTab } from '../components/timeline-tab';
 
 /** Reads the id client-side: static export serves /customers/view/ for every id (or ?id= fallback) via host rewrite (ADR-W02). */
@@ -83,9 +84,10 @@ export function CustomerDetailPage() {
             <PendingCallout c={c} />
           </div>
 
-          <Tabs value={tab} onValueChange={(v) => url.set({ tab: v === 'overview' ? null : v })}>
+          <Tabs value={tab} onValueChange={(v) => url.set({ tab: v === 'overview' ? null : v, invoice: null })}>
             <TabsList className="mb-5">
               <TabsTrigger value="overview">{t('tabs.overview')}</TabsTrigger>
+              <TabsTrigger value="invoices">{t('tabs.invoices')}</TabsTrigger>
               <TabsTrigger value="payments">{t('tabs.payments')}</TabsTrigger>
               <TabsTrigger value="timeline">{t('tabs.timeline')}</TabsTrigger>
               <TabsTrigger value="notes">{t('tabs.notes')}</TabsTrigger>
@@ -96,7 +98,9 @@ export function CustomerDetailPage() {
             <TabsContent value="overview">
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="space-y-4">
-                  {sortPlans(c.plans ?? []).map((p) => <PlanCard key={p.erpPlanId} plan={p} showSchedule />)}
+                  {sortPlans(c.plans ?? []).map((p) => (
+                    <PlanCard key={p.erpPlanId} plan={p} showSchedule onOpen={() => url.set({ tab: 'invoices', invoice: p.erpPlanId ?? null }, { push: true })} />
+                  ))}
                 </div>
                 <div className="space-y-4">
                   <Card className="h-fit p-4">
@@ -110,6 +114,7 @@ export function CustomerDetailPage() {
                 </div>
               </div>
             </TabsContent>
+            <TabsContent value="invoices"><InvoicesTab c={c} /></TabsContent>
             <TabsContent value="payments"><PaymentsTab c={c} /></TabsContent>
             <TabsContent value="timeline"><TimelineTab customerId={c.id!} /></TabsContent>
             <TabsContent value="notes"><div className="max-w-3xl"><NotesList notes={c.recentNotes} /></div></TabsContent>

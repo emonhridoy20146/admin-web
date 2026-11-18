@@ -177,6 +177,15 @@ function recomputeCustomer(c: db.MockCustomer) {
   c.detail.pendingFieldPoisha = c.item.pendingFieldPoisha;
   c.detail.tag = c.item.tag;
   c.detail.badges = c.item.badges;
+  db.deriveCustomer(c);
+}
+const PAY_ORDER = ['bad', 'missed_many', 'missed_one', 'due_today', 'on_track', 'paid_off'] as const;
+/** 1.14.0 filters shared by the list and the map: pin colours (OR) and an open invoice of a kind */
+function payFilter(url: URL) {
+  const pay = (url.searchParams.get('payState') ?? '').split(',').filter(Boolean);
+  const kind = url.searchParams.get('invoiceKind');
+  return (c: db.MockCustomer) =>
+    (!pay.length || pay.includes(c.item.payState ?? '')) && (!kind || (kind === 'credit' ? (c.item.openInvoices?.credit ?? 0) > 0 : (c.item.openInvoices?.installment ?? 0) > 0));
 }
 
 const uploads = new Map<string, boolean>();
@@ -386,24 +395,28 @@ export const handlers = [
     const inBox = db.customers
       .filter((c) => sc.includes(c.branchId) && c.item.location?.status === 'ok')
       .filter((c) => c.item.location!.lat! >= minLat && c.item.location!.lat! <= maxLat && c.item.location!.lng! >= minLng && c.item.location!.lng! <= maxLng)
-      .filter((c) => !filter.length || filter.some((f) => c.item.badges?.includes(f as never)));
+      .filter((c) => !filter.length || filter.some((f) => c.item.badges?.includes(f as never)))
+      .filter(payFilter(url));
     if (zoom < 13) {
       const cell = 360 / 2 ** (zoom + 2);
-      const cells = new Map<string, { lat: number; lng: number; count: number; rank: number }>();
+      const cells = new Map<string, { lat: number; lng: number; count: number; rank: number; payRank: number; payStates: Record<string, number> }>();
       for (const c of inBox) {
         const k = `${Math.floor(c.item.location!.lat! / cell)}:${Math.floor(c.item.location!.lng! / cell)}`;
-        const cur = cells.get(k) ?? { lat: 0, lng: 0, count: 0, rank: 99 };
+        const cur = cells.get(k) ?? { lat: 0, lng: 0, count: 0, rank: 99, payRank: 99, payStates: {} as Record<string, number> };
         cur.lat += c.item.location!.lat!;
         cur.lng += c.item.location!.lng!;
         cur.count++;
         cur.rank = Math.min(cur.rank, ORDER.indexOf(worst(c.item.badges)));
+        const ps = c.item.payState ?? 'on_track';
+        cur.payRank = Math.min(cur.payRank, PAY_ORDER.indexOf(ps));
+        cur.payStates[ps] = (cur.payStates[ps] ?? 0) + 1;
         cells.set(k, cur);
       }
-      return HttpResponse.json({ pins: [], clusters: [...cells.values()].map((v) => ({ lat: v.lat / v.count, lng: v.lng / v.count, count: v.count, worstStatus: ORDER[v.rank] as S['CustomerStatus'] })) });
+      return HttpResponse.json({ pins: [], clusters: [...cells.values()].map((v) => ({ lat: v.lat / v.count, lng: v.lng / v.count, count: v.count, worstStatus: ORDER[v.rank] as S['CustomerStatus'], worstPayState: PAY_ORDER[v.payRank], payStates: v.payStates })) });
     }
     return HttpResponse.json({
       clusters: [],
-      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged' })),
+      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged', payState: c.item.payState, missedCount: c.item.missedCount })),
     });
   })),
   http.get(`${BASE}/location-proposals`, authed(({ ctx, url }) => {
@@ -871,7 +884,7 @@ export const handlers = [
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     const assignedTo = url.searchParams.get('assignedTo');
     const areaId = url.searchParams.get('areaId');
-    let all = db.customers.filter((c) => sc.includes(c.branchId));
+    let all = db.customers.filter((c) => sc.includes(c.branchId)).filter(payFilter(url));
     if (areaId) all = all.filter((c) => c.areaId === areaId);
     if (assignedTo) all = all.filter((c) => c.item.assignee?.id === (assignedTo === 'me' ? ctx.user.id : assignedTo));
     if (q) all = all.filter((c) => `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code} ${c.item.phone}`.toLowerCase().includes(q));

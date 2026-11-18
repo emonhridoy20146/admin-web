@@ -101,6 +101,24 @@
   --color-st-pending-bg: var(--st-pending-bg);
   --color-st-mock: var(--st-mock-fg);
   --color-st-mock-bg: var(--st-mock-bg);
+  --color-ps-bad: var(--ps-bad-fg);
+  --color-ps-bad-bg: var(--ps-bad-bg);
+  --color-ps-bad-pin: var(--ps-bad-pin);
+  --color-ps-missed-many: var(--ps-missed-many-fg);
+  --color-ps-missed-many-bg: var(--ps-missed-many-bg);
+  --color-ps-missed-many-pin: var(--ps-missed-many-pin);
+  --color-ps-missed-one: var(--ps-missed-one-fg);
+  --color-ps-missed-one-bg: var(--ps-missed-one-bg);
+  --color-ps-missed-one-pin: var(--ps-missed-one-pin);
+  --color-ps-due-today: var(--ps-due-today-fg);
+  --color-ps-due-today-bg: var(--ps-due-today-bg);
+  --color-ps-due-today-pin: var(--ps-due-today-pin);
+  --color-ps-on-track: var(--ps-on-track-fg);
+  --color-ps-on-track-bg: var(--ps-on-track-bg);
+  --color-ps-on-track-pin: var(--ps-on-track-pin);
+  --color-ps-paid-off: var(--ps-paid-off-fg);
+  --color-ps-paid-off-bg: var(--ps-paid-off-bg);
+  --color-ps-paid-off-pin: var(--ps-paid-off-pin);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -208,6 +226,31 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent);
   cursor: pointer;
 }
+/* A cluster that knows its mix of pay states: the ring shows the share of each colour, the worst one is the halo. */
+.fos-cluster.has-ring {
+  padding: 5px;
+  background: var(--ring);
+  color: var(--fg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent), var(--e2);
+}
+.fos-cluster.has-ring > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--surface);
+}
+/* Pins (shared/map/pin-icon.tsx): body = state colour, dark outline so yellow still stands out on light tiles,
+   white face with a glyph that repeats what the colour says. */
+.fos-pin { display: block; line-height: 0; cursor: pointer; filter: drop-shadow(0 1px 1.5px var(--pin-shadow)); }
+.fos-pin.is-selected { filter: drop-shadow(0 3px 5px var(--pin-shadow)); }
+.fos-pin-body { fill: var(--pin-fill); stroke: var(--pin-edge); stroke-width: 1.25; }
+.fos-pin-face { fill: var(--neutral-0); }
+.fos-pin-glyph { color: var(--pin-edge); }
+:root[data-theme='dark'] .fos-pin-body { stroke: color-mix(in srgb, var(--pin-fill) 45%, var(--neutral-950)); }
+:root[data-theme='dark'] .fos-pin-glyph { color: var(--neutral-900); }
+.leaflet-marker-icon:focus-visible .fos-pin { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 4px; }
 .fos-map .leaflet-container,
 .fos-map.leaflet-container {
   background: var(--surface-subtle);

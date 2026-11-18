@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloudUpload, Flag, Gauge, MapPin, MapPinPlus, MapPinned, Phone, Signpost, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
+import { CloudUpload, FileText, Flag, Gauge, MapPin, MapPinPlus, MapPinned, Phone, Signpost, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
 import { AssignCustomerDialog } from '@/features/assignments';
 import { useGate } from '@/shared/feature/useGate';
 import { useUrlState } from '@/shared/lib/url-state';
@@ -225,7 +225,8 @@ function Item({ icon: Icon, label, children }: { icon: typeof Phone; label: stri
   );
 }
 
-export function PlanCard({ plan, showSchedule }: { plan: Plan; showSchedule?: boolean }) {
+/** `onOpen` adds a link to the full invoice view (FR-W-028). */
+export function PlanCard({ plan, showSchedule, onOpen }: { plan: Plan; showSchedule?: boolean; onOpen?: () => void }) {
   const { t } = useTranslation('customers');
   const { t: tc } = useTranslation();
   const total = plan.totalPayablePoisha ?? 0;
@@ -265,6 +266,12 @@ export function PlanCard({ plan, showSchedule }: { plan: Plan; showSchedule?: bo
         <div className="text-end">
           <div className="text-xs text-fg-tertiary">{t('outstanding')}</div>
           <MoneyText poisha={plan.outstandingPoisha ?? 0} className="text-md font-semibold" />
+          {onOpen && (
+            <button type="button" onClick={onOpen} className="mt-1 flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline sm:min-h-8">
+              <FileText className="size-4" aria-hidden />
+              {t('invoice.openFull')}
+            </button>
+          )}
         </div>
       </div>
       <div className="px-4 pb-3">
