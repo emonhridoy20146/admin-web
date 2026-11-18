@@ -33,6 +33,7 @@ One static page serves every customer id: `/customers/view/` (ADR-W02, amended).
   /customers/:id/index.txt /customers/view/index.txt   200
   ```
 - Nginx: `location ~ ^/customers/(?!view/)[^/]+/(index\.txt)?$ { try_files /customers/view/$1 /customers/view/index.html; }`
+- Vercel: `vercel.json` in this repo holds the same two rewrites (paths are tested against Vercel's matcher, path-to-regexp 6). Set the `NEXT_PUBLIC_*` variables in the Vercel project and redeploy after any change: they are baked in at build time. Use a custom domain under the same parent domain as field-api (for example `admin.example.com` and `api.example.com`): the refresh cookie is `SameSite=Strict`, so a `*.vercel.app` address signs out on every reload. Add the CSP below as a Vercel `headers` entry before real use.
 
 `scripts/serve-static.mjs` implements the same rules and is the reference.
 
