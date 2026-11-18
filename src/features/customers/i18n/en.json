@@ -72,7 +72,10 @@
     "source": "Source",
     "reversed": "Reversed",
     "noPending": "No field collections waiting to post.",
-    "none": "No payments yet."
+    "none": "No payments yet.",
+    "advance": "Advance",
+    "collector": "Collector: {{name}}",
+    "discount": "discount {{amount}}"
   },
   "notes": {
     "empty": "No notes yet. Staff add notes from the app."
@@ -210,5 +213,40 @@
   "assign": {
     "open": "Assign a staff member",
     "change": "Change staff"
+  },
+  "kind": {
+    "credit": "Credit sale"
+  },
+  "planStatus": {
+    "defaulted": "Defaulted",
+    "closed": "Returned",
+    "cancelled": "Cancelled"
+  },
+  "creditDue": "pay by {{date}}",
+  "frequency": {
+    "monthly": "monthly",
+    "weekly": "weekly",
+    "daily": "daily",
+    "custom": "custom days",
+    "everyNDays": "every {{n}} days"
+  },
+  "notCollectable": "Not collectable: the invoice is returned or cancelled in the ERP, so it is not in the totals.",
+  "writtenOff": "Written off",
+  "items": "Products",
+  "serials": "Serial: {{list}}",
+  "planGuarantor": "Guarantor of this sale",
+  "lateFeeIncl": "incl. late fee {{amount}}",
+  "rolledHidden": "{{n}} lines that the ERP moved to a later date are hidden.",
+  "directions": "How to find the house",
+  "erpRisk": {
+    "badge": "ERP risk {{grade}}",
+    "level": {
+      "low": "Low risk",
+      "medium": "Medium risk",
+      "high": "High risk"
+    },
+    "overdue": "{{n}} times late",
+    "maxLate": "up to {{n}} days late",
+    "asOf": "as of {{date}}"
   }
 }

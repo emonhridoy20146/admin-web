@@ -12,11 +12,13 @@ import { Checkbox } from '@/shared/ui/primitives';
 import { Button } from '@/shared/ui/button';
 import { ErrorBanner } from '@/shared/ui/feedback';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
-import { useCreateUser, useUpdateUser, type User } from '../api/users';
+import { useCreateUser, useErpEmployees, useUpdateUser, type User } from '../api/users';
 import {
   changedKeys,
   emptyForm,
+  erpEmployeeLabel,
   fromUser,
+  orderErpEmployees,
   ROLES,
   toCreate,
   toUpdate,
@@ -242,18 +244,12 @@ export function UserFormDialog({
               )}
             </fieldset>
           )}
-          <Field label={t('form.erpId')} help={t('form.erpIdHelp')}>
-            {(id, d) => (
-              <Input
-                id={id}
-                aria-describedby={d}
-                className="font-mono"
-                value={v.erpEmployeeId}
-                disabled={!!user}
-                onChange={(e) => set('erpEmployeeId', e.target.value)}
-              />
-            )}
-          </Field>
+          <ErpEmployeeField
+            value={v.erpEmployeeId}
+            branchErpIds={(branches.data ?? []).filter((b) => v.branchIds.includes(b.id!)).map((b) => b.erpBranchId!)}
+            needed={v.role === 'field_staff' || v.role === 'branch_manager'}
+            onChange={(val) => set('erpEmployeeId', val)}
+          />
           {v.role === 'field_staff' && (
             <Field label={t('form.cashLimit')} error={err('cashLimitTaka')} help={t('form.cashLimitHelp')}>
               {(id, d) => (
@@ -312,5 +308,46 @@ export function UserFormDialog({
         />
       )}
     </>
+  );
+}
+
+/**
+ * Link the account to its ERP employee (1.13.0). The ERP records a collector on every payment, so field staff who
+ * are not linked get the COLLECTOR_NOT_LINKED conflict. The list is read live from the ERP; when the ERP cannot be
+ * reached the id can still be typed.
+ */
+function ErpEmployeeField({ value, branchErpIds, needed, onChange }: { value: string; branchErpIds: string[]; needed: boolean; onChange: (v: string) => void }) {
+  const { t } = useTranslation('admin-users');
+  const q = useErpEmployees();
+  const list = q.data?.items ?? [];
+  const { mine, others } = orderErpEmployees(list, branchErpIds);
+  const known = !value || list.some((e) => e.erpEmployeeId === value);
+  const label = (e: (typeof list)[number]) => (e.active === false ? `${erpEmployeeLabel(e)} · ${t('form.erpInactive')}` : erpEmployeeLabel(e));
+  const warn = needed && !value ? t('form.erpNotLinked') : undefined;
+  if (q.isError)
+    return (
+      <Field label={t('form.erpId')} help={warn ? `${t('form.erpUnavailable')} ${warn}` : t('form.erpUnavailable')}>
+        {(id, d) => <Input id={id} aria-describedby={d} className="font-mono" value={value} onChange={(e) => onChange(e.target.value.trim())} />}
+      </Field>
+    );
+  return (
+    <Field label={t('form.erpId')} help={warn ?? t('form.erpIdHelp')}>
+      {(id, d) => (
+        <Select id={id} aria-describedby={d} value={value} disabled={q.isLoading} onChange={(e) => onChange(e.target.value)}>
+          <option value="">{q.isLoading ? t('form.erpLoading') : t('form.erpNone')}</option>
+          {!known && <option value={value}>{t('form.erpUnknown', { id: value })}</option>}
+          {mine.length > 0 && (
+            <optgroup label={t('form.erpMine')}>
+              {mine.map((e) => <option key={e.erpEmployeeId} value={e.erpEmployeeId}>{label(e)}</option>)}
+            </optgroup>
+          )}
+          {others.length > 0 && (
+            <optgroup label={mine.length ? t('form.erpOthers') : t('form.erpAll')}>
+              {others.map((e) => <option key={e.erpEmployeeId} value={e.erpEmployeeId}>{label(e)}</option>)}
+            </optgroup>
+          )}
+        </Select>
+      )}
+    </Field>
   );
 }

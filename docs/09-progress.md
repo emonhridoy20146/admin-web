@@ -55,6 +55,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - Bulk assign from the customers list and the CI workflow done 2026-11-16. Contract 1.7.1 adopted (plain-array location proposals, audit export).
 - Refund proof photo upload done 2026-11-16 (`proofMediaId`, presigned upload).
 - Map pins and single-customer assignment done 2026-11-17 on contract 1.11.0 (owner request): set or move a customer's pin on a map with a fixed centre pin or pasted coordinates (applies at once), assign one customer to a staff member of its branch or end a direct assignment, fix links from data quality, method and phone distance on pin approvals.
+- Real ERP shape done 2026-11-18 on contract 1.13.0 (owner request; field-api ADR-033): invoice details, credit sales, rolled lines hidden, returned invoices not collectable, ERP risk badge, ERP receipts and collectors on payments, ERP employee picker in the user form, conflict hints, branch map points in Settings (FR-W-025..027, ADR-W17).
 - Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api

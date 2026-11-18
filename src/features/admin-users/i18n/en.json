@@ -4,7 +4,11 @@
   "new": "New user",
   "search": "Search name, phone, code…",
   "allRoles": "All roles",
-  "status": { "active": "Active", "inactive": "Deactivated", "all": "All" },
+  "status": {
+    "active": "Active",
+    "inactive": "Deactivated",
+    "all": "All"
+  },
   "col": {
     "name": "Name",
     "role": "Role",
@@ -39,8 +43,8 @@
     },
     "branches": "Branches",
     "code": "Employee code",
-    "erpId": "ERP employee ID",
-    "erpIdHelp": "Links the account to the ERP staff record. Optional.",
+    "erpId": "ERP employee",
+    "erpIdHelp": "The ERP records who collected every payment. Pick this person's ERP staff record.",
     "cashLimit": "Cash-on-hand limit (৳)",
     "cashLimitHelp": "Leave empty to use the branch default.",
     "create": "Create user",
@@ -51,7 +55,16 @@
     "noChanges": "Nothing has changed.",
     "shift": "Work shift",
     "shiftHelp": "Hours, weekly off and late rule. Shifts are set up in Holidays and shifts.",
-    "noShift": "Branch duty hours (no shift)"
+    "noShift": "Branch duty hours (no shift)",
+    "erpNotLinked": "Not linked yet: the ERP will not accept this person's collections until they are linked.",
+    "erpUnavailable": "The ERP list cannot be loaded right now. You can type the ERP employee id.",
+    "erpLoading": "Loading ERP staff…",
+    "erpNone": "Not linked",
+    "erpUnknown": "{{id}} (not in the ERP list)",
+    "erpMine": "Staff of these branches",
+    "erpOthers": "Other branches",
+    "erpAll": "ERP staff",
+    "erpInactive": "inactive"
   },
   "fields": {
     "name": "name",
@@ -59,7 +72,8 @@
     "role": "role",
     "branchIds": "branches",
     "cashLimitPoisha": "cash limit",
-    "shiftId": "shift"
+    "shiftId": "shift",
+    "erpEmployeeId": "ERP employee"
   },
   "errors": {
     "required": "Required.",

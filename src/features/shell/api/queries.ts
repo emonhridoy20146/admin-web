@@ -5,8 +5,12 @@ import { useCan, useSession } from '@/shared/auth/session';
 import { useBranchId } from '@/shared/lib/ui-store';
 import { EV, useInvalidateOn } from '@/shared/feature/events';
 
+const BRANCH_EVENTS = [EV.branchChanged];
+const BRANCH_KEYS = [['shell', 'branches']];
+
 export function useBranches() {
   const authed = useSession((s) => s.status === 'authenticated');
+  useInvalidateOn(BRANCH_EVENTS, BRANCH_KEYS);
   return useQuery({ queryKey: ['shell', 'branches'], queryFn: () => unwrap(api.GET('/branches')), staleTime: 60 * 60_000, enabled: authed });
 }
 

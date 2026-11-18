@@ -56,6 +56,9 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | FR-W-022 **[ADDED 2026-11-17]** | Leave approvals: waiting requests first, status and date filters with counts, approve with a confirmation naming the days, reject with a reason, overlap warning and the person's other requests; nav badge with the waiting count (master FR-ATT-008, contract 1.12.0). | active | P2 | U E A |
 | FR-W-023 **[ADDED 2026-11-17]** | Holidays and shifts: holidays per year (national or some branches), add and delete; shifts with hours, weekly off, late grace and break limit, add and edit; a user's shift in the user form (master FR-SET-002/003). | active | P2 | U E A |
 | FR-W-024 **[ADDED 2026-11-17]** | Notices: compose in Bangla (English optional) to branches and groups, must read, confirm before sending; list with read counts; who has not read first, with read times (master FR-NOT-005, contract 1.12.0). | active | P2 | U E A |
+| FR-W-025 **[ADDED 2026-11-18]** | Real ERP shape on customers: invoice number, credit sale, products and serials, guarantor of the sale, frequency, written off, late fee per line, rolled lines hidden, returned/cancelled not collectable, ERP risk badge, detailed address and directions; payments with ERP receipt, method name, collector, advance, discount, reversed (master FR-ERP-006, contract 1.13.0). | active | P1 | U E |
+| FR-W-026 **[ADDED 2026-11-18]** | Link a user to an ERP employee from a live list (staff of the user's branches first, change or remove on edit, typed id when the ERP is down); hints for the real ERP's conflict codes with a link to the unlinked collector (master FR-ERP-006). | active | P1 | U E |
+| FR-W-027 **[ADDED 2026-11-18]** | Branch map points in Settings: set by moving the map or pasting coordinates, refuse points outside Bangladesh, remove; warehouses marked (master FR-BR-002). | active | P2 | E A |
 
 ## 3. Non-functional (web specifics)
 | ID | Requirement |

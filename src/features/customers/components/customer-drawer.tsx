@@ -5,6 +5,7 @@ import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { AsOf } from '@/shared/ui/page';
 import { useCustomer } from '../api/customers';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from './customer-parts';
+import { sortPlans } from '../model/plan';
 
 /** Row → drawer (FR-W-005). URL `?drawer=customer:<id>` makes it shareable; Esc closes and focus returns. */
 export function CustomerDrawer({ id, onClose, footer }: { id: string | null; onClose: () => void; footer?: React.ReactNode }) {
@@ -39,7 +40,7 @@ export function CustomerDrawer({ id, onClose, footer }: { id: string | null; onC
             </section>
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-fg-secondary">{t('plans')}</h3>
-              {c.plans?.map((p) => <PlanCard key={p.erpPlanId} plan={p} />)}
+              {sortPlans(c.plans ?? []).map((p) => <PlanCard key={p.erpPlanId} plan={p} />)}
             </section>
             <section>
               <h3 className="mb-2 text-sm font-semibold text-fg-secondary">{t('tabs.notes')}</h3>

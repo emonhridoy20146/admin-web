@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { Receipt } from 'lucide-react';
-import { formatDate, formatDateTime } from '@/shared/lib/format';
+import { formatDate, formatDateTime, formatMoney } from '@/shared/lib/format';
 import { Card, CardHeader } from '@/shared/ui/card';
 import { MoneyText } from '@/shared/ui/money';
 import { Badge, StatusBadge } from '@/shared/ui/badge';
@@ -56,12 +56,20 @@ export function PaymentsTab({ c }: { c: CustomerDetail }) {
                   <tr key={p.erpPaymentId} className="border-t border-line">
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(p.date!)}</td>
                     <td className="px-3 py-2 font-mono text-xs">{p.receiptNo}</td>
-                    <td className="px-3 py-2">{tc(`method.${p.method}`, { defaultValue: p.method })}</td>
+                    <td className="px-3 py-2">
+                      {tc(`method.${p.method}`, { defaultValue: p.method })}
+                      {p.methodLabel && <span className="block text-xs text-fg-tertiary">{p.methodLabel}</span>}
+                    </td>
                     <td className="px-3 py-2">
                       <Badge tone={p.source === 'field' ? 'brand' : 'neutral'} icon={false}>{p.source === 'field' ? t('payments.fieldSource') : t('payments.office')}</Badge>
+                      {p.advance && <Badge tone="info" icon={false} className="ms-1">{t('payments.advance')}</Badge>}
                       {p.reversed && <Badge tone="danger" className="ms-1">{t('payments.reversed')}</Badge>}
+                      {p.collectorName && <span className="mt-0.5 block text-xs text-fg-tertiary">{t('payments.collector', { name: p.collectorName })}</span>}
                     </td>
-                    <td className="px-4 py-2 text-end"><MoneyText poisha={p.amountPoisha ?? 0} className="font-medium" /></td>
+                    <td className="px-4 py-2 text-end">
+                      <MoneyText poisha={p.amountPoisha ?? 0} className={p.reversed ? 'font-medium text-fg-tertiary line-through' : 'font-medium'} />
+                      {(p.discountPoisha ?? 0) > 0 && <span className="block text-xs whitespace-nowrap text-fg-tertiary">{t('payments.discount', { amount: formatMoney(p.discountPoisha ?? 0) })}</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

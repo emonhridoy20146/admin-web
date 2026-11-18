@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloudUpload, Flag, MapPin, MapPinPlus, MapPinned, Phone, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
+import { CloudUpload, Flag, Gauge, MapPin, MapPinPlus, MapPinned, Phone, Signpost, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
 import { AssignCustomerDialog } from '@/features/assignments';
 import { useGate } from '@/shared/feature/useGate';
 import { useUrlState } from '@/shared/lib/url-state';
@@ -14,6 +14,7 @@ import { EmptyState } from '@/shared/ui/feedback';
 import type { components } from '@/shared/api/schema';
 import { sortStatuses } from '../model/customer-row';
 import { currentPin } from '../model/pin';
+import { frequencyLabel, guarantorPhones, isCollectable, itemLabel, rolledCount, visibleLines } from '../model/plan';
 import type { CustomerDetail } from '../api/customers';
 import { SetPinDialog } from './set-pin-dialog';
 
@@ -78,10 +79,33 @@ export function CustomerStatusRow({ c }: { c: CustomerDetail }) {
     <div className="flex flex-wrap items-center gap-1.5">
       <StatusBadges statuses={sortStatuses(c.badges ?? [])} max={4} />
       {c.tag?.state === 'tagged' && c.tag.severity && c.tag.severity !== 'bad' && <Badge tone="neutral" icon={Flag}>{t(`severity.${c.tag.severity}`)}</Badge>}
+      <ErpRiskBadge c={c} />
       {c.openPromise && (
         <Badge tone="promised">{t('promiseOn', { date: formatDate(c.openPromise.promisedDate, { withYear: false }), amount: formatMoney(c.openPromise.promisedAmountPoisha) })}</Badge>
       )}
     </div>
+  );
+}
+
+/** The ERP's own risk grade (read-only), shown next to FOS tags; it is not a FOS tag. */
+function ErpRiskBadge({ c }: { c: CustomerDetail }) {
+  const { t } = useTranslation('customers');
+  const r = c.erpRisk;
+  if (!r?.grade || r.grade === 'N/A') return null;
+  const level = (r.level ?? '').toLowerCase();
+  const tone = level === 'high' ? 'danger' : level === 'medium' ? 'warning' : 'neutral';
+  const label = t('erpRisk.badge', { grade: r.grade });
+  const detail = [
+    level ? t(`erpRisk.level.${level}`, { defaultValue: r.level }) : null,
+    r.overdueCount ? t('erpRisk.overdue', { n: formatNumber(r.overdueCount) }) : null,
+    r.maxDaysLate ? t('erpRisk.maxLate', { n: formatNumber(r.maxDaysLate) }) : null,
+    r.computedAt ? t('erpRisk.asOf', { date: formatDate(r.computedAt) }) : null,
+  ].filter(Boolean).join(' · ');
+  return (
+    <span title={detail} className="inline-flex">
+      <Badge tone={tone} icon={Gauge}>{label}</Badge>
+      <span className="sr-only">{detail}</span>
+    </span>
   );
 }
 
@@ -94,7 +118,7 @@ export function BadSuggestionCallout({ c }: { c: CustomerDetail }) {
       <div className="text-sm">
         <p className="font-semibold">{t('badSuggestion')}</p>
         <p className="mt-0.5 text-fg-secondary">
-          {t('badSuggestionBody', { plan: c.badSuggestion.erpPlanId, date: formatDate(c.badSuggestion.finalDueDate!), amount: formatMoney(c.badSuggestion.outstandingPoisha ?? 0) })}
+          {t('badSuggestionBody', { plan: c.plans?.find((p) => p.erpPlanId === c.badSuggestion?.erpPlanId)?.invoiceNo ?? c.badSuggestion.erpPlanId, date: formatDate(c.badSuggestion.finalDueDate!), amount: formatMoney(c.badSuggestion.outstandingPoisha ?? 0) })}
         </p>
       </div>
     </div>
@@ -128,11 +152,17 @@ export function ContactCard({ c }: { c: CustomerDetail }) {
       <Item icon={MapPin} label={t('address')}>
         {c.areaName && <span className="block font-medium" lang={locale}>{pickText(c.areaName, locale)}</span>}
         <span>{c.address}</span>
+        {c.detailedAddress && c.detailedAddress !== c.address && <span className="block text-sm text-fg-secondary">{c.detailedAddress}</span>}
         <span className={cn('mt-0.5 block text-xs', hasLoc ? 'text-fg-tertiary' : 'text-warning')}>
           {hasLoc ? `${c.location!.lat!.toFixed(5)}, ${c.location!.lng!.toFixed(5)}` : t('locationMissing')}
         </span>
         <PinAction c={c} hasLoc={hasLoc} />
       </Item>
+      {c.directions && (
+        <Item icon={Signpost} label={t('directions')}>
+          <span className="text-sm" lang={/[ঀ-৿]/.test(c.directions) ? 'bn' : 'en'}>{c.directions}</span>
+        </Item>
+      )}
       <Item icon={UserRound} label={t('assignedTo')}>
         <span className={c.assignee?.name ? undefined : 'text-warning'}>{c.assignee?.name ?? t('nobodyAssigned')}</span>
         <AssignAction c={c} />
@@ -200,19 +230,37 @@ export function PlanCard({ plan, showSchedule }: { plan: Plan; showSchedule?: bo
   const { t: tc } = useTranslation();
   const total = plan.totalPayablePoisha ?? 0;
   const paidPct = total ? (plan.paidPoisha ?? 0) / total : 0;
-  const sched = plan.schedule ?? [];
+  const sched = visibleLines(plan);
+  const rolled = rolledCount(plan);
+  const credit = plan.kind === 'credit';
+  const collectable = isCollectable(plan);
+  const freq = frequencyLabel(plan);
+  const written = plan.writtenOffPoisha ?? 0;
+  const gPhones = guarantorPhones(plan.guarantor);
   return (
-    <div className="overflow-hidden rounded-md border border-line bg-surface">
+    <div className={cn('overflow-hidden rounded-md border border-line bg-surface', !collectable && 'bg-surface-subtle')}>
       <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-base font-semibold text-fg">{plan.product}</span>
+            <span className={cn('text-base font-semibold', collectable ? 'text-fg' : 'text-fg-secondary')}>{plan.product}</span>
+            {credit && <Badge tone="info" icon={false}>{t('kind.credit')}</Badge>}
             {plan.badSuggested && <StatusBadge status="bad_suggested" />}
             {plan.status === 'completed' && <StatusBadge status="paid_up" />}
+            {plan.status === 'defaulted' && <Badge tone="danger">{t('planStatus.defaulted')}</Badge>}
+            {!collectable && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
           </div>
           <div className="mt-0.5 text-sm text-fg-tertiary">
-            <span className="font-mono text-xs">{plan.erpPlanId}</span> · {t('installments', { n: formatNumber(plan.installmentCount ?? 0) })} · {t('started')} {formatDate(plan.startDate!)} · {t('finalDue')} {formatDate(plan.finalDueDate!)}
+            <span className="font-mono text-xs">{plan.invoiceNo ?? plan.erpPlanId}</span>
+            {credit ? (
+              <> · {t('creditDue', { date: formatDate(plan.finalDueDate!) })}</>
+            ) : (
+              <>
+                {' '}· {t('installments', { n: formatNumber(sched.length || (plan.installmentCount ?? 0)) })}
+                {freq && <> · {t(freq.key, { n: formatNumber(freq.n ?? 0) })}</>} · {t('started')} {formatDate((plan.saleDate ?? plan.startDate)!)} · {t('finalDue')} {formatDate(plan.finalDueDate!)}
+              </>
+            )}
           </div>
+          {!collectable && <p className="mt-1 text-xs text-fg-secondary">{t('notCollectable')}</p>}
         </div>
         <div className="text-end">
           <div className="text-xs text-fg-tertiary">{t('outstanding')}</div>
@@ -229,7 +277,7 @@ export function PlanCard({ plan, showSchedule }: { plan: Plan; showSchedule?: bo
             />
           ))}
         </div>
-        <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+        <dl className={cn('mt-3 grid gap-2 text-sm', written > 0 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')}>
           <div>
             <dt className="text-xs text-fg-tertiary">{t('totalPayable')}</dt>
             <dd><MoneyText poisha={total} /></dd>
@@ -242,8 +290,45 @@ export function PlanCard({ plan, showSchedule }: { plan: Plan; showSchedule?: bo
             <dt className="text-xs text-fg-tertiary">{t('paid')} · {formatPercent(paidPct)}</dt>
             <dd><MoneyText poisha={plan.paidPoisha ?? 0} /></dd>
           </div>
+          {written > 0 && (
+            <div>
+              <dt className="text-xs text-fg-tertiary">{t('writtenOff')}</dt>
+              <dd><MoneyText poisha={written} /></dd>
+            </div>
+          )}
         </dl>
       </div>
+      {showSchedule && (!!plan.items?.length || !!plan.guarantor?.name) && (
+        <dl className="grid gap-3 border-t border-line px-4 py-3 text-sm sm:grid-cols-2">
+          {!!plan.items?.length && (
+            <div className="min-w-0">
+              <dt className="text-xs text-fg-tertiary">{t('items')}</dt>
+              <dd>
+                <ul className="space-y-1">
+                  {plan.items.map((it, i) => (
+                    <li key={i} className="min-w-0">
+                      <span className="text-fg">{itemLabel(it)}</span>
+                      {!!it.serials?.length && <span className="block truncate font-mono text-xs text-fg-tertiary">{t('serials', { list: it.serials.join(', ') })}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          )}
+          {plan.guarantor?.name && (
+            <div className="min-w-0">
+              <dt className="text-xs text-fg-tertiary">{t('planGuarantor')}</dt>
+              <dd className="text-fg">
+                {plan.guarantor.name}
+                {gPhones.map((p) => (
+                  <a key={p} href={`tel:${p}`} className="ms-2 font-mono text-sm text-fg-tertiary hover:text-primary">{p}</a>
+                ))}
+                {plan.guarantor.address && <span className="block text-xs text-fg-tertiary">{plan.guarantor.address}</span>}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
       {showSchedule && sched.length > 0 && (
         <div className="scrollbar-thin overflow-x-auto border-t border-line">
           <table className="w-full text-sm">
@@ -265,13 +350,17 @@ export function PlanCard({ plan, showSchedule }: { plan: Plan; showSchedule?: bo
                     {formatDate(s.dueDate!)}
                     {s.estimated && <span className="ms-1 text-xs text-fg-tertiary">({t('estimated')})</span>}
                   </td>
-                  <td className="px-3 py-2 text-end"><MoneyText poisha={s.amountPoisha ?? 0} /></td>
+                  <td className="px-3 py-2 text-end">
+                    <MoneyText poisha={s.amountPoisha ?? 0} />
+                    {(s.lateFeePoisha ?? 0) > 0 && <span className="block text-xs whitespace-nowrap text-fg-tertiary">{t('lateFeeIncl', { amount: formatMoney(s.lateFeePoisha ?? 0) })}</span>}
+                  </td>
                   <td className="px-3 py-2 text-end"><MoneyText poisha={s.paidPoisha ?? 0} className={(s.paidPoisha ?? 0) === 0 ? 'text-fg-tertiary' : ''} /></td>
                   <td className="px-4 py-2"><StatusBadge status={s.status ?? 'upcoming'} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {rolled > 0 && <p className="border-t border-line px-4 py-2 text-xs text-fg-tertiary">{t('rolledHidden', { n: formatNumber(rolled) })}</p>}
         </div>
       )}
     </div>

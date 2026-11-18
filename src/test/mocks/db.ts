@@ -337,22 +337,22 @@ for (let d = 7; d >= 0; d--) {
   }
 }
 // conflicts & failures (the interesting part for managers)
+// Codes and texts as field-api sends them for the real ERP's rules (contract 1.13.0, ADR-033).
 const CONFLICTS = [
-  ['ALREADY_PAID_IN_OFFICE', 'এই কিস্তি অফিসে ইতিমধ্যে জমা হয়েছে (রসিদ R-88214)।', 'This installment was already paid at the office (receipt R-88214).'],
-  ['PLAN_CLOSED', 'কিস্তি পরিকল্পনাটি ERP-তে বন্ধ করা হয়েছে।', 'The installment plan is closed in the ERP.'],
-  ['AMOUNT_EXCEEDS_BALANCE', 'জমার পরিমাণ বকেয়ার চেয়ে বেশি।', 'Amount exceeds the outstanding balance.'],
-  ['CUSTOMER_TRANSFERRED', 'গ্রাহক অন্য শাখায় স্থানান্তরিত হয়েছেন।', 'Customer was transferred to another branch.'],
-  ['DUPLICATE_TXN_REF', 'একই bKash লেনদেন নম্বর আগে ব্যবহার হয়েছে।', 'The same bKash transaction ID was used before.'],
+  ['DUPLICATE_SAME_DAY', 'ইআরপিতে এই ইনভয়েসে ওই দিনে আগেই একটি পেমেন্ট আছে', 'ERP already has a payment for this invoice on that day'],
+  ['PLAN_CLOSED', 'এই ইনভয়েস ইআরপিতে বন্ধ (ফেরত বা বাতিল)', 'This invoice is closed in ERP (returned or cancelled)'],
+  ['AMOUNT_EXCEEDS_OUTSTANDING', 'টাকার পরিমাণ বাকির চেয়ে বেশি', 'Amount is more than the outstanding balance'],
+  ['COLLECTOR_NOT_LINKED', 'আদায়কারী ইআরপির কোনো কর্মীর সাথে যুক্ত নন', 'Collector is not linked to an ERP employee'],
+  ['METHOD_NOT_AVAILABLE', 'এই পেমেন্ট মাধ্যম ইআরপিতে শাখার জন্য চালু নেই', 'This payment method is not set up for the branch in ERP'],
 ] as const;
 collections.filter((c) => c.recordedAt! > isoAt(now().minus({ days: 3 }))).slice(0, 400).filter((_, i) => i % 61 === 7).slice(0, 5).forEach((c, i) => {
   const [code, bn, en] = CONFLICTS[i % CONFLICTS.length]!;
   c.status = 'conflict';
   c.erpReceiptNo = null;
   c.conflict = { code, message: { bn, en }, raisedAt: c.receivedAt };
-  if (code === 'DUPLICATE_TXN_REF') {
+  if (code === 'METHOD_NOT_AVAILABLE') {
     c.method = 'bkash';
     c.transactionRef = 'BK7G3K2Q9P';
-    c.flags = ['duplicate_txn_ref'];
   }
 });
 collections.filter((c) => c.status === 'posting').slice(0, 2).forEach((c) => (c.status = 'posting_failed'));
@@ -1013,6 +1013,95 @@ branches.forEach((b, bi) => {
     at(i).detail.assignee = undefined;
   }
 });
+// ---------- real ERP shape (contract 1.13.0) ----------
+// Derived from what is already generated, without random draws, so the seeded data above stays the same.
+branches.forEach((b) => (b.kind = 'branch'));
+const METHOD_LABEL: Record<string, string> = { cash: 'Cash-01', bkash: 'bKash merchant', nagad: 'Nagad merchant' };
+const receiptOf = (date: string, n: number) => `PAY-${date.replace(/-/g, '')}-${String(n).padStart(5, '0')}`;
+let payNo = 1200;
+customers.forEach((c, ci) => {
+  const d = c.detail;
+  d.plans?.forEach((p, pi) => {
+    const no = (p.erpPlanId ?? '').replace(/\D/g, '');
+    Object.assign(p, {
+      kind: 'installment', invoiceNo: `INV-${no}`, saleDate: p.startDate, frequency: 'monthly',
+      items: [{ name: p.product, model: null, qty: 1, serials: ci % 3 === 0 ? [`SN${no}${pi}A`] : [] }],
+      ...(pi === 0 && d.guarantor?.name ? { guarantor: { name: d.guarantor.name, phone: d.guarantor.phone, phones: [d.guarantor.phone!] } } : {}),
+    } satisfies Partial<S['Plan']>);
+    const lines = p.schedule ?? [];
+    const overdue = lines.filter((x) => x.status === 'overdue');
+    // a late fee the ERP added (already inside the line amount)
+    if (ci % 7 === 3 && overdue[0]) overdue[0].lateFeePoisha = Math.min(5_000, overdue[0].amountPoisha ?? 0);
+    // the ERP rolled an unpaid line forward: its balance moved to the next (also overdue) line, the old line is 0
+    if (ci % 11 === 5 && overdue.length >= 2 && !overdue[0]!.lateFeePoisha) {
+      const [a, next] = [overdue[0]!, overdue[1]!];
+      next.amountPoisha = (next.amountPoisha ?? 0) + (a.amountPoisha ?? 0) - (a.paidPoisha ?? 0);
+      Object.assign(a, { amountPoisha: a.paidPoisha ?? 0, status: 'paid', rolled: (a.paidPoisha ?? 0) === 0 });
+    }
+  });
+  // a paid-up credit sale (one due date) with a small write-off, and a returned invoice that is not collectable
+  if (ci % 25 === 12) {
+    const sale = now().minus({ days: 75 }).toISODate()!;
+    const due = now().minus({ days: 45 }).toISODate()!;
+    d.plans?.push({
+      erpPlanId: `P-${90000 + ci}`, kind: 'credit', invoiceNo: `INV-C${90000 + ci}`, product: 'Rice cooker 2.8 L', saleDate: sale, startDate: sale, finalDueDate: due,
+      installmentCount: 1, totalPayablePoisha: 450_000, downPaymentPoisha: 0, paidPoisha: 450_000, writtenOffPoisha: 20_000, outstandingPoisha: 0, status: 'completed', badSuggested: false,
+      items: [{ name: 'Rice cooker', model: '2.8 L', qty: 1, serials: [] }],
+      schedule: [{ seq: 1, dueDate: due, amountPoisha: 450_000, paidPoisha: 450_000, status: 'paid', estimated: false }],
+    });
+  }
+  if (ci % 25 === 18) {
+    const sale = now().minus({ days: 120 }).toISODate()!;
+    d.plans?.push({
+      erpPlanId: `P-${91000 + ci}`, kind: 'installment', invoiceNo: `INV-${91000 + ci}`, product: 'LED TV 32"', saleDate: sale, startDate: sale, finalDueDate: now().plus({ days: 60 }).toISODate()!,
+      installmentCount: 6, totalPayablePoisha: 2_400_000, downPaymentPoisha: 400_000, paidPoisha: 800_000, outstandingPoisha: 1_600_000, status: 'closed', badSuggested: false, frequency: 'monthly',
+      items: [{ name: 'LED TV', model: '32"', qty: 1, serials: [`SN${91000 + ci}R`] }], schedule: [],
+    });
+  }
+  d.payments?.forEach((pay) => {
+    payNo += 1;
+    Object.assign(pay, {
+      erpPaymentId: String(payNo), receiptNo: receiptOf(pay.date!, payNo), erpPlanId: d.plans?.[0]?.erpPlanId, methodLabel: METHOD_LABEL[pay.method ?? ''] ?? pay.method,
+      ...(pay.source === 'field' ? { collectorName: c.item.assignee?.name } : {}),
+    });
+  });
+  // the office removed a payment in the ERP: field-api shows it as reversed (not in the totals)
+  if (ci % 20 === 6 && d.payments?.[0]) {
+    payNo += 1;
+    const first = d.payments[0];
+    d.payments.splice(1, 0, { ...first, erpPaymentId: `removed-${payNo}`, receiptNo: receiptOf(first.date!, payNo), reversed: true, source: 'office', collectorName: undefined });
+  }
+  if (ci % 9 === 2) {
+    d.detailedAddress = `${c.item.address}, ${['north of the mosque', 'east para', 'near the primary school'][ci % 3]}`;
+    d.directions = ['বাজারের পাশে, লাল গেটের বাড়ি', 'Second house after the bridge, blue door', 'মসজিদের পেছনে, টিনের ঘর'][ci % 3];
+  }
+  if (ci % 8 === 1) {
+    const grade = ['B', 'C', 'D', 'E'][ci % 4]!;
+    d.erpRisk = { grade, level: grade === 'E' || grade === 'D' ? 'High' : grade === 'C' ? 'Medium' : 'Low', classification: grade === 'E' ? 'trend' : 'isolated', overdueCount: (ci % 5) + 1, maxDaysLate: 10 + (ci % 40), computedAt: isoAt(now().minus({ days: 1 })) };
+  }
+});
+
+// ERP employees: the ERP needs a collector employee on every payment. Staff and managers are linked (numeric ids, as
+// in the ERP); one ERP employee is not linked to anybody yet and one has left. The collector of the
+// COLLECTOR_NOT_LINKED conflict is not linked, so that conflict is what it says.
+export const erpEmployees: S['ErpEmployee'][] = [];
+users.forEach((u) => {
+  if (u.role !== 'field_staff' && u.role !== 'branch_manager') {
+    u.erpEmployeeId = null;
+    return;
+  }
+  const id = String(7 + erpEmployees.length);
+  const b = branches.find((x) => x.id === u.branchIds?.[0]);
+  u.erpEmployeeId = id;
+  erpEmployees.push({ erpEmployeeId: id, code: `EMP-${id.padStart(5, '0')}`, name: u.name?.en, erpBranchIds: b ? [b.erpBranchId!] : [], active: u.active !== false });
+});
+erpEmployees.push(
+  { erpEmployeeId: '90', code: 'EMP-00090', name: 'Jamal Uddin', erpBranchIds: [branches[0]!.erpBranchId!], active: true },
+  { erpEmployeeId: '91', code: 'EMP-00091', name: 'Habib Khan', erpBranchIds: [branches[1]!.erpBranchId!], active: false },
+);
+const unlinked = userById(collections.find((c) => c.conflict?.code === 'COLLECTOR_NOT_LINKED')?.collector?.id ?? '');
+if (unlinked) unlinked.erpEmployeeId = null;
+
 export const DQ_ISSUES = ['no_location', 'invalid_location', 'suspect_swapped', 'far_from_branch', 'missing_phone', 'invalid_phone', 'shared_phone', 'plan_without_schedule', 'unassigned'] as const;
 const bdMobile = (raw: string) => {
   let d = raw.replace(/\D/g, '');
