@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/customers/:id((?!view/)[^/]+)/", "destination": "/customers/view/" },
+    { "source": "/customers/:id((?!view/)[^/]+)/index.txt", "destination": "/customers/view/index.txt" }
+  ]
+}
