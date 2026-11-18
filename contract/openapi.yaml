@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Howlader Field Operations API
+  title: Howlader Electronics Field Operations API
   version: 1.13.0
   description: |
     Contract owned by field-api. Consumers (admin-web, staff-app) generate types from this file.

@@ -9,3 +9,8 @@ e2e/.results/
 playwright-report/
 test-results/
 coverage/
+
+# Vercel Build Output (scripts/vercel-output.mjs)
+.vercel
+
+.vercel

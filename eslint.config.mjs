@@ -4,7 +4,7 @@ import boundaries from 'eslint-plugin-boundaries';
 const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 
 const config = [
-  { ignores: ['.next/**', 'out/**', 'node_modules/**', 'next-env.d.ts', 'public/mockServiceWorker.js', 'src/shared/api/schema.d.ts', 'e2e/.results/**', 'playwright-report/**', 'test-results/**'] },
+  { ignores: ['.next/**', 'out/**', '.vercel/**', 'node_modules/**', 'next-env.d.ts', 'public/mockServiceWorker.js', 'src/shared/api/schema.d.ts', 'e2e/.results/**', 'playwright-report/**', 'test-results/**'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     files: ['src/**/*.{ts,tsx}'],

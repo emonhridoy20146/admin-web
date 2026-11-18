@@ -9,39 +9,13 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
+import { BASE_HEADERS, htmlHeaders } from './lib/csp.mjs';
 
 const ROOT = path.resolve('out');
 const PORT = Number(process.argv[2] ?? process.env.PORT ?? 4000);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.webmanifest': 'application/manifest+json' };
-const extra = (k) => (process.env[k] ? ` ${process.env[k]}` : '');
 
-const hashCache = new Map();
-function inlineHashes(file, html) {
-  if (hashCache.has(file)) return hashCache.get(file);
-  const hashes = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
-    .map((m) => m[1])
-    .filter(Boolean)
-    .map((s) => `'sha256-${crypto.createHash('sha256').update(s).digest('base64')}'`);
-  const v = [...new Set(hashes)].join(' ');
-  hashCache.set(file, v);
-  return v;
-}
-
-function csp(hashes) {
-  return [
-    "default-src 'self'",
-    `script-src 'self' ${hashes}`.trim(),
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob:${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
-    `connect-src 'self'${extra('API_ORIGIN')}${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
-    "font-src 'self'",
-    "worker-src 'self'",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join('; ');
-}
+const htmlCache = new Map();
 
 function resolve(urlPath) {
   let p = decodeURIComponent(urlPath.split('?')[0]);
@@ -68,14 +42,12 @@ http
     const body = fs.readFileSync(file);
     const headers = {
       'Content-Type': TYPES[ext] ?? 'application/octet-stream',
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      ...BASE_HEADERS,
       'Cache-Control': file.includes(`${path.sep}_next${path.sep}static${path.sep}`) ? 'public, max-age=31536000, immutable' : 'no-cache',
     };
     if (ext === '.html') {
-      headers['Content-Security-Policy'] = csp(inlineHashes(file, body.toString('utf8')));
-      headers['X-Frame-Options'] = 'DENY';
+      if (!htmlCache.has(file)) htmlCache.set(file, htmlHeaders(body.toString('utf8')));
+      Object.assign(headers, htmlCache.get(file));
     }
     res.writeHead(status, headers);
     res.end(body);
