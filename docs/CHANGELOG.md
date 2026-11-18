@@ -1,7 +1,7 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.13.0** from field-api branch `claude/project-thread-kr9ahz` (field-api PR #10; 1.12.0 → 1.13.0; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.13.0** from field-api `main` (merge c69ed55, PR #10; 1.12.0 → 1.13.0; types regenerated with `pnpm gen:api`).
 ### Added (contract 1.13.0, owner request 2026-11-18: work with the real Laravel ERP's data; field-api ADR-033)
 - Customer plans (FR-W-025): the ERP invoice number instead of the internal id (also on conflicts and the "possible bad customer" note), "Credit sale" badge and "pay by" date for pay-later invoices, payment frequency, sale date, products with model, quantity and serial numbers, the guarantor of that sale with every phone, the written-off amount, and "incl. late fee" under a line's amount. Lines the ERP rolled forward (amount 0) are hidden with a note saying how many. Returned (closed) and cancelled invoices are listed last, muted, with "not collectable". Defaulted plans are labelled.
 - Customer contact: the ERP's detailed address under the address and "How to find the house" (directions). The ERP's risk grade is a badge next to the tags (level, times late, most days late and "as of" in its description).
