@@ -1,0 +1,122 @@
+{
+  "title": "Tasks",
+  "subtitle": "Give a staff member a job with a note. They send a resolve request when it is done, and it counts as resolved only after you verify it.",
+  "new": "New task",
+  "search": "Search tasks by title",
+  "staff": "Staff member",
+  "allStaff": "All staff",
+  "tabs": "Show tasks",
+  "tab": {
+    "open": "In progress",
+    "resolve_requested": "To verify",
+    "overdue": "Late",
+    "resolved": "Resolved",
+    "cancelled": "Cancelled"
+  },
+  "status": {
+    "open": "In progress",
+    "resolve_requested": "Waiting for verification",
+    "resolved": "Resolved",
+    "cancelled": "Cancelled"
+  },
+  "col": {
+    "title": "Task",
+    "assignee": "Given to",
+    "branch": "Branch",
+    "due": "Due",
+    "status": "Status",
+    "updated": "Updated"
+  },
+  "due": {
+    "none": "No due date",
+    "late": "Late",
+    "today": "Today",
+    "on": "{{date}}"
+  },
+  "empty": {
+    "open": "No task is in progress.",
+    "resolve_requested": "Nothing is waiting for you to verify.",
+    "overdue": "No task is late.",
+    "resolved": "No task has been resolved yet.",
+    "cancelled": "No task was cancelled."
+  },
+  "form": {
+    "newTitle": "New task",
+    "newDesc": "The staff member gets a notification on their phone.",
+    "editTitle": "Edit task",
+    "editDesc": "You can change the wording and due date until the staff member says it is done.",
+    "branch": "Branch",
+    "branchHelp": "Staff who work in more than one branch appear in each of them; the task is kept under the branch you pick.",
+    "assignee": "Give to",
+    "pickAssignee": "Pick a staff member",
+    "noStaff": "No active field staff in this branch.",
+    "title": "What needs to be done",
+    "titlePlaceholder": "e.g. Collect the shop key from Karim",
+    "note": "Note for the staff member",
+    "noteHelp": "Where to go, who to ask, what to bring back. This is not tied to a customer.",
+    "due": "Due date (optional)",
+    "submit": "Give task",
+    "save": "Save changes",
+    "unchanged": "Nothing was changed."
+  },
+  "errors": {
+    "required": "This is required.",
+    "tooLong": "This is too long.",
+    "badDate": "Use a valid date.",
+    "past": "The due date cannot be in the past."
+  },
+  "drawer": {
+    "givenTo": "Given to",
+    "branch": "Branch",
+    "due": "Due",
+    "givenBy": "Given by",
+    "givenAt": "Given",
+    "note": "Note",
+    "noNote": "No note.",
+    "staffSays": "Staff says it is done",
+    "staffSaysAt": "Sent {{at}}",
+    "noStaffNote": "No note was added.",
+    "decision": "Your note",
+    "rejectedReason": "Why it was sent back",
+    "history": "History"
+  },
+  "history": {
+    "created": "{{who}} gave the task",
+    "edited": "{{who}} edited the task",
+    "resolve_requested": "{{who}} said it is done",
+    "verified": "{{who}} verified and resolved it",
+    "rejected": "{{who}} sent it back",
+    "cancelled": "{{who}} cancelled it"
+  },
+  "actions": {
+    "edit": "Edit",
+    "verify": "Verify and resolve",
+    "reject": "Send back",
+    "cancel": "Cancel task"
+  },
+  "verify": {
+    "title": "Verify and resolve?",
+    "desc": "{{who}} says \"{{task}}\" is done. After you confirm it is resolved and the staff member is told.",
+    "note": "Note for the staff member (optional)",
+    "confirm": "Verify and resolve"
+  },
+  "reject": {
+    "title": "Send this task back?",
+    "desc": "\"{{task}}\" goes back to {{who}}. They see the reason and can send a new request.",
+    "confirm": "Send back"
+  },
+  "cancel": {
+    "title": "Cancel this task?",
+    "desc": "\"{{task}}\" for {{who}} is withdrawn and cannot be reopened. They are told.",
+    "confirm": "Cancel task"
+  },
+  "toast": {
+    "created": "Task given to {{who}}.",
+    "edited": "Task updated.",
+    "verified": "Task resolved.",
+    "rejected": "Task sent back.",
+    "cancelled": "Task cancelled."
+  },
+  "stale": "This task changed while you were looking at it. The list was refreshed.",
+  "overdueCount": "{{n}} late"
+}

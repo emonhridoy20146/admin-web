@@ -598,6 +598,45 @@
     }
   },
   {
+    "key": "task.view",
+    "module": "tasks",
+    "description": "See staff tasks in scope",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "task.manage",
+    "module": "tasks",
+    "description": "Give tasks to staff with a note; edit, cancel, verify or reject a resolve request",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "task.work",
+    "module": "tasks",
+    "description": "See own tasks and ask for them to be resolved",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": false,
+      "branch_manager": false,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
     "key": "inbox.view",
     "module": "inbox",
     "description": "\"Needs attention\" exceptions inbox",

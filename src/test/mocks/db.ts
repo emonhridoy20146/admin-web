@@ -463,7 +463,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -1308,3 +1308,70 @@ export function addBroadcast(row: Omit<S['Broadcast'], 'id' | 'recipientCount' |
 }
 addBroadcast({ title: { bn: 'ঈদের ছুটির সময়সূচি', en: 'Eid holiday schedule' }, body: { bn: 'ঈদের আগের দুই দিন অফিস দুপুর ২টা পর্যন্ত খোলা থাকবে।', en: 'The office is open until 2 PM on the two days before Eid.' }, branchIds: [], roles: [], requireAck: false, createdBy: { id: superAdmin.id, name: superAdmin.name?.en }, createdAt: isoAt(now().minus({ days: 6 })) }, 0.9);
 addBroadcast({ title: { bn: 'নতুন নিয়ম: রসিদ ছাড়া টাকা নয়', en: 'New rule: no money without a receipt' }, body: { bn: 'আজ থেকে কোনো কিস্তির টাকা নিলে সাথে সাথে অ্যাপে রসিদ দিন। রসিদ ছাড়া টাকা নিলে তা গ্রহণযোগ্য হবে না।', en: 'From today, give a receipt in the app as soon as you take an installment. Money taken without a receipt is not accepted.' }, branchIds: [B[0]!], roles: ['field_staff'], requireAck: true, createdBy: { id: managers[0]!.id, name: managers[0]!.name?.en }, createdAt: isoAt(now().minus({ hours: 20 })) }, 0.6, 12);
+
+// ---------- tasks (contract 1.16.0) ----------
+export type MockTask = S['Task'];
+export const tasks: MockTask[] = [];
+const who = (u: MockUser) => ({ id: u.id!, name: u.name?.en ?? '' });
+export function taskView(t: MockTask): MockTask {
+  const today = now().toISODate()!;
+  const active = t.status === 'open' || t.status === 'resolve_requested';
+  return { ...t, overdue: !!t.dueDate && active && t.dueDate < today };
+}
+/** Seeds and handlers share this. `ago` = hours since it was given; no random draws, so other seeds do not move. */
+export function addTask(by: MockUser, assignee: MockUser, title: string, note: string | null, dueDate: string | null, ago = 2, branchId = assignee.branchIds?.[0] ?? ''): MockTask {
+  const at = isoAt(now().minus({ hours: ago }));
+  const t: MockTask = {
+    id: oid('6745'),
+    branchId,
+    assignee: { id: assignee.id!, name: assignee.name?.en ?? '', employeeCode: assignee.employeeCode ?? '' },
+    createdBy: who(by),
+    title,
+    note,
+    dueDate,
+    status: 'open',
+    overdue: false,
+    resolveNote: null,
+    resolveRequestedAt: null,
+    decisionNote: null,
+    decidedBy: null,
+    decidedAt: null,
+    events: [{ type: 'created', by: who(by), at, note: null }],
+    createdAt: at,
+    updatedAt: at,
+  };
+  tasks.unshift(t);
+  return t;
+}
+export function taskStep(t: MockTask, by: MockUser, type: 'resolve_requested' | 'verified' | 'rejected' | 'cancelled' | 'edited', note: string | null, ago = 0) {
+  const at = isoAt(now().minus({ hours: ago }));
+  t.events.push({ type, by: who(by), at, note });
+  t.updatedAt = at;
+  if (type === 'resolve_requested') Object.assign(t, { status: 'resolve_requested', resolveNote: note, resolveRequestedAt: at });
+  if (type === 'verified') Object.assign(t, { status: 'resolved', decisionNote: note, decidedBy: who(by), decidedAt: at });
+  if (type === 'rejected') Object.assign(t, { status: 'open', decisionNote: note, decidedBy: who(by), decidedAt: at, resolveNote: null, resolveRequestedAt: null });
+  if (type === 'cancelled') Object.assign(t, { status: 'cancelled', decisionNote: note, decidedBy: who(by), decidedAt: at });
+}
+{
+  const m0 = managers[0]!;
+  const m1 = managers[1]!;
+  const b0 = staff.filter((u) => u.active && u.branchIds?.[0] === B[0]);
+  const b1 = staff.filter((u) => u.active && u.branchIds?.[0] === B[1]);
+  addTask(m0, b0[0]!, 'করিমের কাছ থেকে দোকানের চাবি নিয়ে আসুন', 'বাজারের চায়ের দোকানে জিজ্ঞাসা করবেন। নিয়ে অফিসে জমা দিন, শেষ হলে আমাকে জানাবেন।', dayOff(2), 5);
+  const waiting = addTask(m0, b0[1]!, 'নতুন বাজারের তিনটি দোকানে নোটিশ দিয়ে আসুন', 'কিস্তির তারিখ বদলের নোটিশ। প্রতিটি দোকানের সামনে ছবি তোলার দরকার নেই, শুধু বলে আসুন।', dayOff(0), 30);
+  taskStep(waiting, b0[1]!, 'resolve_requested', 'তিনটি দোকানেই বলে এসেছি। আলামিন স্টোর মালিক বলেছেন শনিবার অফিসে আসবেন।', 1);
+  const waiting2 = addTask(m0, b0[2]!, 'মাসিক রিপোর্টের কাগজ হেড অফিসে পৌঁছে দিন', null, dayOff(-1), 52);
+  taskStep(waiting2, b0[2]!, 'resolve_requested', null, 3);
+  addTask(m0, b0[3]!, 'ক্যাশ কাউন্টারের হিসাব মিলিয়ে দেখুন', 'গত সপ্তাহের জমার স্লিপগুলো আমার টেবিলে আছে।', dayOff(-2), 70);
+  const done = addTask(m0, b0[4]!, 'ভাঙা রসিদ বইটি বদলে নিন', null, dayOff(-3), 120);
+  taskStep(done, b0[4]!, 'resolve_requested', 'নতুন বই নিয়েছি, পুরোনোটা জমা দিয়েছি।', 100);
+  taskStep(done, m0, 'verified', 'ঠিক আছে, ধন্যবাদ।', 98);
+  const sentBack = addTask(m0, b0[5]!, 'রহিম স্টোরের মালিকের সাথে দেখা করুন', 'বকেয়া নিয়ে কথা বলবেন, কোনো টাকা নেবেন না।', dayOff(1), 80);
+  taskStep(sentBack, b0[5]!, 'resolve_requested', 'দেখা করেছি।', 60);
+  taskStep(sentBack, m0, 'rejected', 'কী কথা হলো সেটা লিখে জানান, শুধু "দেখা করেছি" যথেষ্ট নয়।', 50);
+  const cancelled = addTask(m0, b0[6]!, 'গুদাম থেকে ফ্যানের বাক্স আনুন', null, null, 200);
+  taskStep(cancelled, m0, 'cancelled', 'প্রয়োজন নেই, অফিস থেকেই পাঠানো হয়েছে।', 190);
+  addTask(m1, b1[0]!, 'নতুন শাখার ঠিকানা কাস্টমারদের জানিয়ে দিন', 'ফোনে জানালেই হবে।', dayOff(3), 8);
+  const w3 = addTask(m1, b1[1]!, 'বন্ধ হওয়া দোকানের তালিকা বানান', 'যে দোকানগুলো এখন আর খোলে না।', dayOff(0), 26);
+  taskStep(w3, b1[1]!, 'resolve_requested', 'আটটি দোকানের তালিকা বানিয়েছি।', 2);
+}
