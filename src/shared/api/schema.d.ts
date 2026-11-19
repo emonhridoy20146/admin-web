@@ -616,6 +616,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Scope (FR-CUS-001, FR-CUS-015): super admin = all; branch manager / viewer = their branches; field staff =
+         *     every customer of their branches (one or more) since 1.19.0, or only the ones assigned to them in a branch whose
+         *     setting `customers.staffVisibility` is `assigned`. `assignedTo=me` gives the caller's own work list.
+         */
         get: operations["listCustomers"];
         put?: never;
         post?: never;
@@ -1522,6 +1527,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/storage/o": {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download target of a presigned GET URL when the server keeps files itself (ADR-039) */
+        get: operations["storageGet"];
+        /**
+         * Upload target of a presigned URL when the server keeps files itself (ADR-039)
+         * @description Only exists when the server has no S3 (`STORAGE_DRIVER=db`, the default on Vercel test deployments).
+         *     Clients never build this URL: they PUT to `uploadUrl` from `/media/upload-url` as for S3. No bearer
+         *     token; the signature in the path is the permission and expires after 5 minutes. The body must match
+         *     the signed content type, size and sha256.
+         */
+        put: operations["storagePut"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customers/{id}/notes": {
         parameters: {
             query?: never;
@@ -2333,6 +2365,7 @@ export interface components {
             phone?: string;
             username?: string;
             role?: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds?: string[];
             employeeCode?: string;
             erpEmployeeId?: string | null;
@@ -2351,6 +2384,7 @@ export interface components {
             phone: string;
             username?: string;
             role: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds: string[];
             employeeCode: string;
             erpEmployeeId?: string;
@@ -2361,6 +2395,7 @@ export interface components {
             name?: components["schemas"]["I18nText"];
             phone?: string;
             role?: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds?: string[];
             shiftId?: string;
             cashLimitPoisha?: number;
@@ -2623,6 +2658,15 @@ export interface components {
             };
             /** @description FOS branch of the customer. Added in 1.11.0 */
             branchId?: string | null;
+            /**
+             * @description Added in 1.19.0 (FR-CUS-015). The customer's branch, so a list that spans several branches can say which
+             *     one each row belongs to. Absent when the customer has no FOS branch.
+             */
+            branch?: {
+                id?: string;
+                code?: string;
+                name?: components["schemas"]["I18nText"];
+            };
             payState?: components["schemas"]["PayState"];
             /** @description Added in 1.14.0. Missed installments across open plans */
             missedCount?: number;
@@ -6777,6 +6821,65 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    storageGet: {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    storagePut: {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/webp": string;
+                "audio/aac": string;
+                "audio/mp4": string;
+            };
+        };
+        responses: {
+            /** @description Stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stored: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     listNotes: {

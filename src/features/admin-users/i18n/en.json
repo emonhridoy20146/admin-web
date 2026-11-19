@@ -38,7 +38,7 @@
     "roleHelp": {
       "super_admin": "Everything in every branch, including settings and permissions.",
       "branch_manager": "Runs the branches listed below.",
-      "field_staff": "Uses the staff app in one branch.",
+      "field_staff": "Uses the staff app. Sees every customer of the branches below and can work in more than one.",
       "viewer": "Read-only access to the branches listed below."
     },
     "branches": "Branches",
@@ -64,7 +64,9 @@
     "erpMine": "Staff of these branches",
     "erpOthers": "Other branches",
     "erpAll": "ERP staff",
-    "erpInactive": "inactive"
+    "erpInactive": "inactive",
+    "homeBranch": "Home branch",
+    "homeBranchHelp": "Attendance, cash, targets and app settings follow this branch. In the other branches this person sees every customer and can visit or collect."
   },
   "fields": {
     "name": "name",
@@ -79,7 +81,6 @@
     "required": "Required.",
     "phone": "Enter an 11-digit mobile number starting with 01.",
     "branch": "Choose at least one branch.",
-    "oneBranch": "Field staff work in exactly one branch.",
     "amount": "Whole taka only.",
     "username": "3–32 characters: a–z, 0–9, dot, dash, underscore."
   },

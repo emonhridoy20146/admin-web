@@ -54,7 +54,7 @@ test('map: opens on Patuakhali district, keeps the place the user moved to, colo
 test('map: Google-style pins coloured by payment state, list beside the map, a pin opens the customer', async ({ page }) => {
   await login(page);
   await page.goto('/map/?at=22.35960,90.32990,14');
-  const pins = page.locator('.leaflet-marker-icon .fos-pin:not(.is-branch)'); // branch pins (FR-W-033) are not customers
+  const pins = page.locator('.leaflet-marker-icon .fos-pin:not(.is-branch)'); // branch pins (FR-W-034) are not customers
   await expect(pins.first()).toBeVisible();
   expect(await pins.count()).toBeGreaterThan(5);
   // the worst first in the list, each with its colour badge in words

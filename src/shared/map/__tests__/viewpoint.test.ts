@@ -51,7 +51,7 @@ describe('pins and cluster rings', () => {
   });
 });
 
-describe('branch pins on the maps (FR-W-033)', () => {
+describe('branch pins on the maps (FR-W-034)', () => {
   const list = [
     { id: 'b1', code: 'BRL01', name: { bn: 'বরিশাল', en: 'Barishal' }, lat: 22.7, lng: 90.37, active: true },
     { id: 'b2', code: 'PTK01', name: { bn: 'পটুয়াখালী', en: 'Patuakhali' }, lat: null, lng: null, active: true },
