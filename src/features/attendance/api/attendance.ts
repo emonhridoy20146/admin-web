@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
+import { viaApiProxy } from '@/shared/api/config';
 import { useBranchId } from '@/shared/lib/ui-store';
 import type { components, operations } from '@/shared/api/schema';
 
@@ -62,7 +63,7 @@ export function useEvents(userId: string | null, date: string) {
 export function useSelfieUrl(id: string | null | undefined) {
   return useQuery({
     queryKey: ['attendance', 'selfie', id],
-    queryFn: () => unwrap(api.GET('/media/{id}/url', { params: { path: { id: id! } } })),
+    queryFn: () => unwrap(api.GET('/media/{id}/url', { params: { path: { id: id! } } })).then((r) => ({ ...r, url: viaApiProxy(r.url) })),
     enabled: !!id,
     staleTime: 4 * 60_000,
     gcTime: 5 * 60_000,

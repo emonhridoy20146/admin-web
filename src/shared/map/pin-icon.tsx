@@ -10,8 +10,10 @@ export const PIN_PATH = 'M14 1C7.1 1 1.5 6.5 1.5 13.4c0 9.2 10.6 19.3 11.8 24.6.
 export const PIN_W = 28;
 export const PIN_H = 40;
 const CHECK_PATH = 'M9.6 13.6l3 3 5.8-6.2';
+/** A small house (branch / office) inside the pin head. */
+const HOME_PATH = 'M9.8 13.4 14 9.6l4.2 3.8M11.2 12.4v4.6h5.6v-4.6';
 
-export type PinGlyph = 'check' | 'dot' | 'alert' | { text: string };
+export type PinGlyph = 'check' | 'dot' | 'alert' | 'home' | { text: string };
 
 export interface PinLook {
   /** token for the body, e.g. `--ps-bad-pin` */
@@ -19,6 +21,8 @@ export interface PinLook {
   /** token for the outline and the glyph, e.g. `--ps-bad-fg` (dark enough to stand out on light map tiles) */
   edge: string;
   glyph?: PinGlyph;
+  /** `branch`: a branch / office pin (class `is-branch`), not a customer */
+  variant?: 'branch';
 }
 
 /** Pixel size of a pin; `lg` marks the selected customer. */
@@ -33,6 +37,7 @@ function glyphSvg(g: PinGlyph | undefined): string {
   if (!g) return '';
   if (g === 'check') return `<path d="${CHECK_PATH}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
   if (g === 'dot') return '<circle cx="14" cy="13.5" r="2.6" fill="currentColor"/>';
+  if (g === 'home') return `<path d="${HOME_PATH}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
   const text = g === 'alert' ? '!' : g.text.slice(0, 3);
   const size = text.length > 2 ? 8 : text.length > 1 ? 9.5 : 11;
   return `<text x="14" y="13.5" dy="0.36em" text-anchor="middle" font-size="${size}" font-weight="700" fill="currentColor">${esc(text)}</text>`;
@@ -42,7 +47,7 @@ function glyphSvg(g: PinGlyph | undefined): string {
 export function pinIconHtml(look: PinLook, large?: boolean): string {
   const [w, h] = pinSize(large);
   return (
-    `<span class="fos-pin${large ? ' is-selected' : ''}" style="--pin-fill:${cssVar(look.fill)};--pin-edge:${cssVar(look.edge)}">` +
+    `<span class="fos-pin${large ? ' is-selected' : ''}${look.variant === 'branch' ? ' is-branch' : ''}" style="--pin-fill:${cssVar(look.fill)};--pin-edge:${cssVar(look.edge)}">` +
     `<svg width="${w}" height="${h}" viewBox="0 0 ${PIN_W} ${PIN_H}" aria-hidden="true" focusable="false">` +
     `<path class="fos-pin-body" d="${PIN_PATH}"/><circle class="fos-pin-face" cx="14" cy="13.5" r="7.4"/>` +
     `<g class="fos-pin-glyph">${glyphSvg(look.glyph)}</g></svg></span>`
@@ -68,6 +73,7 @@ export function PinIcon({ look, size = 16, className }: { look: PinLook; size?: 
       <g className="fos-pin-glyph">
         {g === 'check' && <path d={CHECK_PATH} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />}
         {g === 'dot' && <circle cx="14" cy="13.5" r="2.6" fill="currentColor" />}
+        {g === 'home' && <path d={HOME_PATH} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />}
         {text && (
           <text x="14" y="13.5" dy="0.36em" textAnchor="middle" fontSize={text.length > 2 ? 8 : text.length > 1 ? 9.5 : 11} fontWeight={700} fill="currentColor">
             {text}

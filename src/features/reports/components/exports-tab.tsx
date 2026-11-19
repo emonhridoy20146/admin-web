@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import { ArrowRight, CircleAlert, CircleCheck, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
+import { viaApiProxy } from '@/shared/api/config';
 import { useUi, useBranchId } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
 import { useGate } from '@/shared/feature/useGate';
@@ -193,7 +194,7 @@ function JobRow({ job }: { job: Job }) {
       <div className="flex items-center gap-3" aria-live="polite">
         {status === 'ready' ? <Badge tone="success" icon={CircleCheck}>{t('exports.status.ready')}</Badge> : status === 'failed' || q.error ? <Badge tone="danger" icon={CircleAlert}>{t('exports.status.failed')}</Badge> : <Badge tone="info" icon={Loader2}>{t(`exports.status.${status}`)}</Badge>}
         {status === 'ready' && q.data?.downloadUrl ? (
-          <a href={q.data.downloadUrl} download rel="noopener" aria-label={t('exports.downloadOf', { name: job.name })} className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-primary px-3 text-sm font-medium text-primary-fg hover:bg-primary-hover [@media(pointer:coarse)]:h-11">
+          <a href={viaApiProxy(q.data.downloadUrl)} download rel="noopener" aria-label={t('exports.downloadOf', { name: job.name })} className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-primary px-3 text-sm font-medium text-primary-fg hover:bg-primary-hover [@media(pointer:coarse)]:h-11">
             <Download className="size-4" aria-hidden />
             {t('exports.download')}
           </a>

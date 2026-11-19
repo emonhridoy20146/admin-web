@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additive; PR #16 gave 1.17.0, PR #18 gave 1.19.0 (several branches), PR #17 gives 1.20.0 with tasks; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
-### Added (contract 1.20.0, owner request 2026-11-18: admin tasks for staff; FR-W-034, ADR-W21)
+### Added (contract 1.20.0, owner request 2026-11-18: admin tasks for staff; FR-W-035, ADR-W21)
 - **Tasks** (`/tasks`, new feature `tasks`, flag `module.tasks`, permissions `task.view` / `task.manage`): give one field staff member a task with a note and an optional due date, not tied to a customer. Tabs In progress / To verify / Late / Resolved / Cancelled with counts, filter by staff, title search. A task opens in a drawer with the note, the staff member's resolve note, the admin's note and the history. **Verify** (resolves it), **send back** (reason of at least 5 characters, the staff member sees it), **cancel** (reason) and edit while open. Nav badge shows requests waiting for verification; the inbox item links to the "To verify" tab.
 - Mock API: `/tasks` list (counts, filters), create (idempotent), get, edit, verify, reject, cancel with the same state rules and `422`/`409` codes; seeded tasks in every state.
 - Journeys `tasks.spec.ts` (give, verify, send back with a reason, cancel; viewer is read-only); `/tasks/` pages in the axe sweep; unit tests for the form and state rules.
@@ -11,6 +11,14 @@ Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additiv
 - Settings → new **Customers** section: `customers.staffVisibility` (whole branch, the default, or assigned only) and `customers.staffPinApproval` (shown for the first time; was read-only under "Other settings").
 ### Changed
 - Visit flag `not_in_scope_at_record_time` reads "Not their customer" / "নিজের গ্রাহক নয়" as information (staff may now work on any customer of their branch).
+
+### Added (owner report 2026-11-18: "why can't I see my own GPS location and the branch pins on the map?", FR-W-034)
+- **Branch pins** on the live map and the customer map: every active branch with a map point (Settings → branch map points) is a brand-coloured pin with a house inside (`shared/map/branch-markers.ts`, glyph `home` in `pin-icon.tsx`); the chosen branch is larger, hover shows "Branch: name", and it sits under customer pins. Before, the branch point only decided where the map opened.
+- **"My location" button** on the same two maps (`MapView locate`): on click the browser asks for permission once, then the map moves to the admin's position with a blue dot and the accuracy circle. The position stays in the page and is never sent to the server. Blocked or unavailable location shows a plain message under the button.
+### Fixed
+- The admin's location could never be read: the security headers sent `Permissions-Policy: geolocation=()`, which blocks the browser's location API for the site itself. Now `geolocation=(self)` (camera and microphone stay off), `scripts/lib/csp.mjs`, tested in `scripts/lib/vercel-config.test.mjs`.
+- Photos and exports kept by field-api itself (no S3, field-api 1.18.0 ADR-039, the Vercel test deployment) have links on the API host. With the same-origin proxy (ADR-W19, the Vercel default) those links now go through `/api/v1` (`viaApiProxy` in `shared/api/config.ts`, used for uploads, attendance and visit photos and export downloads), so the CSP stays `'self'`; without the proxy `img-src` now also allows the API origin. S3 / R2 links are unchanged.
+- Tests: unit (branch pins), Playwright `maps show the branch and where the admin is` (granted and blocked location).
 
 Contract 1.17.0 from field-api PR #16 (1.14.0 → 1.17.0, additive).
 ### Added (contract 1.17.0, owner request 2026-11-18: reload keeps the login, customer total, Sync from ERP, delete a pin; ADR-W19, ADR-W20)

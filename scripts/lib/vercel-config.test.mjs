@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cspEnv, DEFAULT_TILE_ORIGIN, vercelRoutes } from './vercel-config.mjs';
 import { apiProxy } from './api-proxy.mjs';
+import { BASE_HEADERS } from './csp.mjs';
 
 const page = (script) => `<!DOCTYPE html><html><head><script src="/_next/static/a.js"></script></head><body><script>${script}</script></body></html>`;
 let out;
@@ -54,8 +55,17 @@ describe('vercelRoutes', () => {
       expect(directive(csp, 'connect-src')).toContain('https://tile.openstreetmap.org');
       expect(directive(csp, 'img-src')).toContain('https://tile.openstreetmap.org');
       expect(directive(csp, 'img-src')).toContain('https://*.tile.openstreetmap.org');
+      // photos served by the API itself when it keeps files in its database (field-api ADR-039)
+      expect(directive(csp, 'img-src')).toContain('https://howlader-apps-api.vercel.app');
       expect(directive(csp, 'script-src')).toMatch(/^script-src 'self' 'sha256-[^']+'$/);
     }
+  });
+
+  it("lets the maps ask for the admin's own location, and nothing else", () => {
+    const pp = BASE_HEADERS['Permissions-Policy'];
+    expect(pp).toContain('geolocation=(self)');
+    expect(pp).toContain('camera=()');
+    expect(pp).toContain('microphone=()');
   });
 
   it('rewrites customer pages to the one static page and checks the file exists (ADR-W02)', () => {
