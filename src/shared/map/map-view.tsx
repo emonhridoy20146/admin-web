@@ -2,7 +2,10 @@
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
+import { useTranslation } from 'react-i18next';
+import { LocateFixed } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
+import { formatNumber } from '@/shared/lib/format';
 import type { Bounds, LatLng } from './geo';
 import { pinIconHtml, pinSize, type PinLook } from './pin-icon';
 import { useTileProvider } from './use-tiles';
@@ -65,8 +68,10 @@ export function ringGradient(ring: { token: string; n: number }[]): string | nul
  * SVG pins coloured from design tokens, so no marker images and no extra CSP hosts beyond the tile origin.
  * The map is a visual aid; every page that uses it also lists the same items as text (keyboard / screen reader).
  * The user moves it freely: the page only moves it on purpose through `fit` (a new branch, a cluster click).
+ * With `locate`, a button shows where the person using the admin panel is (browser location, asked on click only;
+ * the position stays in the page and is never sent anywhere, FR-W-030).
  */
-export function MapView({ center, zoom = 13, initialBounds, markers, clusters, lines, paths, fit, onView, onMarkerClick, onClusterClick, className, label }: {
+export function MapView({ center, zoom = 13, initialBounds, markers, clusters, lines, paths, fit, onView, onMarkerClick, onClusterClick, className, label, locate }: {
   center: LatLng;
   zoom?: number;
   /** opens on these bounds instead of `center`/`zoom` (read once, when the map is created) */
@@ -83,8 +88,13 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
   onClusterClick?: (c: MapCluster) => void;
   className?: string;
   label: string;
+  /** shows the "my location" button */
+  locate?: boolean;
 }) {
+  const { t } = useTranslation();
   const el = useRef<HTMLDivElement>(null);
+  const me = useRef<Leaflet.LayerGroup | null>(null);
+  const [loc, setLoc] = useState<'idle' | 'busy' | 'denied' | 'unavailable'>('idle');
   const map = useRef<Leaflet.Map | null>(null);
   const L = useRef<typeof Leaflet | null>(null);
   const layer = useRef<Leaflet.LayerGroup | null>(null);
@@ -144,6 +154,7 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
       m.attributionControl.setPrefix(false);
       map.current = m;
       layer.current = lf.layerGroup().addTo(m);
+      me.current = lf.layerGroup().addTo(m);
       const emit = () => {
         const b = m.getBounds();
         cb.current.onView?.({ bounds: { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() }, zoom: m.getZoom() });
@@ -158,6 +169,7 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
       dead = true;
       map.current?.remove();
       map.current = null;
+      me.current = null;
       ready.current = false;
       setCreated(false);
     };
@@ -192,5 +204,49 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey]);
 
-  return <div ref={el} role="application" aria-label={label} className={cn('fos-map isolate z-0 h-full min-h-64 w-full overflow-hidden rounded-md border border-line bg-surface-subtle', className)} />;
+  const locateMe = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return setLoc('unavailable');
+    setLoc('busy');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lf = L.current;
+        const m = map.current;
+        if (!lf || !m || !me.current) return setLoc('idle');
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        const color = token('--info-fg');
+        me.current.clearLayers();
+        lf.circle([lat, lng], { radius: Math.min(accuracy, 3000), color, weight: 1, fillColor: color, fillOpacity: 0.12, interactive: false }).addTo(me.current);
+        lf.circleMarker([lat, lng], { radius: 8, color: token('--surface'), weight: 3, fillColor: color, fillOpacity: 1 })
+          .bindTooltip(t('map.you', { m: formatNumber(Math.round(accuracy)) }), { direction: 'top', offset: [0, -8] })
+          .addTo(me.current);
+        m.setView([lat, lng], Math.max(m.getZoom(), 15), { animate: false });
+        setLoc('idle');
+      },
+      (err) => setLoc(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable'),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+    );
+  };
+
+  const mapEl = <div ref={el} role="application" aria-label={label} className={cn('fos-map isolate z-0 h-full min-h-64 w-full overflow-hidden rounded-md border border-line bg-surface-subtle', className)} />;
+  if (!locate) return mapEl;
+  return (
+    <div className="relative h-full w-full">
+      {mapEl}
+      <div className="absolute right-2.5 top-2.5 z-[1000] flex max-w-[70%] flex-col items-end gap-1">
+        <button
+          type="button"
+          onClick={locateMe}
+          aria-label={loc === 'busy' ? t('map.locating') : t('map.myLocation')}
+          title={t('map.myLocation')}
+          aria-busy={loc === 'busy'}
+          className="grid size-11 place-items-center rounded-md border border-line bg-surface text-fg shadow-e1 hover:bg-surface-hover"
+        >
+          <LocateFixed className={cn('size-5', loc === 'busy' && 'animate-pulse')} aria-hidden />
+        </button>
+        <p role="status" className={cn('rounded-md bg-surface px-2 py-1 text-xs text-fg-secondary shadow-e1', loc !== 'denied' && loc !== 'unavailable' && 'sr-only')}>
+          {loc === 'denied' ? t('map.locationDenied') : loc === 'unavailable' ? t('map.locationUnavailable') : loc === 'busy' ? t('map.locating') : ''}
+        </p>
+      </div>
+    </div>
+  );
 }

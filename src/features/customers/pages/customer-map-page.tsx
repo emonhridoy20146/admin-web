@@ -10,6 +10,7 @@ import { formatNumber } from '@/shared/lib/format';
 import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
 import { bboxParam, boxAround, branchPoint, centerOf, DEFAULT_AREA, parseViewpoint, viewpointParam, type Bounds, type MapViewpoint } from '@/shared/map/geo';
 import { MapView, type MapCluster, type MapMarker, type MapViewState } from '@/shared/map/map-view';
+import { branchMarkers, isBranchMarker } from '@/shared/map/branch-markers';
 import { PinIcon } from '@/shared/map/pin-icon';
 import { PageHeader } from '@/shared/ui/page';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
@@ -36,6 +37,7 @@ function writeViewpoint(at: string) {
 
 export function CustomerMapPage() {
   const { t } = useTranslation('customers');
+  const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const branchId = useUi((s) => s.branchId);
@@ -81,6 +83,8 @@ export function CustomerMapPage() {
         }),
     [pins, drawerId, t, fmt],
   );
+  const places = useMemo(() => branchMarkers(branches.data, { selectedId: branchId, locale, title: (name) => tc('map.branch', { name }) }), [branches.data, branchId, locale, tc]);
+  const shown = useMemo(() => [...places, ...markers], [places, markers]);
   const rawClusters = useMemo(() => (q.data?.clusters ?? []).filter((c) => c.lat != null && c.lng != null), [q.data?.clusters]);
   const clusters: (MapCluster & { worst: PayState; mix: Partial<Record<PayState, number>> | null })[] = useMemo(
     () =>
@@ -107,7 +111,7 @@ export function CustomerMapPage() {
     setView(v);
     writeViewpoint(viewpointParam({ center: centerOf(v.bounds), zoom: v.zoom }));
   }, []);
-  const open = useCallback((id: string) => url.set({ drawer: `customer:${id}` }, { push: true }), [url]);
+  const open = useCallback((id: string) => !isBranchMarker(id) && url.set({ drawer: `customer:${id}` }, { push: true }), [url]);
   const zoomTo = useCallback((c: { lat: number; lng: number }) => setFit({ minLat: c.lat - 0.012, maxLat: c.lat + 0.012, minLng: c.lng - 0.016, maxLng: c.lng + 0.016 }), []);
   const sorted = useMemo(() => [...pins].sort((a, b) => payRank(payStateOf(a)) - payRank(payStateOf(b)) || (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
   const togglePay = (s: PayState) => url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s] });
@@ -153,12 +157,13 @@ export function CustomerMapPage() {
               center={'center' in start ? start.center : centerOf(start.bounds)}
               zoom={'zoom' in start ? start.zoom : PIN_ZOOM}
               initialBounds={'bounds' in start ? start.bounds : null}
-              markers={markers}
+              markers={shown}
               clusters={clusters}
               fit={fit}
               onView={onView}
               onMarkerClick={open}
               onClusterClick={zoomTo}
+              locate
             />
           ) : (
             <Skeleton className="h-full w-full" />

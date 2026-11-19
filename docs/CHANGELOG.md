@@ -1,6 +1,14 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+### Added (owner report 2026-11-18: "why can't I see my own GPS location and the branch pins on the map?", FR-W-030)
+- **Branch pins** on the live map and the customer map: every active branch with a map point (Settings → branch map points) is a brand-coloured pin with a house inside (`shared/map/branch-markers.ts`, glyph `home` in `pin-icon.tsx`); the chosen branch is larger, hover shows "Branch: name", and it sits under customer pins. Before, the branch point only decided where the map opened.
+- **"My location" button** on the same two maps (`MapView locate`): on click the browser asks for permission once, then the map moves to the admin's position with a blue dot and the accuracy circle. The position stays in the page and is never sent to the server. Blocked or unavailable location shows a plain message under the button.
+### Fixed
+- The admin's location could never be read: the security headers sent `Permissions-Policy: geolocation=()`, which blocks the browser's location API for the site itself. Now `geolocation=(self)` (camera and microphone stay off), `scripts/lib/csp.mjs`, tested in `scripts/lib/vercel-config.test.mjs`.
+- `img-src` now includes the API origin: when field-api keeps files in its own database (no S3, field-api 1.18.0 ADR-039, the Vercel test deployment) photo links point at the API, and attendance selfies and visit photos would have been blocked.
+- Tests: unit (branch pins), Playwright `maps show the branch and where the admin is` (granted and blocked location).
+
 Contract pinned: field-api `openapi.yaml` **1.14.0** from field-api PR #14 (1.13.0 → 1.14.0, additive; types regenerated with `pnpm gen:api`).
 ### Added (contract 1.14.0, owner request 2026-11-18: map pins by payment state, installment and credit invoices; ADR-W18)
 - Customer map opens on **Patuakhali district** (or the chosen branch's map point when it has one) instead of Barishal city, and stays where the user moves it: the view is kept in the link (`?at=lat,lng,zoom`, written with a native `replaceState` so panning makes no router round trip), so reload and Back return to the same place; it only moves by itself when another branch is picked. The other maps (live map, route history, pin and branch-point pickers) fall back to Patuakhali too.

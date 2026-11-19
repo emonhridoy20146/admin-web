@@ -60,13 +60,14 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | FR-W-026 **[ADDED 2026-11-18]** | Link a user to an ERP employee from a live list (staff of the user's branches first, change or remove on edit, typed id when the ERP is down); hints for the real ERP's conflict codes with a link to the unlinked collector (master FR-ERP-006). | active | P1 | U E |
 | FR-W-027 **[ADDED 2026-11-18]** | Branch map points in Settings: set by moving the map or pasting coordinates, refuse points outside Bangladesh, remove; warehouses marked (master FR-BR-002). | active | P2 | E A |
 | FR-W-028 **[ADDED 2026-11-18]** | Invoice viewer: customer invoices filtered by kind (installment / credit) and state; one invoice with products, ERP money lines, every installment with date, amount, paid, left, state, paid-on date and receipt, credit pay-by date with days left/overdue, payments of the invoice, guarantor, print (master FR-CUS-013, contract 1.14.0). | active | P1 | U E A |
+| FR-W-030 **[ADDED 2026-11-18]** | Live map and customer map show each active branch's map point as a branch pin (house glyph, brand colour) and a "my location" button that shows the admin's own browser position (asked on click, kept in the page only, never sent). Requires `Permissions-Policy: geolocation=(self)`. | active | P1 | U E A |
 | FR-W-029 **[ADDED 2026-11-18]** | Customer map: opens on Patuakhali district or the branch point, keeps the user's view in the link; pins in map-pin shape coloured by payment state with a glyph, clusters with the colour mix, colour legend as filter, installment/credit switch; same filters and colour badge on the customer list (master FR-CUS-012, contract 1.14.0). | active | P1 | U E A |
 
 ## 3. Non-functional (web specifics)
 | ID | Requirement |
 |---|---|
 | NFR-W-001 | Shell JS ≤ 250 KB gzip; LCP < 2.5 s on 4G mid-range phone; route chunks lazy; Leaflet and Recharts dynamic import. |
-| NFR-W-002 | Strict CSP: `default-src 'self'; connect-src api.<domain> tiles.<provider> <storage host>; img-src 'self' data: blob: tiles storage; script-src 'self'; style-src 'self' 'unsafe-inline' (Tailwind runtime-free build OK)`; `frame-ancestors 'none'`. |
+| NFR-W-002 | Strict CSP: `default-src 'self'; connect-src api.<domain> tiles.<provider> <storage host>; img-src 'self' data: blob: tiles storage; script-src 'self'; style-src 'self' 'unsafe-inline' (Tailwind runtime-free build OK)`; `frame-ancestors 'none'`. `img-src` also allows the API origin (photos when field-api keeps files itself, its ADR-039). `Permissions-Policy: camera=(), microphone=(), geolocation=(self)` (FR-W-030). |
 | NFR-W-003 | No secrets in the bundle; only `NEXT_PUBLIC_*` non-secret config. |
 | NFR-W-004 | WCAG 2.2 AA; axe checks in Playwright on every page. |
 | NFR-W-005 | Supports latest 2 versions of Chrome, Edge, Firefox, Safari; Android Chrome ≥ 100. |

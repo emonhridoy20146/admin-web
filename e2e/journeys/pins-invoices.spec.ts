@@ -54,16 +54,16 @@ test('map: opens on Patuakhali district, keeps the place the user moved to, colo
 test('map: Google-style pins coloured by payment state, list beside the map, a pin opens the customer', async ({ page }) => {
   await login(page);
   await page.goto('/map/?at=22.35960,90.32990,14');
-  const pins = page.locator('.leaflet-marker-icon .fos-pin');
+  const pins = page.locator('.leaflet-marker-icon .fos-pin:not(.is-branch)'); // branch pins (FR-W-030) are not customers
   await expect(pins.first()).toBeVisible();
   expect(await pins.count()).toBeGreaterThan(5);
   // the worst first in the list, each with its colour badge in words
   const list = page.getByRole('region', { name: custBn.map.inView });
   await expect(list.getByRole('button').first()).toContainText(custBn.pay.state.bad);
-  await page.locator('.leaflet-marker-icon:has(.fos-pin)').nth(3).click({ force: true });
+  await page.locator('.leaflet-marker-icon:has(.fos-pin:not(.is-branch))').nth(3).click({ force: true });
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page).toHaveURL(/drawer=customer/);
-  await expect(page.locator('.fos-pin.is-selected')).toHaveCount(1);
+  await expect(page.locator('.fos-pin.is-selected:not(.is-branch)')).toHaveCount(1);
 });
 
 test('customers: installment / credit invoice filter, colour filter, colour badge and open invoices per row', async ({ page }) => {
