@@ -1,7 +1,11 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.19.0** from field-api main after PR #18 (1.17.0 → 1.19.0, additive; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additive; PR #16 gave 1.17.0, PR #18 gave 1.19.0 (several branches), PR #17 gives 1.20.0 with tasks; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+### Added (contract 1.20.0, owner request 2026-11-18: admin tasks for staff; FR-W-035, ADR-W21)
+- **Tasks** (`/tasks`, new feature `tasks`, flag `module.tasks`, permissions `task.view` / `task.manage`): give one field staff member a task with a note and an optional due date, not tied to a customer. Tabs In progress / To verify / Late / Resolved / Cancelled with counts, filter by staff, title search. A task opens in a drawer with the note, the staff member's resolve note, the admin's note and the history. **Verify** (resolves it), **send back** (reason of at least 5 characters, the staff member sees it), **cancel** (reason) and edit while open. Nav badge shows requests waiting for verification; the inbox item links to the "To verify" tab.
+- Mock API: `/tasks` list (counts, filters), create (idempotent), get, edit, verify, reject, cancel with the same state rules and `422`/`409` codes; seeded tasks in every state.
+- Journeys `tasks.spec.ts` (give, verify, send back with a reason, cancel; viewer is read-only); `/tasks/` pages in the axe sweep; unit tests for the form and state rules.
 ### Added (contract 1.19.0, owner request 2026-11-18: staff see their whole branch, staff in several branches; FR-W-033)
 - User form: a field staff member can be given **several branches** at creation or later (the "exactly one branch" rule is gone). With more than one, a **Home branch** picker decides which one comes first: attendance, cash, targets and app settings follow it; in the others the person sees every customer and can visit or collect. A home-branch change alone is saved as an update (branch order now counts).
 - Settings → new **Customers** section: `customers.staffVisibility` (whole branch, the default, or assigned only) and `customers.staffPinApproval` (shown for the first time; was read-only under "Other settings").

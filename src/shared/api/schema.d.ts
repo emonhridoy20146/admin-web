@@ -1257,6 +1257,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The caller's own tasks (1.20.0, FR-TASK-003): everything still going plus what was closed in the last 30 days, newest first.
+         *     Permission task.work. The app mostly gets the same tasks as sync entity `task`; this call is for refreshing online.
+         */
+        get: operations["myTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{id}/resolve-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description The assignee says the work is done (1.20.0, FR-TASK-002). open → resolve_requested and every manager with task.manage in the task's
+         *     branch is notified. Idempotent: a repeat answers 200 with the task as it is. Offline phones use the sync mutation `task_resolve_request`.
+         *     Permission task.work; a task of someone else is 404. 409 INVALID_STATE: TASK_RESOLVED, TASK_CANCELLED.
+         */
+        post: operations["requestTaskResolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Tasks in scope, newest first (1.20.0, FR-TASK-004). Permission task.view. `counts` are for the same branch, person and search whatever
+         *     `status` is, so tab badges stay right; `counts.overdue` = still going and past the due date.
+         */
+        get: operations["listTasks"];
+        put?: never;
+        /**
+         * @description Give a task to one field staff member, with a note (1.20.0, FR-TASK-001). Not tied to a customer. The assignee is notified. Idempotent by clientId
+         *     (a repeat answers 200). Permission task.manage. `branchId` must be one of the assignee's branches that the caller can see; default: the first such branch.
+         *     422 BUSINESS_RULE: TASK_INVALID_ASSIGNEE (unknown, inactive, not field staff, or out of the caller's scope), TASK_DUE_IN_PAST.
+         */
+        post: operations["createTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One task with its history (1.20.0). Permission task.view; out of scope is 404. */
+        get: operations["getTask"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Change title, note or due date while the task is open (1.20.0). Permission task.manage. 409 INVALID_STATE: TASK_RESOLVE_REQUESTED, TASK_RESOLVED, TASK_CANCELLED, TASK_CHANGED. 422 TASK_DUE_IN_PAST. */
+        patch: operations["editTask"];
+        trace?: never;
+    };
+    "/tasks/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The admin agrees the work is done: resolve_requested → resolved; the assignee is notified (1.20.0, FR-TASK-003). Idempotent. Permission task.manage. 409 INVALID_STATE: TASK_OPEN (no resolve request yet), TASK_CANCELLED, TASK_CHANGED. */
+        post: operations["verifyTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The admin says the work is not done: resolve_requested → open, with a reason (at least 5 characters) the assignee sees (1.20.0, FR-TASK-003). Permission task.manage. 422 REASON_REQUIRED. 409 INVALID_STATE: TASK_OPEN, TASK_RESOLVED, TASK_CANCELLED, TASK_CHANGED. */
+        post: operations["rejectTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The admin withdraws a task that is open or waiting for verification (1.20.0). Idempotent; the assignee is notified. Permission task.manage. 409 INVALID_STATE: TASK_RESOLVED, TASK_CHANGED. */
+        post: operations["cancelTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/targets": {
         parameters: {
             query?: never;
@@ -3150,6 +3285,75 @@ export interface components {
             /** @description Co-work visits recorded in this session (manager list and detail only) */
             visitsCount?: number;
         };
+        /**
+         * @description 1.20.0. open → resolve_requested (staff) → resolved (admin verifies) or back to open (admin rejects with a reason); cancelled by an admin.
+         * @enum {string}
+         */
+        TaskStatus: "open" | "resolve_requested" | "resolved" | "cancelled";
+        TaskCounts: {
+            open: number;
+            resolve_requested: number;
+            resolved: number;
+            cancelled: number;
+            overdue: number;
+        };
+        TaskPerson: {
+            id: string;
+            name: string;
+        };
+        TaskCreate: {
+            /** Format: uuid */
+            clientId?: string;
+            assigneeId: string;
+            branchId?: string;
+            title: string;
+            note?: string;
+            /**
+             * Format: date
+             * @description Dhaka date, today or later
+             */
+            dueDate?: string;
+        };
+        TaskEvent: {
+            /** @enum {string} */
+            type: "created" | "edited" | "resolve_requested" | "verified" | "rejected" | "cancelled";
+            by: components["schemas"]["TaskPerson"];
+            /** Format: date-time */
+            at: string;
+            note?: string | null;
+        };
+        /** @description A free-form job an admin gave to one field staff member (1.20.0). Sync entity `task`, sent only to the assignee. */
+        Task: {
+            id: string;
+            branchId: string;
+            assignee: {
+                id: string;
+                name: string;
+                employeeCode: string;
+            };
+            createdBy: components["schemas"]["TaskPerson"];
+            title: string;
+            note?: string | null;
+            /** Format: date */
+            dueDate?: string | null;
+            status: components["schemas"]["TaskStatus"];
+            /** @description Unfinished and the due date has passed */
+            overdue: boolean;
+            /** @description What the staff member wrote with the latest resolve request */
+            resolveNote?: string | null;
+            /** Format: date-time */
+            resolveRequestedAt?: string | null;
+            /** @description The admin note or reason of the latest verify, reject or cancel */
+            decisionNote?: string | null;
+            decidedBy?: components["schemas"]["TaskPerson"] | null;
+            /** Format: date-time */
+            decidedAt?: string | null;
+            events: components["schemas"]["TaskEvent"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         Note: {
             id?: string;
             clientId?: string;
@@ -3526,7 +3730,7 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /** @enum {string} */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -3540,6 +3744,7 @@ export interface components {
              *     cash_closing → { businessDate, note? } · handover_decision → { handoverId, decision: accept|reject, reason? (required to reject) } ·
              *     tag payload may carry `ifMatch` (customer version).
              *     1.12.0: broadcast_ack → { broadcastId, at? } (when the staff tapped "read"; kept between sending and now).
+             *     1.20.0: task_resolve_request → { taskId, note?, requestedAt? } (the staff member says the task is done; idempotent, a repeat is a replay). Needs permission task.work.
              *     Every mutation is idempotent by mutationId; the same id with a different payload is rejected with IDEMPOTENCY_MISMATCH.
              */
             payload: {
@@ -3578,7 +3783,7 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
@@ -3589,6 +3794,7 @@ export interface components {
              *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
              *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
+             *     task → Task (1.20.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
              */
             data?: {
                 [key: string]: unknown;
@@ -6337,6 +6543,265 @@ export interface operations {
             };
         };
     };
+    myTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Task"][];
+                    };
+                };
+            };
+        };
+    };
+    requestTaskResolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                    /**
+                     * Format: date-time
+                     * @description When the staff member tapped the button (offline). Never later than the server time.
+                     */
+                    requestedAt?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    listTasks: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["TaskStatus"];
+                assigneeId?: string;
+                branchId?: components["parameters"]["BranchId"];
+                /** @description Only unfinished tasks past their due date */
+                overdue?: boolean;
+                /** @description Words in the title */
+                q?: string;
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Task"][];
+                        nextCursor?: string | null;
+                        counts: components["schemas"]["TaskCounts"];
+                    };
+                };
+            };
+        };
+    };
+    createTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCreate"];
+            };
+        };
+        responses: {
+            /** @description Replay of the same clientId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    getTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    editTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    note?: string | null;
+                    /** Format: date */
+                    dueDate?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    verifyTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    rejectTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    cancelTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
     listTargets: {
         parameters: {
             query?: {
@@ -7598,7 +8063,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paged snapshot for a fresh device; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0). Entities, in this order (1.9.1): attendance_day (today, id userId:date), cowork_session (today's), customer (whole scope), location_proposal (own pending), promise (own open), visit (today's, own and joint). Older history is not included; it is read online. */
+            /** @description Paged snapshot for a fresh device; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0). Entities, in this order (1.9.1): attendance_day (today, id userId:date), cowork_session (today's), customer (whole scope), location_proposal (own pending), promise (own open), visit (today's, own and joint). Since 1.20.0 also task (open ones and those closed in the last 30 days). Older history is not included; it is read online. */
             200: {
                 headers: {
                     [name: string]: unknown;

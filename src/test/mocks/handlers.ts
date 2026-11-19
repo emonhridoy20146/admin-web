@@ -1567,5 +1567,83 @@ export const handlers = [
     items.sort((a, c) => Number(a.acked) - Number(c.acked) || (a.name?.en ?? '').localeCompare(c.name?.en ?? ''));
     return HttpResponse.json({ broadcastId: b.row.id, recipientCount: b.recipientIds.length, ackCount: b.acks.size, items });
   })),
+  // ---------- tasks (1.16.0) ----------
+  http.get(`${BASE}/tasks`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'task.view');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const g = (k: string) => url.searchParams.get(k);
+    const base = db.tasks
+      .filter((x) => sc.includes(x.branchId))
+      .filter((x) => !g('assigneeId') || x.assignee.id === g('assigneeId'))
+      .filter((x) => !g('q') || x.title.toLowerCase().includes(g('q')!.toLowerCase()))
+      .map(db.taskView);
+    const n = (s: S['TaskStatus']) => base.filter((x) => x.status === s).length;
+    const counts = { open: n('open'), resolve_requested: n('resolve_requested'), resolved: n('resolved'), cancelled: n('cancelled'), overdue: base.filter((x) => x.overdue).length };
+    const all = base
+      .filter((x) => !g('status') || x.status === g('status'))
+      .filter((x) => g('overdue') !== 'true' || x.overdue)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor, counts });
+  })),
+  http.post(`${BASE}/tasks`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'task.manage');
+    if (deny) return deny;
+    const b = (await request.json()) as S['TaskCreate'];
+    if (!b.title?.trim() || b.title.trim().length > 120 || !b.assigneeId) return problem(400, 'VALIDATION_FAILED', 'title and assigneeId are required');
+    const prior = b.clientId ? db.tasks.find((x) => x.createdBy.id === ctx.user.id && (x as { clientId?: string }).clientId === b.clientId) : undefined;
+    if (prior) return HttpResponse.json(db.taskView(prior));
+    const u = db.userById(b.assigneeId);
+    const sc = scope(ctx, new URL('http://x/'));
+    const branchId = b.branchId ?? u?.branchIds?.find((x) => sc.includes(x));
+    if (!u || !u.active || u.role !== 'field_staff' || !branchId || !u.branchIds?.includes(branchId) || !sc.includes(branchId)) return problem(422, 'BUSINESS_RULE', 'This person cannot be given a task', undefined, { rule: 'TASK_INVALID_ASSIGNEE' });
+    if (b.dueDate && b.dueDate < db.now().toISODate()!) return problem(422, 'BUSINESS_RULE', 'The due date is in the past', undefined, { rule: 'TASK_DUE_IN_PAST' });
+    const t = db.addTask(ctx.user, u, b.title.trim(), b.note?.trim() || null, b.dueDate ?? null, 0, branchId);
+    if (b.clientId) (t as { clientId?: string }).clientId = b.clientId;
+    db.addAudit({ actor: actor(ctx.user), action: 'task.created', entity: 'task', entityId: t.id, branchId, after: { assigneeId: u.id, title: t.title, dueDate: t.dueDate }, reason: '' });
+    return HttpResponse.json(db.taskView(t), { status: 201 });
+  })),
+  http.get(`${BASE}/tasks/:id`, authed(({ ctx, params, url }) => {
+    const deny = need(ctx, 'task.view');
+    if (deny) return deny;
+    const t = db.tasks.find((x) => x.id === params.id);
+    if (!t || !scope(ctx, url).includes(t.branchId)) return problem(404, 'NOT_FOUND', 'Task not found');
+    return HttpResponse.json(db.taskView(t));
+  })),
+  http.patch(`${BASE}/tasks/:id`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'task.manage');
+    if (deny) return deny;
+    const t = db.tasks.find((x) => x.id === params.id);
+    if (!t || !scope(ctx, new URL('http://x/')).includes(t.branchId)) return problem(404, 'NOT_FOUND', 'Task not found');
+    if (t.status !== 'open') return problem(409, 'INVALID_STATE', 'The task can no longer be edited', undefined, { reason: `TASK_${t.status.toUpperCase()}` });
+    const b = (await request.json()) as { title?: string; note?: string | null; dueDate?: string | null };
+    if (!Object.keys(b).length) return problem(400, 'VALIDATION_FAILED', 'nothing to change');
+    if (b.dueDate && b.dueDate < db.now().toISODate()!) return problem(422, 'BUSINESS_RULE', 'The due date is in the past', undefined, { rule: 'TASK_DUE_IN_PAST' });
+    if (b.title !== undefined) t.title = b.title.trim();
+    if (b.note !== undefined) t.note = b.note?.trim() || null;
+    if (b.dueDate !== undefined) t.dueDate = b.dueDate;
+    db.taskStep(t, ctx.user, 'edited', null);
+    db.addAudit({ actor: actor(ctx.user), action: 'task.edited', entity: 'task', entityId: t.id, branchId: t.branchId, after: { title: t.title, dueDate: t.dueDate }, reason: '' });
+    return HttpResponse.json(db.taskView(t));
+  })),
+  ...(['verify', 'reject', 'cancel'] as const).map((step) =>
+    http.post(`${BASE}/tasks/:id/${step}`, authed(async ({ request, params, ctx }) => {
+      const deny = need(ctx, 'task.manage');
+      if (deny) return deny;
+      const t = db.tasks.find((x) => x.id === params.id);
+      if (!t || !scope(ctx, new URL('http://x/')).includes(t.branchId)) return problem(404, 'NOT_FOUND', 'Task not found');
+      const b = ((await request.json().catch(() => ({}))) ?? {}) as { note?: string; reason?: string };
+      const done = { verify: 'resolved', reject: 'open', cancel: 'cancelled' }[step];
+      if (t.status === done && step !== 'reject') return HttpResponse.json(db.taskView(t)); // verify and cancel repeat harmlessly
+      const from = step === 'cancel' ? ['open', 'resolve_requested'] : ['resolve_requested'];
+      if (!from.includes(t.status)) return problem(409, 'INVALID_STATE', 'The task is not in a state that allows this', undefined, { reason: `TASK_${t.status.toUpperCase()}` });
+      if (step === 'reject' && (b.reason ?? '').trim().length < 5) return problem(422, 'BUSINESS_RULE', 'A reason is required', undefined, { rule: 'REASON_REQUIRED' });
+      const note = (step === 'reject' ? b.reason : b.note)?.trim() || null;
+      db.taskStep(t, ctx.user, ({ verify: 'verified', reject: 'rejected', cancel: 'cancelled' } as const)[step], note);
+      db.addAudit({ actor: actor(ctx.user), action: `task.${({ verify: 'verified', reject: 'rejected', cancel: 'cancelled' })[step]}`, entity: 'task', entityId: t.id, branchId: t.branchId, after: { status: t.status }, reason: note ?? '' });
+      return HttpResponse.json(db.taskView(t));
+    })),
+  ),
   http.get(`${BASE}/notifications`, authed(() => HttpResponse.json({ items: [], nextCursor: null }))),
 ];
