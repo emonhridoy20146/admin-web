@@ -17,7 +17,8 @@ export function csp(hashes, env = process.env) {
     "default-src 'self'",
     `script-src 'self' ${hashes}`.trim(),
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob:${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
+    // API origin: photo links point at the API itself when it keeps files in its database (field-api ADR-039).
+    `img-src 'self' data: blob:${extra('API_ORIGIN')}${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
     `connect-src 'self'${extra('API_ORIGIN')}${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
     "font-src 'self'",
     "worker-src 'self'",
@@ -31,7 +32,8 @@ export function csp(hashes, env = process.env) {
 export const BASE_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  // geolocation=(self): the "my location" button on the maps (FR-W-034); the browser still asks the user first.
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
 };
 
 /** Headers an HTML response gets on top of BASE_HEADERS. */

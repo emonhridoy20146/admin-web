@@ -4,6 +4,7 @@
  * camera metadata such as GPS tags. Nothing is stored locally; the file only lives in memory until it is sent.
  */
 import { api, unwrap } from '../api/client';
+import { viaApiProxy } from '../api/config';
 import type { paths } from '../api/schema';
 
 export type MediaKind = paths['/media/upload-url']['post']['requestBody']['content']['application/json']['kind'];
@@ -61,7 +62,7 @@ export async function uploadMedia(kind: MediaKind, blob: Blob): Promise<string> 
   if (!slot.mediaId) throw new Error('upload slot without media id');
   if (!slot.alreadyExists) {
     if (!slot.uploadUrl) throw new Error('upload slot without url');
-    const put = await fetch(slot.uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': contentType, ...(slot.headers ?? {}) } });
+    const put = await fetch(viaApiProxy(slot.uploadUrl), { method: 'PUT', body: blob, headers: { 'Content-Type': contentType, ...(slot.headers ?? {}) } });
     if (!put.ok) throw new Error(`upload failed: ${put.status}`);
   }
   await unwrap(api.POST('/media/{id}/confirm', { params: { path: { id: slot.mediaId } } }));

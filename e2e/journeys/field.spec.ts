@@ -329,6 +329,31 @@ test('live map: staff list with freshness, filter, expand one and jump to the ro
   await expect(page).toHaveURL(/user=/);
 });
 
+test.describe('maps show the branch and where the admin is (FR-W-034)', () => {
+  test.use({ geolocation: { latitude: 22.7031, longitude: 90.3712, accuracy: 25 }, permissions: ['geolocation'] });
+
+  test('live map: branch pin and the "my location" button', async ({ page }) => {
+    await login(page, 'manager');
+    await nav(page, locBn.live.title);
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await expect(page.locator('.leaflet-marker-icon .fos-pin.is-branch').first()).toBeVisible(); // branch pin (staff are dots)
+    const paths = page.locator('.leaflet-overlay-pane path');
+    await expect(paths.first()).toBeVisible();
+    const before = await paths.count();
+    await page.getByRole('button', { name: commonBn.map.myLocation }).click();
+    await expect.poll(() => paths.count()).toBe(before + 2); // accuracy circle + dot
+    await expect(page.getByText(commonBn.map.locationDenied)).toHaveCount(0);
+  });
+
+  test('customer map: the same button, and a clear message when the browser blocks location', async ({ page, context }) => {
+    await context.clearPermissions();
+    await login(page, 'manager');
+    await nav(page, custBn.map.title);
+    await page.getByRole('button', { name: commonBn.map.myLocation }).click();
+    await expect(page.getByText(commonBn.map.locationDenied)).toBeVisible();
+  });
+});
+
 test('route history: pick a staff member and a day, see summary, stops and select a stop', async ({ page }) => {
   await login(page, 'manager');
   await nav(page, locBn.routes.title);

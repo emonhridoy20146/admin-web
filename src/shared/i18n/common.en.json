@@ -240,5 +240,13 @@
     "period": "Period: {{period}}",
     "date": "Date: {{date}}",
     "note": "Field app records; ERP figures are labelled where shown."
+  },
+  "map": {
+    "myLocation": "Show my location",
+    "locating": "Finding your location…",
+    "you": "You are here (±{{m}} m)",
+    "locationDenied": "Location is blocked for this site. Allow it in the browser's site settings.",
+    "locationUnavailable": "Your location could not be found. Try again outdoors or check that location is on.",
+    "branch": "Branch: {{name}}"
   }
 }
