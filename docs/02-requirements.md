@@ -61,6 +61,7 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | FR-W-027 **[ADDED 2026-11-18]** | Branch map points in Settings: set by moving the map or pasting coordinates, refuse points outside Bangladesh, remove; warehouses marked (master FR-BR-002). | active | P2 | E A |
 | FR-W-028 **[ADDED 2026-11-18]** | Invoice viewer: customer invoices filtered by kind (installment / credit) and state; one invoice with products, ERP money lines, every installment with date, amount, paid, left, state, paid-on date and receipt, credit pay-by date with days left/overdue, payments of the invoice, guarantor, print (master FR-CUS-013, contract 1.14.0). | active | P1 | U E A |
 | FR-W-029 **[ADDED 2026-11-18]** | Customer map: opens on Patuakhali district or the branch point, keeps the user's view in the link; pins in map-pin shape coloured by payment state with a glyph, clusters with the colour mix, colour legend as filter, installment/credit switch; same filters and colour badge on the customer list (master FR-CUS-012, contract 1.14.0). | active | P1 | U E A |
+| FR-W-030 **[ADDED 2026-11-18]** | Staff in several branches: the user form lets field staff hold more than one branch with a home-branch picker (first branch); settings choose whether field staff see the whole branch or only assigned customers (master FR-CUS-015, contract 1.19.0). | active | P1 | U E A |
 
 ## 3. Non-functional (web specifics)
 | ID | Requirement |

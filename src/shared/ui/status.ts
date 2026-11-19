@@ -88,7 +88,8 @@ export const STATUS: Record<string, { tone: Tone; label: string }> = {
   clock_skew: { tone: 'warning', label: 'flags.clock_skew' },
   late_sync: { tone: 'pending', label: 'flags.late_sync' },
   duplicate_txn_ref: { tone: 'danger', label: 'flags.duplicate_txn_ref' },
-  not_in_scope_at_record_time: { tone: 'warning', label: 'flags.not_in_scope_at_record_time' },
+  // contract 1.19.0: staff may work on any customer of their branch, so this is information, not a warning
+  not_in_scope_at_record_time: { tone: 'info', label: 'flags.not_in_scope_at_record_time' },
   no_location: { tone: 'warning', label: 'flags.no_location' },
   // user
   active: { tone: 'success', label: 'status.active' },

@@ -1,7 +1,14 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.14.0** from field-api PR #14 (1.13.0 → 1.14.0, additive; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.19.0** from field-api main after PR #18 (1.14.0 → 1.19.0, additive; 1.15.0–1.18.0 came with pin delete, ERP sync and storage; types regenerated with `pnpm gen:api`).
+### Added (contract 1.19.0, owner request 2026-11-18: staff see their whole branch, staff in several branches; FR-W-030)
+- User form: a field staff member can be given **several branches** at creation or later (the "exactly one branch" rule is gone). With more than one, a **Home branch** picker decides which one comes first: attendance, cash, targets and app settings follow it; in the others the person sees every customer and can visit or collect. A home-branch change alone is saved as an update (branch order now counts).
+- Settings → new **Customers** section: `customers.staffVisibility` (whole branch, the default, or assigned only) and `customers.staffPinApproval` (shown for the first time; was read-only under "Other settings").
+### Changed
+- Visit flag `not_in_scope_at_record_time` reads "Not their customer" / "নিজের গ্রাহক নয়" as information (staff may now work on any customer of their branch).
+
+Contract 1.14.0 from field-api PR #14 (1.13.0 → 1.14.0, additive).
 ### Added (contract 1.14.0, owner request 2026-11-18: map pins by payment state, installment and credit invoices; ADR-W18)
 - Customer map opens on **Patuakhali district** (or the chosen branch's map point when it has one) instead of Barishal city, and stays where the user moves it: the view is kept in the link (`?at=lat,lng,zoom`, written with a native `replaceState` so panning makes no router round trip), so reload and Back return to the same place; it only moves by itself when another branch is picked. The other maps (live map, route history, pin and branch-point pickers) fall back to Patuakhali too.
 - **Google-Maps-style pins** (round head, point on the spot, `shared/map/pin-icon.tsx`) coloured by the customer's payment state: red = tagged bad or the full term is over with money left, orange = two or more installments missed, yellow = one missed, blue = due today, green = everything due so far is paid, grey = paid off. The glyph inside repeats the colour (`!`, the number missed, a dot, a tick); the selected customer's pin is larger. Clusters show their mix of colours as a ring and are coloured by the worst one. The colour legend above the map shows how many of each are in view and is the colour filter (`?pay=`, several at once); an "installment / credit invoices" switch (`?kind=`) sits beside the status chips. The side list puts the worst first, each with its colour badge.

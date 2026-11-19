@@ -14,6 +14,10 @@
       "title": "Collections",
       "desc": "Checks applied to money recorded in the field."
     },
+    "customers": {
+      "title": "Customers",
+      "desc": "Which customers field staff see in the app, and when their map pins need a manager."
+    },
     "tags": {
       "title": "Bad-customer tags",
       "desc": "Who may tag customers and whether a manager must approve."
@@ -167,6 +171,14 @@
     "reports.dataQualityMaxBranchKm": {
       "label": "Farthest pin from the branch",
       "help": "A customer pin further than this from its branch is reported in Data quality."
+    },
+    "customers.staffVisibility": {
+      "label": "Customers field staff see",
+      "help": "Whole branch: every customer of their branches, assigned or not. Assigned only: just the customers assigned to them (the old rule). Today in the app always lists their own customers."
+    },
+    "customers.staffPinApproval": {
+      "label": "Staff map pins",
+      "help": "A pin for a customer with no usable location can apply at once; moving an existing pin always waits for a manager."
     }
   },
   "units": {
@@ -187,7 +199,11 @@
     "work_in": "Work start",
     "break_start": "Break start",
     "break_end": "Back to work",
-    "work_out": "Work end"
+    "work_out": "Work end",
+    "branch": "Whole branch",
+    "assigned": "Assigned only",
+    "when_missing": "Apply at once when the customer has no pin",
+    "always": "Always wait for a manager"
   },
   "weekdays": [
     "Sun",

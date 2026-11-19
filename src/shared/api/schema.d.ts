@@ -165,6 +165,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/system/erp-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.17.0 (owner request 2026-11-18). The admin panel's "Sync from ERP" button: pulls the customers
+         *     that changed in the ERP since the last sync (all of them on the first run) into FOS now, instead of waiting for
+         *     the 5-minute job. Permission `erp.sync` (super admin and branch manager by default). One run at a time.
+         *     A call stops after about 40 s and answers `partial: true`; the caller calls again until it is `false`
+         *     (the next call continues where the last one stopped). Never changes money; the ERP stays the truth.
+         *     `429 RATE_LIMITED` (`details.reason: SYNC_RUNNING`) while another run is in progress; `503 ERP_UNAVAILABLE`
+         *     when the ERP cannot be reached.
+         */
+        post: operations["erpSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/system/erp-employees": {
         parameters: {
             query?: never;
@@ -591,6 +616,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Scope (FR-CUS-001, FR-CUS-015): super admin = all; branch manager / viewer = their branches; field staff =
+         *     every customer of their branches (one or more) since 1.19.0, or only the ones assigned to them in a branch whose
+         *     setting `customers.staffVisibility` is `assigned`. `assignedTo=me` gives the caller's own work list.
+         */
         get: operations["listCustomers"];
         put?: never;
         post?: never;
@@ -704,7 +734,16 @@ export interface paths {
          *     Pending staff proposals for the customer stay pending. Permission `customer.location.approve`; out of scope → 404.
          */
         post: operations["setCustomerLocation"];
-        delete?: never;
+        /**
+         * @description 1.17.0 (owner request 2026-11-18): a manager deletes the customer's map pin, whatever its source (ERP, field or
+         *     map). The customer has no pin afterwards (`location.status: missing`, `source: overlay`), so it shows in the
+         *     "no location" list and staff can drop a new pin, which applies at once under the default policy. The ERP
+         *     coordinates are not shown again: the sync keeps the pin deleted until a new pin is set. Audited as
+         *     `customer.location.cleared`, reaches the assignee's phone through sync, recomputes polygon areas. Pending staff
+         *     proposals stay pending. Idempotent: when there is no pin, nothing changes and `removed` is `false`.
+         *     Permission `customer.location.approve`; out of scope → 404.
+         */
+        delete: operations["deleteCustomerLocation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1481,6 +1520,33 @@ export interface paths {
         };
         get: operations["mediaUrl"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storage/o": {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download target of a presigned GET URL when the server keeps files itself (ADR-039) */
+        get: operations["storageGet"];
+        /**
+         * Upload target of a presigned URL when the server keeps files itself (ADR-039)
+         * @description Only exists when the server has no S3 (`STORAGE_DRIVER=db`, the default on Vercel test deployments).
+         *     Clients never build this URL: they PUT to `uploadUrl` from `/media/upload-url` as for S3. No bearer
+         *     token; the signature in the path is the permission and expires after 5 minutes. The body must match
+         *     the signed content type, size and sha256.
+         */
+        put: operations["storagePut"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2299,6 +2365,7 @@ export interface components {
             phone?: string;
             username?: string;
             role?: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds?: string[];
             employeeCode?: string;
             erpEmployeeId?: string | null;
@@ -2317,6 +2384,7 @@ export interface components {
             phone: string;
             username?: string;
             role: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds: string[];
             employeeCode: string;
             erpEmployeeId?: string;
@@ -2327,6 +2395,7 @@ export interface components {
             name?: components["schemas"]["I18nText"];
             phone?: string;
             role?: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds?: string[];
             shiftId?: string;
             cashLimitPoisha?: number;
@@ -2589,6 +2658,15 @@ export interface components {
             };
             /** @description FOS branch of the customer. Added in 1.11.0 */
             branchId?: string | null;
+            /**
+             * @description Added in 1.19.0 (FR-CUS-015). The customer's branch, so a list that spans several branches can say which
+             *     one each row belongs to. Absent when the customer has no FOS branch.
+             */
+            branch?: {
+                id?: string;
+                code?: string;
+                name?: components["schemas"]["I18nText"];
+            };
             payState?: components["schemas"]["PayState"];
             /** @description Added in 1.14.0. Missed installments across open plans */
             missedCount?: number;
@@ -3211,6 +3289,24 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "approved" | "rejected";
+        };
+        /** @description Added in 1.17.0 */
+        DeleteLocationResult: {
+            /** @description false when the customer had no pin (nothing changed) */
+            removed: boolean;
+            location: components["schemas"]["CustomerLocation"];
+        };
+        /** @description Added in 1.17.0 */
+        ErpSyncResult: {
+            /** @description Customers pulled and updated by this call */
+            customers: number;
+            /** @description ERP branches seen */
+            branches: number;
+            /** @description true = stopped for time; call again to continue */
+            partial: boolean;
+            durationMs?: number;
+            /** Format: date-time */
+            finishedAt: string;
         };
         /** @description Added in 1.11.0 */
         SetLocationResult: {
@@ -4207,6 +4303,29 @@ export interface operations {
                     "application/json": components["schemas"]["ErpStatus"];
                 };
             };
+        };
+    };
+    erpSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErpSyncResult"];
+                };
+            };
+            403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     listErpEmployees: {
@@ -5273,6 +5392,30 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    deleteCustomerLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteLocationResult"];
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     listLocationProposals: {
@@ -6678,6 +6821,65 @@ export interface operations {
                     };
                 };
             };
+        };
+    };
+    storageGet: {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    storagePut: {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/webp": string;
+                "audio/aac": string;
+                "audio/mp4": string;
+            };
+        };
+        responses: {
+            /** @description Stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stored: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     listNotes: {
