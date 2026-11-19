@@ -499,6 +499,7 @@ export const settings: Record<string, unknown> = {
   'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
   'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
   'reports.leaderboardVisibleToStaff': false, 'reports.leaderboardMinPresentDays': 1, 'reports.dataQualityMaxBranchKm': 30,
+  'customers.staffVisibility': 'branch', 'customers.staffPinApproval': 'when_missing',
   'map.tileProvider': 'protomaps-bd',
 };
 

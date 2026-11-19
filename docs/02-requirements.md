@@ -64,6 +64,7 @@ IDs, statuses and permission keys are defined in the master catalog `field-api/d
 | FR-W-031 **[ADDED 2026-11-18, owner request]** | "Sync from ERP" button in the top right of the header (permission `erp.sync`): pulls the latest customer data now, repeats while the server says `partial`, reports the count, refetches the screen; failure is an inline banner with retry (master FR-ERP-007, contract 1.17.0). | active | P1 | U E |
 | FR-W-032 **[ADDED 2026-11-18, owner request]** | Delete a customer's map pin (permission `customer.location.approve`): confirmation dialog that names the customer and the coordinates and requires typing a confirm word before the button is enabled; works from the customer page, the drawer and therefore the map (master FR-CUS-014, contract 1.17.0). | active | P1 | U E A |
 | FR-W-029 **[ADDED 2026-11-18]** | Customer map: opens on Patuakhali district or the branch point, keeps the user's view in the link; pins in map-pin shape coloured by payment state with a glyph, clusters with the colour mix, colour legend as filter, installment/credit switch; same filters and colour badge on the customer list (master FR-CUS-012, contract 1.14.0). | active | P1 | U E A |
+| FR-W-033 **[ADDED 2026-11-18]** | Staff in several branches: the user form lets field staff hold more than one branch with a home-branch picker (first branch); settings choose whether field staff see the whole branch or only assigned customers (master FR-CUS-015, contract 1.19.0). | active | P1 | U E A |
 
 ## 3. Non-functional (web specifics)
 | ID | Requirement |

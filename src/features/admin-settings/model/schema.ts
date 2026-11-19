@@ -46,6 +46,15 @@ export const SECTIONS: SectionDef[] = [
       { key: 'collections.photoRequiredAbovePoisha', type: 'money' },
     ],
   },
+  {
+    id: 'customers',
+    fields: [
+      // FR-CUS-015 (contract 1.19.0): field staff see the whole branch, or only customers assigned to them
+      { key: 'customers.staffVisibility', type: 'enum', options: ['branch', 'assigned'] },
+      // FR-CUS-011: a staff pin for a customer without one applies at once, or always waits for a manager
+      { key: 'customers.staffPinApproval', type: 'enum', options: ['when_missing', 'always'] },
+    ],
+  },
   { id: 'tags', fields: [{ key: 'tags.staffCanSet', type: 'bool' }, { key: 'tags.approvalMode', type: 'bool' }] },
   { id: 'promises', fields: [{ key: 'promises.maxHorizonDays', type: 'int', min: 1, max: 180, unit: 'days' }, { key: 'promises.graceDays', type: 'int', min: 0, max: 14, unit: 'days' }] },
   {

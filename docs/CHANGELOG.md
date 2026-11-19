@@ -1,7 +1,14 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.17.0** from field-api PR #16 (1.14.0 → 1.17.0, additive; types regenerated with `pnpm gen:api`; 1.15.0 and 1.16.0 are other threads' work and not needed here).
+Contract pinned: field-api `openapi.yaml` **1.19.0** from field-api main after PR #18 (1.17.0 → 1.19.0, additive; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+### Added (contract 1.19.0, owner request 2026-11-18: staff see their whole branch, staff in several branches; FR-W-033)
+- User form: a field staff member can be given **several branches** at creation or later (the "exactly one branch" rule is gone). With more than one, a **Home branch** picker decides which one comes first: attendance, cash, targets and app settings follow it; in the others the person sees every customer and can visit or collect. A home-branch change alone is saved as an update (branch order now counts).
+- Settings → new **Customers** section: `customers.staffVisibility` (whole branch, the default, or assigned only) and `customers.staffPinApproval` (shown for the first time; was read-only under "Other settings").
+### Changed
+- Visit flag `not_in_scope_at_record_time` reads "Not their customer" / "নিজের গ্রাহক নয়" as information (staff may now work on any customer of their branch).
+
+Contract 1.17.0 from field-api PR #16 (1.14.0 → 1.17.0, additive).
 ### Added (contract 1.17.0, owner request 2026-11-18: reload keeps the login, customer total, Sync from ERP, delete a pin; ADR-W19, ADR-W20)
 - **Reload no longer asks for the login again on Vercel** (ADR-W19). Root cause: the refresh token is a `SameSite=Strict` HttpOnly cookie, and the admin panel (`howlader-apps-admin.vercel.app`) and the API (`howlader-apps-api.vercel.app`) are different sites (`vercel.app` is a public suffix), so the browser never stored or sent it and every reload ended on the login page. During a Vercel build with an absolute `NEXT_PUBLIC_API_BASE_URL` the app now calls its own origin (`/api/v1`) and `scripts/vercel-output.mjs` adds a first route that forwards `/api/v1/*` to the real API (`scripts/lib/api-proxy.mjs`). The cookie is first-party, stays `Strict`, and works in every browser. `API_PROXY=0` turns it off (admin and API under one parent domain), `API_PROXY=1` turns it on on another host. The CSP then needs no API origin. No change in field-api.
 - **Total customers** (FR-W-030): the customers list asks for `includeTotal=true` (the page never did, so no number was shown, and the mock always sent one, which hid it). The header says "মোট N জন গ্রাহক" (10,000+ when field-api's cap is reached) and the pager shows the same total.

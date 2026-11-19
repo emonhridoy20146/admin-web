@@ -83,7 +83,7 @@
     "clock_skew": "Clock skew",
     "late_sync": "Late sync",
     "duplicate_txn_ref": "Duplicate txn ID",
-    "not_in_scope_at_record_time": "Out of scope",
+    "not_in_scope_at_record_time": "Not their customer",
     "no_location": "No location"
   },
   "method": {
