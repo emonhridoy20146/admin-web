@@ -14,6 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { Avatar, DropdownContent, DropdownItem, DropdownLabel, DropdownMenu, DropdownSeparator, DropdownTrigger, Kbd, Popover, PopoverContent, PopoverTrigger, Switch } from '@/shared/ui/primitives';
 import { logout } from '@/features/auth';
 import { BranchSwitcher } from './branch-switcher';
+import { ErpSyncButton } from './erp-sync-button';
 import { useErpStatus } from '../api/queries';
 
 export function Header({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void }) {
@@ -39,6 +40,7 @@ export function Header({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
         </span>
       </button>
       <div className="flex items-center gap-1 sm:ms-auto">
+        <ErpSyncButton />
         <ErpIndicator />
         <InboxBell />
         <UserMenu />

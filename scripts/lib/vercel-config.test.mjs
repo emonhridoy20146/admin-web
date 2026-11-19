@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cspEnv, DEFAULT_TILE_ORIGIN, vercelRoutes } from './vercel-config.mjs';
+import { apiProxy } from './api-proxy.mjs';
 
 const page = (script) => `<!DOCTYPE html><html><head><script src="/_next/static/a.js"></script></head><body><script>${script}</script></body></html>`;
 let out;
@@ -80,5 +81,49 @@ describe('vercelRoutes', () => {
   it('serves the customer page with the CSP of /customers/view/', () => {
     const { routes } = vercelRoutes(out, env);
     expect(cspOf(routes, '^/customers/(?!view/)[^/]+/$')).toBe(cspOf(routes, '^/customers/view/(?:index\\.html)?$'));
+  });
+});
+
+// ADR-W19: the refresh cookie is SameSite=Strict, so on two *.vercel.app addresses it was never stored and every reload
+// signed the user out. On Vercel the admin host forwards /api/v1/* to the API and the browser calls its own origin.
+describe('same-origin API proxy (ADR-W19)', () => {
+  const API = 'https://howlader-apps-api.vercel.app/api/v1';
+
+  it('is on during a Vercel build with an absolute API URL, calls /api/v1 and forwards to the real API', () => {
+    expect(apiProxy({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: API })).toEqual({ publicBase: '/api/v1', target: 'https://howlader-apps-api.vercel.app/api/v1' });
+    expect(apiProxy({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: `${API}/` })?.target).toBe(API);
+  });
+  it('keeps /api/v1 as the browser path, because field-api sets the cookie for /api/v1/auth', () => {
+    expect(apiProxy({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com/v1' })).toEqual({ publicBase: '/api/v1', target: 'https://api.example.com/v1' });
+  });
+  it('is off locally, in mock builds, for a relative URL, and with API_PROXY=0', () => {
+    expect(apiProxy({ NEXT_PUBLIC_API_BASE_URL: API })).toBeNull();
+    expect(apiProxy({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: API, NEXT_PUBLIC_API_MOCK: '1' })).toBeNull();
+    expect(apiProxy({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: '/api/v1' })).toBeNull();
+    expect(apiProxy({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: API, API_PROXY: '0' })).toBeNull();
+    expect(apiProxy({ VERCEL: '1' })).toBeNull();
+  });
+  it('API_PROXY=1 turns it on on another host', () => {
+    expect(apiProxy({ API_PROXY: '1', NEXT_PUBLIC_API_BASE_URL: API })?.target).toBe(API);
+  });
+
+  const env = cspEnv({ VERCEL: '1', NEXT_PUBLIC_API_BASE_URL: API });
+  it('forwards /api/v1/* before the trailing-slash redirect, so a POST is not redirected', () => {
+    const { routes } = vercelRoutes(out, env);
+    expect(routes[0]).toEqual({ src: '^/api/v1/(.*)$', dest: `${API}/$1` });
+    const re = new RegExp(routes[0].src);
+    expect(re.exec('/api/v1/auth/refresh')?.[1]).toBe('auth/refresh');
+    expect(re.exec('/api/v1/customers/6731abc/location')?.[1]).toBe('customers/6731abc/location');
+    expect(re.test('/api/v2/x')).toBe(false);
+    expect(re.test('/customers/')).toBe(false);
+  });
+  it('does not add the API origin to the CSP: the browser only calls its own origin', () => {
+    const { routes } = vercelRoutes(out, env);
+    expect(directive(cspOf(routes, '^/login/(?:index\\.html)?$'), 'connect-src')).not.toContain('vercel.app');
+    expect(env.API_ORIGIN).toBeUndefined();
+  });
+  it('adds no route when the proxy is off', () => {
+    const { routes } = vercelRoutes(out, cspEnv({ NEXT_PUBLIC_API_BASE_URL: API }));
+    expect(routes.some((r) => r.dest?.includes('/api/v1'))).toBe(false);
   });
 });

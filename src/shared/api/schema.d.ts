@@ -616,6 +616,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Scope (FR-CUS-001, FR-CUS-015): super admin = all; branch manager / viewer = their branches; field staff =
+         *     every customer of their branches (one or more) since 1.19.0, or only the ones assigned to them in a branch whose
+         *     setting `customers.staffVisibility` is `assigned`. `assignedTo=me` gives the caller's own work list.
+         */
         get: operations["listCustomers"];
         put?: never;
         post?: never;
@@ -1260,7 +1265,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description The caller's own tasks (1.18.0, FR-TASK-003): everything still going plus what was closed in the last 30 days, newest first.
+         * @description The caller's own tasks (1.20.0, FR-TASK-003): everything still going plus what was closed in the last 30 days, newest first.
          *     Permission task.work. The app mostly gets the same tasks as sync entity `task`; this call is for refreshing online.
          */
         get: operations["myTasks"];
@@ -1282,7 +1287,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description The assignee says the work is done (1.18.0, FR-TASK-002). open → resolve_requested and every manager with task.manage in the task's
+         * @description The assignee says the work is done (1.20.0, FR-TASK-002). open → resolve_requested and every manager with task.manage in the task's
          *     branch is notified. Idempotent: a repeat answers 200 with the task as it is. Offline phones use the sync mutation `task_resolve_request`.
          *     Permission task.work; a task of someone else is 404. 409 INVALID_STATE: TASK_RESOLVED, TASK_CANCELLED.
          */
@@ -1301,13 +1306,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Tasks in scope, newest first (1.18.0, FR-TASK-004). Permission task.view. `counts` are for the same branch, person and search whatever
+         * @description Tasks in scope, newest first (1.20.0, FR-TASK-004). Permission task.view. `counts` are for the same branch, person and search whatever
          *     `status` is, so tab badges stay right; `counts.overdue` = still going and past the due date.
          */
         get: operations["listTasks"];
         put?: never;
         /**
-         * @description Give a task to one field staff member, with a note (1.18.0, FR-TASK-001). Not tied to a customer. The assignee is notified. Idempotent by clientId
+         * @description Give a task to one field staff member, with a note (1.20.0, FR-TASK-001). Not tied to a customer. The assignee is notified. Idempotent by clientId
          *     (a repeat answers 200). Permission task.manage. `branchId` must be one of the assignee's branches that the caller can see; default: the first such branch.
          *     422 BUSINESS_RULE: TASK_INVALID_ASSIGNEE (unknown, inactive, not field staff, or out of the caller's scope), TASK_DUE_IN_PAST.
          */
@@ -1325,14 +1330,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description One task with its history (1.18.0). Permission task.view; out of scope is 404. */
+        /** @description One task with its history (1.20.0). Permission task.view; out of scope is 404. */
         get: operations["getTask"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Change title, note or due date while the task is open (1.18.0). Permission task.manage. 409 INVALID_STATE: TASK_RESOLVE_REQUESTED, TASK_RESOLVED, TASK_CANCELLED, TASK_CHANGED. 422 TASK_DUE_IN_PAST. */
+        /** @description Change title, note or due date while the task is open (1.20.0). Permission task.manage. 409 INVALID_STATE: TASK_RESOLVE_REQUESTED, TASK_RESOLVED, TASK_CANCELLED, TASK_CHANGED. 422 TASK_DUE_IN_PAST. */
         patch: operations["editTask"];
         trace?: never;
     };
@@ -1345,7 +1350,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description The admin agrees the work is done: resolve_requested → resolved; the assignee is notified (1.18.0, FR-TASK-003). Idempotent. Permission task.manage. 409 INVALID_STATE: TASK_OPEN (no resolve request yet), TASK_CANCELLED, TASK_CHANGED. */
+        /** @description The admin agrees the work is done: resolve_requested → resolved; the assignee is notified (1.20.0, FR-TASK-003). Idempotent. Permission task.manage. 409 INVALID_STATE: TASK_OPEN (no resolve request yet), TASK_CANCELLED, TASK_CHANGED. */
         post: operations["verifyTask"];
         delete?: never;
         options?: never;
@@ -1362,7 +1367,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description The admin says the work is not done: resolve_requested → open, with a reason (at least 5 characters) the assignee sees (1.18.0, FR-TASK-003). Permission task.manage. 422 REASON_REQUIRED. 409 INVALID_STATE: TASK_OPEN, TASK_RESOLVED, TASK_CANCELLED, TASK_CHANGED. */
+        /** @description The admin says the work is not done: resolve_requested → open, with a reason (at least 5 characters) the assignee sees (1.20.0, FR-TASK-003). Permission task.manage. 422 REASON_REQUIRED. 409 INVALID_STATE: TASK_OPEN, TASK_RESOLVED, TASK_CANCELLED, TASK_CHANGED. */
         post: operations["rejectTask"];
         delete?: never;
         options?: never;
@@ -1379,7 +1384,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description The admin withdraws a task that is open or waiting for verification (1.18.0). Idempotent; the assignee is notified. Permission task.manage. 409 INVALID_STATE: TASK_RESOLVED, TASK_CHANGED. */
+        /** @description The admin withdraws a task that is open or waiting for verification (1.20.0). Idempotent; the assignee is notified. Permission task.manage. 409 INVALID_STATE: TASK_RESOLVED, TASK_CHANGED. */
         post: operations["cancelTask"];
         delete?: never;
         options?: never;
@@ -1650,6 +1655,33 @@ export interface paths {
         };
         get: operations["mediaUrl"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storage/o": {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download target of a presigned GET URL when the server keeps files itself (ADR-039) */
+        get: operations["storageGet"];
+        /**
+         * Upload target of a presigned URL when the server keeps files itself (ADR-039)
+         * @description Only exists when the server has no S3 (`STORAGE_DRIVER=db`, the default on Vercel test deployments).
+         *     Clients never build this URL: they PUT to `uploadUrl` from `/media/upload-url` as for S3. No bearer
+         *     token; the signature in the path is the permission and expires after 5 minutes. The body must match
+         *     the signed content type, size and sha256.
+         */
+        put: operations["storagePut"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2468,6 +2500,7 @@ export interface components {
             phone?: string;
             username?: string;
             role?: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds?: string[];
             employeeCode?: string;
             erpEmployeeId?: string | null;
@@ -2486,6 +2519,7 @@ export interface components {
             phone: string;
             username?: string;
             role: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds: string[];
             employeeCode: string;
             erpEmployeeId?: string;
@@ -2496,6 +2530,7 @@ export interface components {
             name?: components["schemas"]["I18nText"];
             phone?: string;
             role?: components["schemas"]["Role"];
+            /** @description One or more branches; field staff may work in several since 1.19.0 (FR-CUS-015). The first is the home branch (attendance, cash, targets, app settings); the others widen whose customers they see. */
             branchIds?: string[];
             shiftId?: string;
             cashLimitPoisha?: number;
@@ -2758,6 +2793,15 @@ export interface components {
             };
             /** @description FOS branch of the customer. Added in 1.11.0 */
             branchId?: string | null;
+            /**
+             * @description Added in 1.19.0 (FR-CUS-015). The customer's branch, so a list that spans several branches can say which
+             *     one each row belongs to. Absent when the customer has no FOS branch.
+             */
+            branch?: {
+                id?: string;
+                code?: string;
+                name?: components["schemas"]["I18nText"];
+            };
             payState?: components["schemas"]["PayState"];
             /** @description Added in 1.14.0. Missed installments across open plans */
             missedCount?: number;
@@ -3242,7 +3286,7 @@ export interface components {
             visitsCount?: number;
         };
         /**
-         * @description 1.18.0. open → resolve_requested (staff) → resolved (admin verifies) or back to open (admin rejects with a reason); cancelled by an admin.
+         * @description 1.20.0. open → resolve_requested (staff) → resolved (admin verifies) or back to open (admin rejects with a reason); cancelled by an admin.
          * @enum {string}
          */
         TaskStatus: "open" | "resolve_requested" | "resolved" | "cancelled";
@@ -3278,7 +3322,7 @@ export interface components {
             at: string;
             note?: string | null;
         };
-        /** @description A free-form job an admin gave to one field staff member (1.18.0). Sync entity `task`, sent only to the assignee. */
+        /** @description A free-form job an admin gave to one field staff member (1.20.0). Sync entity `task`, sent only to the assignee. */
         Task: {
             id: string;
             branchId: string;
@@ -3700,7 +3744,7 @@ export interface components {
              *     cash_closing → { businessDate, note? } · handover_decision → { handoverId, decision: accept|reject, reason? (required to reject) } ·
              *     tag payload may carry `ifMatch` (customer version).
              *     1.12.0: broadcast_ack → { broadcastId, at? } (when the staff tapped "read"; kept between sending and now).
-             *     1.18.0: task_resolve_request → { taskId, note?, requestedAt? } (the staff member says the task is done; idempotent, a repeat is a replay). Needs permission task.work.
+             *     1.20.0: task_resolve_request → { taskId, note?, requestedAt? } (the staff member says the task is done; idempotent, a repeat is a replay). Needs permission task.work.
              *     Every mutation is idempotent by mutationId; the same id with a different payload is rejected with IDEMPOTENCY_MISMATCH.
              */
             payload: {
@@ -3750,7 +3794,7 @@ export interface components {
              *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
              *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
-             *     task → Task (1.18.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
+             *     task → Task (1.20.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
              */
             data?: {
                 [key: string]: unknown;
@@ -7244,6 +7288,65 @@ export interface operations {
             };
         };
     };
+    storageGet: {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    storagePut: {
+        parameters: {
+            query: {
+                /** @description Signed grant (key */
+                t: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/webp": string;
+                "audio/aac": string;
+                "audio/mp4": string;
+            };
+        };
+        responses: {
+            /** @description Stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        stored: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
     listNotes: {
         parameters: {
             query?: {
@@ -7960,7 +8063,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paged snapshot for a fresh device; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0). Entities, in this order (1.9.1): attendance_day (today, id userId:date), cowork_session (today's), customer (whole scope), location_proposal (own pending), promise (own open), visit (today's, own and joint). Since 1.18.0 also task (open ones and those closed in the last 30 days). Older history is not included; it is read online. */
+            /** @description Paged snapshot for a fresh device; the final page has nextCursor null and returns pullCursor (schema declared in 1.5.0). Entities, in this order (1.9.1): attendance_day (today, id userId:date), cowork_session (today's), customer (whole scope), location_proposal (own pending), promise (own open), visit (today's, own and joint). Since 1.20.0 also task (open ones and those closed in the last 30 days). Older history is not included; it is read online. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -168,6 +168,8 @@ function broadcastView(b: db.MockBroadcast, viewer: db.MockUser): S['Broadcast']
 }
 
 const idem = new Map<string, S["Collection"]>();
+let lastErpSyncAt: string | null = null;
+let erpSyncCalls = 0;
 
 const custBranchOk = (ctx: Ctx, c: db.MockCustomer) => scope(ctx, new URL('http://x/')).includes(c.branchId);
 
@@ -251,7 +253,17 @@ export const handlers = [
       tileProvider: { id: 'osm-demo', urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors', maxZoom: 19 },
     }),
   ),
-  http.get(`${BASE}/system/erp-status`, authed(() => HttpResponse.json({ ...db.erpStatus, lastSuccessAt: new Date(Date.now() - 3 * 60_000).toISOString() }))),
+  http.get(`${BASE}/system/erp-status`, authed(() => HttpResponse.json({ ...db.erpStatus, lastSuccessAt: lastErpSyncAt ?? new Date(Date.now() - 3 * 60_000).toISOString() }))),
+  // FR-ERP-007 (contract 1.17.0): "Sync from ERP". The first call is cut for time (`partial`) to exercise the repeat loop.
+  http.post(`${BASE}/system/erp-sync`, authed(async ({ ctx }) => {
+    const deny = need(ctx, 'erp.sync');
+    if (deny) return deny;
+    await new Promise((r) => setTimeout(r, 250));
+    erpSyncCalls += 1;
+    const partial = erpSyncCalls % 2 === 1;
+    if (!partial) lastErpSyncAt = new Date().toISOString();
+    return HttpResponse.json({ customers: partial ? 120 : 37, branches: 3, partial, durationMs: 250, finishedAt: new Date().toISOString() });
+  })),
   http.get(`${BASE}/system/erp-employees`, authed(({ ctx }) => need(ctx, 'user.manage') ?? HttpResponse.json({ items: db.erpEmployees }))),
   http.get(`${BASE}/system/health`, () => HttpResponse.json({ status: 'ok', version: '1.6.0', mongo: 'ok', erp: 'ok' })),
   http.get(`${BASE}/system/sync-health`, authed(({ ctx, url }) => {
@@ -464,6 +476,20 @@ export const handlers = [
     db.proposals.unshift({ branchId: c.branchId, row: { id, customer: { id: c.item.id, name: c.item.name, code: c.item.code, current: c.item.location as never }, lat: b.lat, lng: b.lng, photoMediaId: null, note: b.note ?? null, proposedBy: me.id, proposer: me, status: 'approved', method: 'map', deviceDistanceM: null, deviceMock: false, autoApplied: false, direct: true, decider: me, decidedAt: new Date().toISOString(), createdAt: new Date().toISOString() } });
     db.addAudit({ actor: actor(ctx.user), action: 'customer.location.set', entity: 'customer', entityId: c.item.id, branchId: c.branchId, before: before ?? {}, after: { lat: b.lat, lng: b.lng }, reason: b.note ?? '' });
     return HttpResponse.json({ id, status: 'approved', location: c.item.location }, { status: 201 });
+  })),
+  // FR-CUS-014 (contract 1.17.0): delete the pin; idempotent
+  http.delete(`${BASE}/customers/:id/location`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'customer.location.approve');
+    if (deny) return deny;
+    const c = db.customerById(params.id!);
+    if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+    const had = c.item.location?.status === 'ok' || c.item.location?.status === 'overridden';
+    if (!had) return HttpResponse.json({ removed: false, location: c.item.location });
+    const before = { lat: c.item.location!.lat!, lng: c.item.location!.lng! };
+    c.item.location = { lat: null, lng: null, status: 'missing', source: 'overlay' };
+    recomputeCustomer(c);
+    db.addAudit({ actor: actor(ctx.user), action: 'customer.location.cleared', entity: 'customer', entityId: c.item.id, branchId: c.branchId, before, after: {}, reason: '' });
+    return HttpResponse.json({ removed: true, location: c.item.location });
   })),
   http.post(`${BASE}/location-proposals/:id/decision`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'customer.location.approve');
@@ -903,7 +929,11 @@ export const handlers = [
     const k = key[sort] ?? key['-daysOverdue']!;
     all = [...all].sort((a, b) => (k(a) < k(b) ? -1 : k(a) > k(b) ? 1 : 0));
     const p = page(all.map((c) => c.item), url);
-    return HttpResponse.json(p);
+    // like field-api: `total` only when asked for (includeTotal=true), which is what the header count relies on
+    if (url.searchParams.get('includeTotal') === 'true') return HttpResponse.json(p);
+    const { total: _total, ...rest } = p;
+    void _total;
+    return HttpResponse.json(rest);
   })),
   http.get(`${BASE}/customers/:id`, authed(({ params, ctx }) => {
     const c = db.customerById(params.id!);

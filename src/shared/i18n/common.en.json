@@ -126,6 +126,10 @@
     "placeholder": "Explain why, in a sentence or two",
     "tooShort": "Write at least {{n}} characters."
   },
+  "confirmType": {
+    "label": "Type {{word}} to confirm",
+    "help": "The button turns on when the word matches."
+  },
   "errors": {
     "GENERIC": "Something went wrong. Please try again.",
     "NETWORK": "Cannot reach the server. Check the internet connection.",
@@ -147,6 +151,8 @@
     "FLAG_LOCKED": "This flag is locked.",
     "PERMISSION_RESERVED": "Reserved permissions cannot be granted.",
     "PHONE_TAKEN": "This phone number is already used.",
+    "RATE_LIMITED": "Too many requests, or a sync is already running. Wait a moment and try again.",
+    "ERP_UNAVAILABLE": "The ERP cannot be reached right now. Try again in a moment.",
     "copyDetails": "Copy details"
   },
   "time": {
@@ -166,7 +172,16 @@
     "failed": "{{n}} failed",
     "fresh": "Fresh",
     "stale": "Delayed",
-    "down": "Not syncing"
+    "down": "Not syncing",
+    "sync": "Sync",
+    "syncAria": "Sync from ERP now",
+    "syncTip": "Sync from ERP: pull the latest customer data now",
+    "syncing": "Syncing…",
+    "syncProgress": "Syncing… {{n}} customers so far",
+    "syncDone": "Synced from the ERP: {{n}} customers updated.",
+    "syncUpToDate": "Synced from the ERP. Nothing new.",
+    "syncMore": "The sync is still running. Press Sync again in a moment.",
+    "syncFailed": "The sync did not finish"
   },
   "user": {
     "language": "Language",
