@@ -188,7 +188,12 @@ export function CustomersPage() {
           </Link>
         }
       >
-        {query.data?.total != null && <span>{t('subtitle')}</span>}
+        {query.data?.total != null && (
+          <span className="tabular font-medium text-fg-secondary" data-testid="customer-total">
+            {query.data.total >= 10_000 ? t('totalCapped', { n: formatNumber(10_000) }) : t('total', { n: formatNumber(query.data.total) })}
+          </span>
+        )}
+        <span>{t('subtitle')}</span>
       </PageHeader>
 
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center">

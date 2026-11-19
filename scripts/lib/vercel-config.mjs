@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { BASE_HEADERS, htmlHeaders } from './csp.mjs';
+import { apiProxy } from './api-proxy.mjs';
 
 /** field-api's default tile provider (settings `map.tileProvider`, osm) serves from these hosts. */
 export const DEFAULT_TILE_ORIGIN = 'https://tile.openstreetmap.org https://*.tile.openstreetmap.org';
@@ -14,7 +15,8 @@ export const DEFAULT_TILE_ORIGIN = 'https://tile.openstreetmap.org https://*.til
  */
 export function cspEnv(env) {
   const out = { ...env };
-  if (!out.API_ORIGIN && out.NEXT_PUBLIC_API_BASE_URL) {
+  // ADR-W19: with the same-origin proxy the browser never calls the API origin, so 'self' is enough
+  if (!out.API_ORIGIN && out.NEXT_PUBLIC_API_BASE_URL && !apiProxy(env)) {
     try {
       out.API_ORIGIN = new URL(out.NEXT_PUBLIC_API_BASE_URL).origin;
     } catch {
@@ -37,6 +39,7 @@ function htmlFiles(dir) {
 
 /** Routes for .vercel/output/config.json. `env` must already be passed through cspEnv. */
 export function vercelRoutes(outDir, env) {
+  const proxy = apiProxy(env);
   const headerRoutes = [];
   let notFoundHeaders;
   for (const file of htmlFiles(outDir)) {
@@ -53,6 +56,10 @@ export function vercelRoutes(outDir, env) {
   }
 
   const routes = [
+    // ADR-W19: forward /api/v1/* to field-api (first, before the trailing-slash redirect below: a POST to
+    // /api/v1/auth/refresh must not be redirected). The browser only talks to this origin, so the SameSite=Strict
+    // refresh cookie is first-party. No `continue`: a forwarded request is answered by the API alone.
+    ...(proxy ? [{ src: '^/api/v1/(.*)$', dest: `${proxy.target}/$1` }] : []),
     // trailingSlash: true — paths without an extension get the slash (as `next dev` and serve-static do)
     { src: '^/((?:[^/]+/)*[^/.]+)$', status: 308, headers: { Location: '/$1/' } },
     { src: '^/.*$', headers: BASE_HEADERS, continue: true },

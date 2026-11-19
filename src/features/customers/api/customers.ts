@@ -13,7 +13,8 @@ export type CustomerQuery = NonNullable<operations['listCustomers']['parameters'
 export function useCustomers(params: Omit<CustomerQuery, 'branchId'>) {
   const branchId = useBranchId();
   useInvalidateOn([EV.customerTagged, EV.collectionResolved, EV.assignmentChanged], [['customers']]);
-  const query: CustomerQuery = { ...params, branchId };
+  // includeTotal: the "total customers" number in the header and the pager (field-api caps it at 10,000)
+  const query: CustomerQuery = { ...params, branchId, includeTotal: true };
   return useQuery({
     queryKey: ['customers', 'list', query],
     queryFn: () => unwrap(api.GET('/customers', { params: { query } })),
@@ -117,6 +118,18 @@ export function useSetLocation(customerId: string) {
   return useMutation({
     mutationFn: (v: { clientId: string; lat: number; lng: number; note?: string }) =>
       unwrap(api.POST('/customers/{id}/location', { params: { path: { id: customerId } }, body: { ...v, method: 'map' } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
+  });
+}
+
+/**
+ * FR-CUS-014 (contract 1.17.0): a manager deletes the customer's pin, whatever its source. Not optimistic: the pin leaves
+ * the screen after the server says so. Deleting twice is harmless (`removed: false`).
+ */
+export function useDeleteLocation(customerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.DELETE('/customers/{id}/location', { params: { path: { id: customerId } } })),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
   });
 }

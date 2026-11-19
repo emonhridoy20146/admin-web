@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloudUpload, FileText, Flag, Gauge, MapPin, MapPinPlus, MapPinned, Phone, Signpost, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
+import { CloudUpload, FileText, Flag, Gauge, MapPin, MapPinOff, MapPinPlus, MapPinned, Phone, Signpost, StickyNote, UserPen, UserPlus, UserRound } from 'lucide-react';
 import { AssignCustomerDialog } from '@/features/assignments';
 import { useGate } from '@/shared/feature/useGate';
 import { useUrlState } from '@/shared/lib/url-state';
@@ -17,6 +17,7 @@ import { currentPin } from '../model/pin';
 import { frequencyLabel, guarantorPhones, isCollectable, itemLabel, rolledCount, visibleLines } from '../model/plan';
 import type { CustomerDetail } from '../api/customers';
 import { SetPinDialog } from './set-pin-dialog';
+import { DeletePinDialog } from './delete-pin-dialog';
 
 type Plan = components['schemas']['Plan'];
 
@@ -181,16 +182,24 @@ function PinAction({ c, hasLoc }: { c: CustomerDetail; hasLoc: boolean }) {
   const gate = useGate();
   const url = useUrlState();
   const [open, setOpen] = useState(() => url.get('action') === 'pin');
+  const [deleting, setDeleting] = useState(false);
   if (!gate.can('customer.location.approve')) return null;
   const Icon = hasLoc ? MapPinned : MapPinPlus;
   return (
-    <>
+    <div className="flex flex-wrap items-center gap-x-4">
       <button type="button" onClick={() => setOpen(true)} className="mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-sm text-sm font-medium text-primary hover:underline sm:min-h-8">
         <Icon className="size-4" aria-hidden />
         {hasLoc ? t('setPin.openMove') : t('setPin.openNew')}
       </button>
+      {hasLoc && (
+        <button type="button" onClick={() => setDeleting(true)} className="mt-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-sm text-sm font-medium text-danger hover:underline sm:min-h-8">
+          <MapPinOff className="size-4" aria-hidden />
+          {t('deletePin.open')}
+        </button>
+      )}
       <SetPinDialog open={open} customer={c} onClose={() => (setOpen(false), url.get('action') && url.set({ action: null }))} />
-    </>
+      {hasLoc && <DeletePinDialog open={deleting} customer={c} onClose={() => setDeleting(false)} />}
+    </div>
   );
 }
 

@@ -191,6 +191,19 @@
     "how": "How"
   },
   "nobodyAssigned": "Nobody",
+  "deletePin": {
+    "open": "Delete pin",
+    "title": "Delete the map pin of {{name}}?",
+    "desc": "The customer will have no pin on the map and will appear in the \"No location\" list.",
+    "where": "Pin at {{coords}}",
+    "keep": "The ERP sync will not bring this pin back. Staff or a manager can drop a new pin later.",
+    "word": "DELETE",
+    "confirm": "Delete pin",
+    "deleted": "Pin of {{name}} deleted.",
+    "already": "{{name}} had no pin."
+  },
+  "total": "{{n}} customers",
+  "totalCapped": "{{n}}+ customers",
   "setPin": {
     "openNew": "Set pin on the map",
     "openMove": "Move pin on the map",

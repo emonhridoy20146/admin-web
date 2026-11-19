@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
 import { useCan, useSession } from '@/shared/auth/session';
 import { useBranchId } from '@/shared/lib/ui-store';
@@ -62,4 +62,28 @@ export function useBranchFlags() {
 
 export function useSearch(q: string) {
   return useQuery({ queryKey: ['shell', 'search', q], queryFn: () => unwrap(api.GET('/search', { params: { query: { q } } })), enabled: q.trim().length >= 2, staleTime: 30_000 });
+}
+
+/**
+ * FR-ERP-007 "Sync from ERP" (contract 1.17.0, ADR-W19): pulls what changed in the ERP now. One call stops after about
+ * 40 s with `partial: true`; this calls again until it is done (at most 30 rounds), reporting how many customers came.
+ * Everything on screen is refetched afterwards. Never optimistic: it only reads from the ERP.
+ */
+export function useErpSync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (onProgress?: (customers: number) => void) => {
+      let customers = 0;
+      let rounds = 0;
+      let last: { partial: boolean; finishedAt: string };
+      do {
+        last = await unwrap(api.POST('/system/erp-sync'));
+        customers += (last as { customers?: number }).customers ?? 0;
+        rounds += 1;
+        onProgress?.(customers);
+      } while (last.partial && rounds < 30);
+      return { customers, partial: last.partial, finishedAt: last.finishedAt };
+    },
+    onSettled: () => void qc.invalidateQueries(),
+  });
 }
