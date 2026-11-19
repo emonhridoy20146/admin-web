@@ -18,6 +18,7 @@ import {
   emptyForm,
   erpEmployeeLabel,
   fromUser,
+  makeHome,
   orderErpEmployees,
   ROLES,
   toCreate,
@@ -241,6 +242,24 @@ export function UserFormDialog({
                 <p id="branch-err" className="mt-1.5 text-xs text-danger">
                   {t(errors.branchIds)}
                 </p>
+              )}
+              {v.branchIds.length > 1 && (
+                <div className="mt-3 max-w-sm">
+                  <Field label={t('form.homeBranch')} help={t('form.homeBranchHelp')}>
+                    {(id, d) => (
+                      <Select id={id} aria-describedby={d} value={v.branchIds[0]} onChange={(e) => set('branchIds', makeHome(v.branchIds, e.target.value))}>
+                        {v.branchIds.map((bid) => {
+                          const b = branches.data?.find((x) => x.id === bid);
+                          return (
+                            <option key={bid} value={bid}>
+                              {b ? `${pickText(b.name, locale)} · ${b.code}` : bid}
+                            </option>
+                          );
+                        })}
+                      </Select>
+                    )}
+                  </Field>
+                </div>
               )}
             </fieldset>
           )}

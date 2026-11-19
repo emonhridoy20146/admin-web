@@ -82,7 +82,6 @@ export function validate(v: UserFormValues): UserFormErrors {
   if (!BD_MOBILE.test(normalizePhone(v.phone))) e.phone = 'errors.phone';
   if (!v.employeeCode.trim()) e.employeeCode = 'errors.required';
   if (v.role !== 'super_admin' && v.branchIds.length === 0) e.branchIds = 'errors.branch';
-  if (v.role === 'field_staff' && v.branchIds.length > 1) e.branchIds = 'errors.oneBranch';
   const p = toPoisha(v.cashLimitTaka);
   if (Number.isNaN(p)) e.cashLimitTaka = 'errors.amount';
   if (v.username && !/^[a-z0-9._-]{3,32}$/.test(v.username)) e.username = 'errors.username';
@@ -111,8 +110,8 @@ export function toUpdate(before: User, v: UserFormValues, reason: string): UserU
     out.name = { bn: v.nameBn.trim(), en: v.nameEn.trim() };
   if (normalizePhone(v.phone) !== before.phone) out.phone = normalizePhone(v.phone);
   if (v.role !== before.role) out.role = v.role;
-  if ([...v.branchIds].sort().join() !== [...(before.branchIds ?? [])].sort().join())
-    out.branchIds = v.branchIds;
+  // order matters: the first branch is the home branch (contract 1.19.0)
+  if (v.branchIds.join() !== (before.branchIds ?? []).join()) out.branchIds = v.branchIds;
   const limit = toPoisha(v.cashLimitTaka);
   if (limit != null && !Number.isNaN(limit) && limit !== before.cashLimitPoisha) out.cashLimitPoisha = limit;
   // 1.13.0: link or unlink the ERP employee (the ERP records a collector on every payment)
@@ -121,6 +120,14 @@ export function toUpdate(before: User, v: UserFormValues, reason: string): UserU
   // a shift can be changed to another one; going back to the branch hours is not in the contract
   if (v.shiftId && v.shiftId !== (before.shiftId ?? '')) out.shiftId = v.shiftId;
   return out;
+}
+
+/**
+ * Since contract 1.19.0 a field staff member (like a manager) may hold several branches. The first one is the home
+ * branch: attendance, cash, targets and app settings follow it; the others widen whose customers they see.
+ */
+export function makeHome(branchIds: string[], id: string): string[] {
+  return branchIds.includes(id) ? [id, ...branchIds.filter((b) => b !== id)] : branchIds;
 }
 
 export function changedKeys(u: UserUpdate): string[] {

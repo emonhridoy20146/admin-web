@@ -3,6 +3,7 @@ import {
   changedKeys,
   emptyForm,
   fromUser,
+  makeHome,
   normalizePhone,
   orderErpEmployees,
   toCreate,
@@ -10,6 +11,7 @@ import {
   toUpdate,
   validate,
 } from '../model/user-form';
+import type { User } from '../api/users';
 
 const valid = {
   ...emptyForm('b1'),
@@ -38,10 +40,20 @@ describe('user form model', () => {
     expect(validate({ ...valid, phone: '0123' }).phone).toBe('errors.phone');
     expect(validate({ ...valid, branchIds: [] }).branchIds).toBe('errors.branch');
     expect(validate({ ...valid, role: 'super_admin', branchIds: [] }).branchIds).toBeUndefined();
-    expect(validate({ ...valid, branchIds: ['b1', 'b2'] }).branchIds).toBe('errors.oneBranch');
+    // contract 1.19.0: field staff may work in several branches
+    expect(validate({ ...valid, branchIds: ['b1', 'b2'] }).branchIds).toBeUndefined();
     expect(validate({ ...valid, role: 'branch_manager', branchIds: ['b1', 'b2'] }).branchIds).toBeUndefined();
     expect(validate({ ...valid, nameEn: ' ' }).nameEn).toBe('errors.required');
     expect(validate({ ...valid, username: 'A B' }).username).toBe('errors.username');
+  });
+
+  it('puts the home branch first and sends a home-branch change as an update', () => {
+    expect(makeHome(['b1', 'b2', 'b3'], 'b3')).toEqual(['b3', 'b1', 'b2']);
+    expect(makeHome(['b1', 'b2'], 'zz')).toEqual(['b1', 'b2']);
+    const before = { id: 'u1', role: 'field_staff', branchIds: ['b1', 'b2'], phone: '01712345678', name: { bn: 'রহিম', en: 'Rahim' } } as User;
+    const form = fromUser(before);
+    expect(toUpdate(before, { ...form, branchIds: ['b2', 'b1'] }, 'home moved').branchIds).toEqual(['b2', 'b1']);
+    expect(toUpdate(before, form, 'no change').branchIds).toBeUndefined();
   });
 
   it('builds a create body without empty optionals', () => {
