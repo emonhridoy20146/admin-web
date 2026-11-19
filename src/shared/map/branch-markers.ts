@@ -1,7 +1,7 @@
 import type { MapMarker } from './map-view';
 import type { PinLook } from './pin-icon';
 
-/** Branch / office pin: brand colour with a house, so it never reads as a customer's payment colour (FR-W-030). */
+/** Branch / office pin: brand colour with a house, so it never reads as a customer's payment colour (FR-W-033). */
 export const BRANCH_PIN: PinLook = { fill: '--primary', edge: '--primary-hover', glyph: 'home', variant: 'branch' };
 export const BRANCH_ID_PREFIX = 'branch:';
 

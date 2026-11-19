@@ -329,7 +329,7 @@ test('live map: staff list with freshness, filter, expand one and jump to the ro
   await expect(page).toHaveURL(/user=/);
 });
 
-test.describe('maps show the branch and where the admin is (FR-W-030)', () => {
+test.describe('maps show the branch and where the admin is (FR-W-033)', () => {
   test.use({ geolocation: { latitude: 22.7031, longitude: 90.3712, accuracy: 25 }, permissions: ['geolocation'] });
 
   test('live map: branch pin and the "my location" button', async ({ page }) => {

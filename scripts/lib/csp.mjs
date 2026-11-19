@@ -32,7 +32,7 @@ export function csp(hashes, env = process.env) {
 export const BASE_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  // geolocation=(self): the "my location" button on the maps (FR-W-030); the browser still asks the user first.
+  // geolocation=(self): the "my location" button on the maps (FR-W-033); the browser still asks the user first.
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
 };
 

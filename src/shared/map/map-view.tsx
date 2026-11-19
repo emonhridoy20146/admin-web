@@ -69,7 +69,7 @@ export function ringGradient(ring: { token: string; n: number }[]): string | nul
  * The map is a visual aid; every page that uses it also lists the same items as text (keyboard / screen reader).
  * The user moves it freely: the page only moves it on purpose through `fit` (a new branch, a cluster click).
  * With `locate`, a button shows where the person using the admin panel is (browser location, asked on click only;
- * the position stays in the page and is never sent anywhere, FR-W-030).
+ * the position stays in the page and is never sent anywhere, FR-W-033).
  */
 export function MapView({ center, zoom = 13, initialBounds, markers, clusters, lines, paths, fit, onView, onMarkerClick, onClusterClick, className, label, locate }: {
   center: LatLng;

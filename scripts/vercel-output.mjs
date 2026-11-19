@@ -8,10 +8,12 @@
 //    inline bootstrap scripts (ADR-W09). The hashes change with every build, which is why this cannot live in a
 //    static vercel.json.
 // Run after `next build` (vercel.json buildCommand). Env: API_ORIGIN (default: origin of NEXT_PUBLIC_API_BASE_URL),
-// TILE_ORIGIN (default: OpenStreetMap), STORAGE_ORIGIN extend the CSP. The routes live in scripts/lib/vercel-config.mjs.
+// TILE_ORIGIN (default: OpenStreetMap), STORAGE_ORIGIN extend the CSP. API_PROXY=0 turns the same-origin API proxy off
+// (ADR-W19, scripts/lib/api-proxy.mjs). The routes live in scripts/lib/vercel-config.mjs.
 import fs from 'node:fs';
 import path from 'node:path';
 import { cspEnv, vercelRoutes } from './lib/vercel-config.mjs';
+import { apiProxy } from './lib/api-proxy.mjs';
 
 const OUT = path.resolve('out');
 const DEST = path.resolve('.vercel/output');
@@ -32,4 +34,6 @@ fs.writeFileSync(path.join(DEST, 'config.json'), `${JSON.stringify({ version: 3,
 console.log(
   `vercel-output: ${pageCount} page header routes; connect-src extra: ${[env.API_ORIGIN, env.TILE_ORIGIN, env.STORAGE_ORIGIN].filter(Boolean).join(' ') || 'none'}`,
 );
-if (!env.API_ORIGIN) console.warn('vercel-output: NEXT_PUBLIC_API_BASE_URL is not set; the CSP only allows same-origin API calls');
+const proxy = apiProxy(env);
+if (proxy) console.log(`vercel-output: /api/v1/* is forwarded to ${proxy.target} (same-origin API, ADR-W19); API_PROXY=0 turns it off`);
+else if (!env.API_ORIGIN) console.warn('vercel-output: NEXT_PUBLIC_API_BASE_URL is not set; the CSP only allows same-origin API calls');
