@@ -80,7 +80,7 @@ export function InboxPage() {
         ) : (
           SEV.filter((s) => items.some((i) => i.severity === s)).map((s) => (
             <section key={s} aria-label={tc(`severity.${s}`)}>
-              <h2 className="sticky top-14 z-[1] flex items-center gap-2 border-b border-line bg-surface-subtle px-5 py-2 text-xs font-semibold text-fg-secondary">
+              <h2 className="flex items-center gap-2 border-b border-line bg-surface-subtle px-5 py-2 text-xs font-semibold text-fg-secondary">
                 {tc(`severity.${s}`)}
                 <span className="tabular text-fg-tertiary">{formatNumber(items.filter((i) => i.severity === s).length)}</span>
               </h2>

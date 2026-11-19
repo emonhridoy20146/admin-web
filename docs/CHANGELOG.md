@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additive; PR #16 gave 1.17.0, PR #18 gave 1.19.0 (several branches), PR #17 gives 1.20.0 with tasks; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+### Fixed (owner report 2026-11-19: severity header blocking inbox rows)
+- Inbox severity group headers ("মাঝারি", "নিম্ন", etc.) were `sticky`; with short sections two headers could stay pinned on screen at once and overlap each other's rows, hiding item text underneath. Headers now scroll with the list (`src/features/inbox/pages/inbox-page.tsx`).
 ### Added (contract 1.20.0, owner request 2026-11-18: admin tasks for staff; FR-W-035, ADR-W21)
 - **Tasks** (`/tasks`, new feature `tasks`, flag `module.tasks`, permissions `task.view` / `task.manage`): give one field staff member a task with a note and an optional due date, not tied to a customer. Tabs In progress / To verify / Late / Resolved / Cancelled with counts, filter by staff, title search. A task opens in a drawer with the note, the staff member's resolve note, the admin's note and the history. **Verify** (resolves it), **send back** (reason of at least 5 characters, the staff member sees it), **cancel** (reason) and edit while open. Nav badge shows requests waiting for verification; the inbox item links to the "To verify" tab.
 - Mock API: `/tasks` list (counts, filters), create (idempotent), get, edit, verify, reject, cancel with the same state rules and `422`/`409` codes; seeded tasks in every state.
