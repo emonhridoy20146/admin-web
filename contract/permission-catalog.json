@@ -78,6 +78,19 @@
     }
   },
   {
+    "key": "erp.sync",
+    "module": "erp-gateway",
+    "description": "\"Sync from ERP\": pull the latest customer data from the ERP now (1.17.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
     "key": "flag.manage",
     "module": "flags",
     "description": "Toggle feature flags (global / per branch)",
@@ -145,7 +158,7 @@
   {
     "key": "customer.location.approve",
     "module": "customers",
-    "description": "Approve/reject pin corrections; set a pin on the map (1.11.0)",
+    "description": "Approve/reject pin corrections; set a pin on the map (1.11.0); delete a pin (1.17.0)",
     "added": false,
     "reserved": false,
     "defaults": {
