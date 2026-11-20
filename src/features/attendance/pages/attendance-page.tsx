@@ -18,7 +18,7 @@ import { Segmented } from '@/shared/ui/primitives';
 import { Input } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { useDays, useStaff, useSummary, type AttendanceDay } from '../api/attendance';
-import { countDay, index, lastDay, missingSelfie, monthDays, monthOf, shiftMonth, sortDay, type Status } from '../model/attendance';
+import { countDay, index, lastDay, missingSelfie, monthDays, monthOf, offDayWorked, shiftMonth, sortDay, type Status } from '../model/attendance';
 import { MonthMatrix } from '../components/month-matrix';
 import { CorrectionDialog } from '../components/correction-dialog';
 import { DayDrawer } from '../components/day-drawer';
@@ -82,6 +82,8 @@ export function AttendancePage() {
             <Badge tone={TONE[s]}>{t(`status.${s}`)}</Badge>
             {r.day?.corrected && <Badge tone="neutral" icon={PencilLine}>{t('corrected')}</Badge>}
             {r.day?.autoClosed && <Badge tone="warning" icon={false}>{t('autoClosed')}</Badge>}
+            {offDayWorked(r.day) && <Badge tone="info" icon={false}>{t('offDayWorked')}</Badge>}
+            {(r.day?.overBreakMin ?? 0) > 0 && <Badge tone="danger" icon={false}>{t('overBreak', { d: formatDuration(r.day!.overBreakMin!) })}</Badge>}
             {missingSelfie(r.day) && <Badge tone="danger" icon={CameraOff}>{t('noSelfie')}</Badge>}
           </span>
         );
@@ -90,8 +92,9 @@ export function AttendancePage() {
     { id: 'in', header: t('col.in'), priority: 1, mobile: 'meta', cell: (r) => (r.day?.firstIn ? <span className="tabular">{formatTime(r.day.firstIn)}</span> : <span className="text-fg-tertiary">—</span>) },
     { id: 'out', header: t('col.out'), priority: 2, mobile: 'meta', cell: (r) => (r.day?.lastOut ? <span className="tabular">{formatTime(r.day.lastOut)}</span> : <span className="text-fg-tertiary">—</span>) },
     { id: 'late', header: t('col.late'), align: 'end', priority: 2, mobile: 'amount', cell: (r) => ((r.day?.lateMin ?? 0) > 0 ? <span className="tabular font-medium text-warning">{formatDuration(r.day!.lateMin!)}</span> : <span className="text-fg-tertiary">—</span>) },
-    { id: 'break', header: t('col.break'), align: 'end', priority: 3, cell: (r) => ((r.day?.breakMin ?? 0) > 0 ? <span className="tabular">{formatDuration(r.day!.breakMin!)}</span> : <span className="text-fg-tertiary">—</span>) },
+    { id: 'break', header: t('col.break'), align: 'end', priority: 3, cell: (r) => ((r.day?.breakMin ?? 0) > 0 ? <span className={cn('tabular', (r.day?.overBreakMin ?? 0) > 0 && 'font-medium text-danger')}>{formatDuration(r.day!.breakMin!)}</span> : <span className="text-fg-tertiary">—</span>) },
     { id: 'duty', header: t('col.duty'), align: 'end', priority: 3, cell: (r) => ((r.day?.dutyMin ?? 0) > 0 ? <span className="tabular">{formatDuration(r.day!.dutyMin!)}</span> : <span className="text-fg-tertiary">—</span>) },
+    { id: 'overtime', header: t('col.overtime'), align: 'end', priority: 3, cell: (r) => ((r.day?.overtimeMin ?? 0) > 0 ? <span className="tabular font-medium text-info">{formatDuration(r.day!.overtimeMin!)}</span> : <span className="text-fg-tertiary">—</span>) },
     ...(canManage
       ? [{
           id: 'act',

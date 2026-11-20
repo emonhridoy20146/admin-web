@@ -709,7 +709,7 @@ function hash(s: string): number {
 }
 export function attendanceDay(u: MockUser, date: string): S['AttendanceDay'] {
   const d = DateTime.fromISO(date, { zone: 'Asia/Dhaka' });
-  const base = { userId: u.id, businessDate: date, lateMin: 0, breakMin: 0, dutyMin: 0, breaks: [], autoClosed: false, corrected: false, flags: [] };
+  const base = { userId: u.id, businessDate: date, lateMin: 0, breakMin: 0, dutyMin: 0, overBreakMin: 0, overtimeMin: 0, breaks: [], autoClosed: false, corrected: false, flags: [] };
   if (d.weekday === 5) return { ...base, status: 'weekly_off', firstIn: null, lastOut: null };
   const h = hash(`${u.id}:${date}`);
   const isToday = date === T;
@@ -739,10 +739,13 @@ export function attendanceDay(u: MockUser, date: string): S['AttendanceDay'] {
     return { ...base, status: done ? 'off_duty' : onBreak ? 'on_break' : 'on_duty', firstIn: isoAt(inAt), lastOut: done ? isoAt(outAt) : null, lateMin: late, breakMin: brk, dutyMin: Math.max(0, worked - brk), breaks: br, corrected: !!corr };
   }
   const autoClosed = !cout && h % 37 === 0;
+  // as field-api 1.25.0: duty after 18:00 is overtime from 30 minutes, never on a day the system closed
+  const after = Math.round(outAt.diff(d.set({ hour: 18, minute: 0 }), 'minutes').minutes);
+  const overtimeMin = !autoClosed && after >= Number(settings['attendance.overtimeAfterMin'] ?? 30) ? after : 0;
   return {
-    ...base, status: late > 0 ? 'late' : 'present', firstIn: isoAt(inAt), lastOut: isoAt(outAt), lateMin: late, breakMin,
+    ...base, status: late > 0 ? 'late' : 'present', firstIn: isoAt(inAt), lastOut: isoAt(outAt), lateMin: late, breakMin, overBreakMin: Math.max(0, breakMin - 60), overtimeMin,
     dutyMin: Math.max(0, Math.round(outAt.diff(inAt, 'minutes').minutes) - breakMin), breaks: [{ start: isoAt(bStart), end: isoAt(bStart.plus({ minutes: breakMin })) }],
-    autoClosed, corrected: !!corr, flags: [...(breakMin > 60 ? ['over_break'] : []), ...(noSelfieAt(u.id!, date).length ? ['no_selfie'] : [])],
+    autoClosed, corrected: !!corr, flags: [...(breakMin > 60 ? ['over_break'] : []), ...(overtimeMin > 0 ? ['overtime'] : []), ...(noSelfieAt(u.id!, date).length ? ['no_selfie'] : [])],
   };
 }
 /** Event types of a day that came without a photo (about one day in nine misses one). */

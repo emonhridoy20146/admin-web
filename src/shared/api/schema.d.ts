@@ -1857,7 +1857,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description attendance.record (1.12.0). The caller's shift: their own if assigned, else the branch default (`id: default`). Weekly off days are 0 = Sunday … 6 = Saturday. */
+        /** @description attendance.record (1.12.0). The caller's shift: their own if assigned, else the branch default (`id: default`). Weekly off days are 0 = Sunday … 6 = Saturday. 1.25.0: `breakWindows` (e.g. the Friday break). */
         get: operations["myShift"];
         put?: never;
         post?: never;
@@ -2695,6 +2695,7 @@ export interface components {
             /** @enum {string} */
             type?: "national" | "branch";
         };
+        /** @description Duty hours. `weeklyOff` may be empty (a branch that works every day). `breakWindows` since 1.25.0. */
         Shift: {
             id?: string;
             name?: string;
@@ -2702,9 +2703,20 @@ export interface components {
             start?: string;
             /** @example 18:00 */
             end?: string;
+            /** @description 0 = Sunday … 6 = Saturday */
             weeklyOff?: number[];
             lateGraceMin?: number;
             maxBreakMin?: number;
+            breakWindows?: components["schemas"]["BreakWindow"][];
+        };
+        /** @description 1.25.0 (FR-ATT-010). On that weekday, break time between `start` and `end` (Dhaka) is allowed on top of `maxBreakMin` and is never counted as over-break. Example: Friday 12:30–15:30. */
+        BreakWindow: {
+            /** @description 0 = Sunday … 5 = Friday, 6 = Saturday */
+            weekday: number;
+            /** @example 12:30 */
+            start: string;
+            /** @example 15:30 */
+            end: string;
         };
         ErpStatus: {
             /** @enum {string} */
@@ -3685,6 +3697,16 @@ export interface components {
             breakMin?: number;
             dutyMin?: number;
             overBreakDays?: number;
+            /** @description 1.25.0: break minutes over the limit in the month */
+            overBreakMin?: number;
+            /** @description 1.25.0 (FR-ATT-011) */
+            overtimeMin?: number;
+            /** @description 1.25.0: days with overtime */
+            overtimeDays?: number;
+            /** @description 1.25.0: weekly off days and holidays on which the person worked (all of that work is overtime) */
+            offDaysWorked?: number;
+            /** @description 1.25.0 (FR-ATT-012): absent days that the late days of the month count as for pay: floor(late / `attendance.lateDaysPerAbsent`); not included in `absent` */
+            lateAbsences?: number;
         };
         /** @description 1.12.0 adds `branchId`, `days`, `decisionReason`, `cancelledAt` and status `cancelled`. */
         LeaveRequest: {
@@ -3778,12 +3800,17 @@ export interface components {
             lateMin?: number;
             breakMin?: number;
             dutyMin?: number;
+            /** @description 1.25.0: break minutes over the limit; break time inside a break window of the day is not counted (FR-ATT-010). > 0 goes with the flag `over_break`. */
+            overBreakMin?: number;
+            /** @description 1.25.0 (FR-ATT-011): on a working day, minutes on duty after the shift end (breaks excluded), counted only from `attendance.overtimeAfterMin` and never on a day the system closed; on a weekly off day or holiday, every minute worked. > 0 goes with the flag `overtime`. */
+            overtimeMin?: number;
             breaks?: {
                 start?: string;
                 end?: string | null;
             }[];
             autoClosed?: boolean;
             corrected?: boolean;
+            /** @description e.g. over_break, overtime (1.25.0), worked_on_off_day, invalid_sequence, auto_closed */
             flags?: string[];
         };
         /** @description A stored attendance event as managers see it (1.8.0) */

@@ -1,7 +1,12 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.24.0** (2026-11-21: 1.20.0 → 1.24.0 in three steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.25.0** (2026-11-21: 1.20.0 → 1.25.0 in four steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.25.0, owner request 2026-11-21: overtime, break over the limit, late days as absences; FR-W-042)
+- **Attendance, day list**: a new "ওভারটাইম" column; a break over the limit is red with a "বিরতি … বেশি" mark (break time inside the branch's break window is not counted by the server); a weekly day off or holiday that was worked has the mark "ছুটির দিনে কাজ".
+- **Attendance, month**: two new columns per staff member, "দেরিতে অনুপস্থিত" (absent days the late days of the month count as; explained on the header, never added into "অনুপস্থিত") and "ওভারটাইম" (total). A day's tooltip names its overtime and over-break.
+- Mock API: `overtimeMin`, `overBreakMin`, `lateAbsences` and the other new summary fields, by the server's rules.
+- Tests: unit `offDayWorked`; the attendance journey checks both columns and the late-days rule row by row.
 ### Fixed (2026-11-21: Settings edits the keys the server really has; FR-W-040)
 - **Thirteen settings on the Settings page did not exist on the server** (`duty.*`, `cash.warnAtRatio`, `collections.farFromPinM`, `promises.maxHorizonDays`, `tags.staffCanSet`, `tags.approvalMode`, `location.fastSec/slowSec/stillSec`). Against the real API they showed empty and a save answered 400 "Unknown setting"; only the mock API had them. The page now edits the server's own keys: duty hours are parts of `attendance.defaultShift`, the tracking intervals parts of `location.sampling` (the whole value is sent with the edited parts replaced), "far from pin" is `collections.geofenceM`, tag approval is `tags.requireApproval`. The three with no server setting are gone.
 - **The mock API now refuses what the server refuses** (unknown key 400, a branch value for an organisation-only setting 422) and seeds the server's keys, so this cannot go unnoticed again.
