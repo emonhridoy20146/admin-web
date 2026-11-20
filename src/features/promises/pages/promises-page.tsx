@@ -7,7 +7,7 @@ import { ArrowRight, Handshake, Plus } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent, pickText } from '@/shared/lib/format';
+import { formatDate, formatDateTime, formatMoney, formatPercent, pickText, formatDaySpan } from '@/shared/lib/format';
 import { todayDhaka } from '@/shared/lib/time';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader, DescList } from '@/shared/ui/page';
@@ -53,7 +53,7 @@ export function PromisesPage() {
       <span className="inline-flex flex-col">
         <span className="tabular">{formatDate(p.promisedDate, { withYear: false })}</span>
         <span className={cn('text-xs', late ? 'font-medium text-st-overdue' : 'text-fg-tertiary')}>
-          {d === 0 ? t('rel.today') : d > 0 ? t('rel.in', { n: formatNumber(d) }) : t('rel.ago', { n: formatNumber(-d) })}
+          {d === 0 ? t('rel.today') : d > 0 ? t('rel.in', { n: formatDaySpan(d) }) : t('rel.ago', { n: formatDaySpan(-d) })}
         </span>
       </span>
     );
@@ -161,7 +161,7 @@ export function PromisesPage() {
               </div>
               <p className="mt-1.5 text-sm text-fg-secondary">{t('paidLine', { paid: formatMoney(open.paidTowardsPoisha ?? 0), pct: formatPercent(paidRatio(open)) })}</p>
             </div>
-            {isLate(open, today) && <p className="rounded-sm bg-st-overdue-bg px-3 py-2 text-sm text-st-overdue">{t('lateHint', { n: formatNumber(-daysTo(open.promisedDate, today)) })}</p>}
+            {isLate(open, today) && <p className="rounded-sm bg-st-overdue-bg px-3 py-2 text-sm text-st-overdue">{t('lateHint', { n: formatDaySpan(-daysTo(open.promisedDate, today)) })}</p>}
             <DescList
               items={[
                 { label: t('col.date'), value: formatDate(open.promisedDate) },

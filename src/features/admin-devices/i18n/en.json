@@ -29,7 +29,7 @@
   "unknownStaff": "Unknown staff",
   "unknownPhone": "Unknown model",
   "never": "Never",
-  "idle": "Silent for {{n}} days",
+  "idle": "Silent for {{n}}",
   "empty": "No devices",
   "emptyBody": "A phone appears here the first time a staff member signs in to the app.",
   "approve": "Approve",

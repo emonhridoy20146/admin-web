@@ -147,6 +147,23 @@ export function formatDuration(min: number, opts: Partial<FormatPrefs> = {}): st
   return digits(s, p);
 }
 
+/**
+ * A count of days as a span people can read (FR-W-039): the two largest units of years, months and days.
+ * 20 → "২০ দিন" / "20 days"; 45 → "১ মাস ১৫ দিন"; 584 → "১ বছর ৭ মাস". A month is 30 days and a year 365 here
+ * (the count has no start date); use it for "how long", never to work out a date.
+ */
+export function formatDaySpan(days: number, opts: Partial<FormatPrefs> = {}): string {
+  const p = { ...prefs, ...opts };
+  const bn = p.locale === 'bn';
+  const total = Math.max(0, Math.round(days));
+  const y = Math.floor(total / 365);
+  const m = Math.floor((total % 365) / 30);
+  const d = (total % 365) % 30;
+  const unit = (n: number, one: string, many: string, bnWord: string) => `${n} ${bn ? bnWord : n === 1 ? one : many}`;
+  const parts = [y ? unit(y, 'year', 'years', 'বছর') : '', m ? unit(m, 'month', 'months', 'মাস') : '', d ? unit(d, 'day', 'days', 'দিন') : ''].filter(Boolean);
+  return digits(parts.length ? parts.slice(0, 2).join(' ') : unit(0, 'day', 'days', 'দিন'), p);
+}
+
 /** Localised I18nText pick with fallback. */
 export function pickText(t: { bn?: string; en?: string } | undefined | null, locale: Locale = prefs.locale): string {
   if (!t) return '';

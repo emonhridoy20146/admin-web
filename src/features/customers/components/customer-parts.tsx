@@ -6,7 +6,7 @@ import { AssignCustomerDialog } from '@/features/assignments';
 import { useGate } from '@/shared/feature/useGate';
 import { useUrlState } from '@/shared/lib/url-state';
 import { cn } from '@/shared/lib/cn';
-import { formatDate, formatMoney, formatNumber, formatRelative, formatPercent, pickText } from '@/shared/lib/format';
+import { formatDate, formatMoney, formatNumber, formatRelative, formatPercent, pickText, formatDaySpan } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
 import { MoneyText } from '@/shared/ui/money';
 import { Badge, StatusBadge, StatusBadges } from '@/shared/ui/badge';
@@ -51,7 +51,7 @@ export function CustomerFigures({ c, className }: { c: CustomerDetail; className
         </>
       ),
       emphasis: (c.daysOverdue ?? 0) > 0 },
-    { label: t('col.daysOverdue'), value: (c.daysOverdue ?? 0) > 0 ? <span className="text-lg font-semibold text-st-overdue">{t('days', { n: formatNumber(c.daysOverdue ?? 0) })}</span> : <span className="text-lg font-semibold text-fg-tertiary">—</span> },
+    { label: t('col.daysOverdue'), value: (c.daysOverdue ?? 0) > 0 ? <span className="text-lg font-semibold text-st-overdue">{t('days', { n: formatDaySpan(c.daysOverdue ?? 0) })}</span> : <span className="text-lg font-semibold text-fg-tertiary">—</span> },
     {
       label: t('col.nextDue'),
       value: (
@@ -100,7 +100,7 @@ function ErpRiskBadge({ c }: { c: CustomerDetail }) {
   const detail = [
     level ? t(`erpRisk.level.${level}`, { defaultValue: r.level }) : null,
     r.overdueCount ? t('erpRisk.overdue', { n: formatNumber(r.overdueCount) }) : null,
-    r.maxDaysLate ? t('erpRisk.maxLate', { n: formatNumber(r.maxDaysLate) }) : null,
+    r.maxDaysLate ? t('erpRisk.maxLate', { n: formatDaySpan(r.maxDaysLate) }) : null,
     r.computedAt ? t('erpRisk.asOf', { date: formatDate(r.computedAt) }) : null,
   ].filter(Boolean).join(' · ');
   return (
