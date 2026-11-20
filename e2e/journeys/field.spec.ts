@@ -231,8 +231,12 @@ test('attendance: day list, correct an entry with a reason, month matrix', async
   // every two late days of a month are one absent day: check it on each row from the numbers shown,
   // in last month (a whole month, so there are late days whatever today's date is)
   await page.getByRole('button', { name: attendanceBn.prevMonth }).click();
+  // wait until the table really is last month: one column per day of it (staff + days + 7 totals), rows loaded
+  const dhaka = new Date(Date.now() + 6 * 3_600_000); // the app's business date, whatever the runner's time zone
+  const lastMonthDays = new Date(Date.UTC(dhaka.getUTCFullYear(), dhaka.getUTCMonth(), 0)).getUTCDate();
+  await expect(head).toHaveCount(lastMonthDays + 8);
+  await expect(page.getByRole('table').locator('tbody tr').first().locator('th, td')).toHaveCount(lastMonthDays + 8);
   await page.waitForLoadState('networkidle');
-  await expect(head.filter({ hasText: attendanceBn.col.lateAbsences })).toBeVisible();
   const bn = (t: string) => Number(t.replace(/[০-৯]/g, (c) => String('০১২৩৪৫৬৭৮৯'.indexOf(c))).replace('—', '0'));
   const cols = await head.allTextContents();
   const lateCol = cols.indexOf(attendanceBn.status.late);
