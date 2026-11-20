@@ -42,5 +42,22 @@
   "cancel": "Cancel promise",
   "cancelTitle": "Cancel this promise?",
   "cancelDesc": "The promise of {{amount}} on {{date}} by {{name}} will be cancelled.",
-  "cancelled": "Promise cancelled"
+  "cancelled": "Promise cancelled",
+  "create": "New promise",
+  "createTitle": "Record a new promise",
+  "createDesc": "Record a promise that a customer made to pay by a date.",
+  "field": {
+    "customer": "Customer",
+    "customerHelp": "Search by name or code",
+    "amount": "Promised amount (Tk)",
+    "date": "Promised date",
+    "plan": "ERP plan (optional)",
+    "note": "Note (optional)"
+  },
+  "created": "Promise recorded",
+  "validation": {
+    "customer": "Select a customer",
+    "amount": "Enter an amount",
+    "date": "Pick a date"
+  }
 }

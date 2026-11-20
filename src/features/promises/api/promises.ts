@@ -22,6 +22,18 @@ export function usePromises(params: Omit<PromiseQuery, 'branchId'>) {
   });
 }
 
+export function useCreatePromise() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { customerId: string; promisedDate: string; promisedAmountPoisha: number; erpPlanId?: string; note?: string }) =>
+      unwrap(api.POST('/promises', { body: { ...body, clientId: crypto.randomUUID() } })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['promises'] });
+      emit(EV.promiseCreated);
+    },
+  });
+}
+
 export function useCancelPromise() {
   const qc = useQueryClient();
   return useMutation({

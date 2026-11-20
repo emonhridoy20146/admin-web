@@ -1,7 +1,8 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
 import { viaApiProxy } from '@/shared/api/config';
 import { useBranchId } from '@/shared/lib/ui-store';
+import { emit, EV } from '@/shared/feature/events';
 import type { components, operations } from '@/shared/api/schema';
 
 export type Visit = components['schemas']['VisitListItem'];
@@ -19,6 +20,27 @@ export function useVisits(params: Omit<VisitQuery, 'branchId'>) {
     },
     placeholderData: keepPreviousData,
     staleTime: 30_000,
+  });
+}
+
+export function useCreateVisit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { customerId: string; outcome: VisitOutcome; note?: string }) =>
+      unwrap(api.POST('/visits', {
+        body: {
+          clientId: crypto.randomUUID(),
+          customerId: body.customerId,
+          checkInAt: new Date().toISOString(),
+          outcome: body.outcome,
+          geo: null,
+          geoUnavailableReason: 'permission_denied',
+        },
+      })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['visits'] });
+      emit(EV.visitCreated);
+    },
   });
 }
 

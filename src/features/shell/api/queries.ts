@@ -69,6 +69,21 @@ export function useSearch(q: string) {
  * 40 s with `partial: true`; this calls again until it is done (at most 30 rounds), reporting how many customers came.
  * Everything on screen is refetched afterwards. Never optimistic: it only reads from the ERP.
  */
+const ERP_AUTO_SYNC_INTERVAL = 10 * 60_000;
+
+export function useAutoErpSync() {
+  const allowed = useCan('erp.sync');
+  const sync = useErpSync();
+  useEffect(() => {
+    if (!allowed) return;
+    const id = setInterval(() => {
+      if (!sync.isPending) sync.mutate(undefined);
+    }, ERP_AUTO_SYNC_INTERVAL);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed]);
+}
+
 export function useErpSync() {
   const qc = useQueryClient();
   return useMutation({

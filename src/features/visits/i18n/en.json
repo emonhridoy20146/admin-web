@@ -83,5 +83,19 @@
     "sessionFilter": "Visits of one co-work group",
     "openSession": "See the group",
     "clearSession": "All visits"
+  },
+  "create": "New visit",
+  "createTitle": "Record a visit",
+  "createDesc": "Record a customer visit from the admin panel. No device location is required.",
+  "field": {
+    "customer": "Customer",
+    "customerHelp": "Search by name or code",
+    "outcome": "Outcome",
+    "note": "Note (optional)"
+  },
+  "created": "Visit recorded",
+  "validation": {
+    "customer": "Select a customer",
+    "outcome": "Choose an outcome"
   }
 }

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additive; PR #16 gave 1.17.0, PR #18 gave 1.19.0 (several branches), PR #17 gives 1.20.0 with tasks; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+### Added (2026-11-20: admin can create promises and collect cash; auto ERP sync)
+- **Create Promise** from the promises page: admin users with `promise.create` can record a promise on behalf of a customer via a dialog with customer picker, amount, date, plan and note. No device location required from the admin panel.
+- **Collect Cash** from the collections page: admin users with `collection.record` can record a cash collection via a dialog with customer picker, amount, payment method, receipt number, transaction ID, plan and note. `geo` is sent as `null` with `geoUnavailableReason: permission_denied` since the admin panel has no GPS.
+- **Record Visit** from the visits page: admin users with `visit.record` can record a visit via a dialog with customer picker, outcome and note. No device location required.
+- **Auto ERP sync** every 10 minutes: the shell runs `POST /system/erp-sync` automatically in the background for users with `erp.sync` permission; failures are silent (the manual button still works for visibility).
+- Shared `CustomerPicker` component for all three dialogs (search customers by name or code within the current branch).
+- `collection.record` and `visit.record` added to their manifest permissions.
+- `collectionCreated`, `promiseCreated` and `visitCreated` events added to the UI event bus.
 ### Fixed (owner report 2026-11-19: severity header blocking inbox rows)
 - Inbox severity group headers ("মাঝারি", "নিম্ন", etc.) were `sticky`; with short sections two headers could stay pinned on screen at once and overlap each other's rows, hiding item text underneath. Headers now scroll with the list (`src/features/inbox/pages/inbox-page.tsx`).
 ### Added (contract 1.20.0, owner request 2026-11-18: admin tasks for staff; FR-W-035, ADR-W21)

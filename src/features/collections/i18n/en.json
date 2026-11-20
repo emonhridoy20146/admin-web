@@ -103,5 +103,25 @@
     "METHOD_NOT_AVAILABLE": "The office has to add this payment method for the branch in the ERP first, then retry posting. Otherwise refund it.",
     "PLAN_CLOSED": "The invoice was returned or cancelled. Post the money to another plan of this customer, or refund it.",
     "linkStaff": "Link {{name}}"
+  },
+  "collect": "Collect cash",
+  "collectTitle": "Record a cash collection",
+  "collectDesc": "Record a payment collected from a customer. No device location is required from the admin panel.",
+  "collectField": {
+    "customer": "Customer",
+    "customerHelp": "Search by name or code",
+    "amount": "Amount (Tk)",
+    "method": "Payment method",
+    "receipt": "Receipt number",
+    "txnRef": "Transaction ID (optional)",
+    "plan": "ERP plan (optional)",
+    "note": "Note (optional)"
+  },
+  "collected": "Collection recorded",
+  "collectValidation": {
+    "customer": "Select a customer",
+    "amount": "Enter an amount",
+    "method": "Choose a method",
+    "receipt": "Enter a receipt number"
   }
 }

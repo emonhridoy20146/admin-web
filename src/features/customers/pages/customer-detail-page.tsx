@@ -1,12 +1,16 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ArrowLeft, RefreshCw, SearchX } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarClock, MapPin, RefreshCw, SearchX } from 'lucide-react';
 import { useGate } from '@/shared/feature/useGate';
+import { useCan } from '@/shared/auth/session';
 import { customerTabs } from '@/shared/feature/registry';
 import { useUrlState } from '@/shared/lib/url-state';
+import { pickText } from '@/shared/lib/format';
+import { useUi } from '@/shared/lib/ui-store';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorBanner, Skeleton, useErrorMessage } from '@/shared/ui/feedback';
@@ -20,6 +24,9 @@ import { sortPlans } from '../model/plan';
 import { PaymentsTab } from '../components/payments-tab';
 import { InvoicesTab } from '../components/invoices-tab';
 import { TimelineTab } from '../components/timeline-tab';
+import { CollectDialog } from '@/features/collections';
+import { CreatePromiseDialog } from '@/features/promises';
+import { CreateVisitDialog } from '@/features/visits';
 
 /** Reads the id client-side: static export serves /customers/view/ for every id (or ?id= fallback) via host rewrite (ADR-W02). */
 export function useIdFromPath(prefix: string) {
@@ -31,6 +38,7 @@ export function useIdFromPath(prefix: string) {
 export function CustomerDetailPage() {
   const { t } = useTranslation('customers');
   const { t: tc } = useTranslation();
+  const locale = useUi((s) => s.locale);
   const id = useIdFromPath('/customers');
   const q = useCustomer(id);
   const refresh = useRefreshCustomer(id ?? '');
@@ -40,6 +48,14 @@ export function CustomerDetailPage() {
   const extTabs = customerTabs(gate);
   const tab = url.get('tab') || 'overview';
   const c = q.data;
+
+  const canCollect = useCan('collection.record');
+  const canPromise = useCan('promise.create');
+  const canVisit = useCan('visit.record');
+  const [collectOpen, setCollectOpen] = useState(false);
+  const [promiseOpen, setPromiseOpen] = useState(false);
+  const [visitOpen, setVisitOpen] = useState(false);
+  const initialCustomer = c ? { id: c.id!, name: pickText(c.name, locale) } : undefined;
 
   if (q.error && isApiError(q.error) && q.error.status === 404)
     return <EmptyState icon={SearchX} title={t('notFound')} className="mt-16" action={<Link href="/customers/" className="text-primary hover:underline">{tc('actions.back')}</Link>} />;
@@ -66,6 +82,24 @@ export function CustomerDetailPage() {
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-3">
               {c.erpFetchedAt && <AsOf at={c.erpFetchedAt} />}
+              {canCollect && (
+                <Button variant="primary" size="sm" onClick={() => setCollectOpen(true)}>
+                  <Banknote className="size-3.5" aria-hidden />
+                  {t('action.collectCash')}
+                </Button>
+              )}
+              {canPromise && (
+                <Button variant="secondary" size="sm" onClick={() => setPromiseOpen(true)}>
+                  <CalendarClock className="size-3.5" aria-hidden />
+                  {t('action.newPromise')}
+                </Button>
+              )}
+              {canVisit && (
+                <Button variant="secondary" size="sm" onClick={() => setVisitOpen(true)}>
+                  <MapPin className="size-3.5" aria-hidden />
+                  {t('action.recordVisit')}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -124,6 +158,13 @@ export function CustomerDetailPage() {
               </TabsContent>
             ))}
           </Tabs>
+        </>
+      )}
+      {initialCustomer && (
+        <>
+          <CollectDialog open={collectOpen} onOpenChange={setCollectOpen} initialCustomer={initialCustomer} />
+          <CreatePromiseDialog open={promiseOpen} onOpenChange={setPromiseOpen} initialCustomer={initialCustomer} />
+          <CreateVisitDialog open={visitOpen} onOpenChange={setVisitOpen} initialCustomer={initialCustomer} />
         </>
       )}
     </>

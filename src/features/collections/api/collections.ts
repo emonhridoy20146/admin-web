@@ -46,6 +46,23 @@ export function useCustomerForConflict(id: string | undefined) {
   });
 }
 
+export function useCreateCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, body }: { key: string; body: { customerId: string; amountPoisha: number; method: components['schemas']['PaymentMethod']; receiptNo: string; erpPlanId?: string; transactionRef?: string; note?: string } }) =>
+      unwrap(
+        api.POST('/collections', {
+          params: { header: { 'Idempotency-Key': key } },
+          body: { ...body, clientId: crypto.randomUUID(), recordedAt: new Date().toISOString(), geo: null, geoUnavailableReason: 'permission_denied' },
+        }),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['collections'] });
+      emit(EV.collectionCreated);
+    },
+  });
+}
+
 /** Money action: never optimistic; one Idempotency-Key per dialog, reused on retry (W-E5). */
 export function useResolve() {
   const qc = useQueryClient();

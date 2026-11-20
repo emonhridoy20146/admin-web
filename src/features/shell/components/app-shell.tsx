@@ -22,7 +22,7 @@ import { IdleWatcher } from './idle-watcher';
 import { CommandPalette } from './command-palette';
 import { PrintMasthead } from './print-masthead';
 import { useBranchSync } from './branch-switcher';
-import { useBranchFlags, useMe } from '../api/queries';
+import { useAutoErpSync, useBranchFlags, useMe } from '../api/queries';
 
 const GROUPS: NavGroup[] = ['top', 'field', 'people', 'insights', 'admin'];
 
@@ -72,6 +72,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   useMe();
   useBranchFlags();
   useBranchSync();
+  useAutoErpSync();
   useEffect(() => setMobileOpen(false), [pathname]);
 
   useEffect(() => {

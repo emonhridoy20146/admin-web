@@ -27,7 +27,7 @@ export const collectionsManifest: FeatureManifest = {
       useBadge: useConflictBadge,
     },
   ],
-  permissions: ['collection.view', 'collection.void', 'collection.resolve'],
+  permissions: ['collection.view', 'collection.record', 'collection.void', 'collection.resolve'],
   events: { emits: [EV.collectionResolved, EV.collectionVoided] },
   commands: [
     {

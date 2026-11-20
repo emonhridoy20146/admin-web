@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { GitMerge, Receipt, ArrowRight, Ban, MapPin, MapPinOff, Clock } from 'lucide-react';
+import { GitMerge, Receipt, ArrowRight, Ban, MapPin, MapPinOff, Clock, Plus } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
@@ -30,6 +30,7 @@ import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useCollection, useCollections, useVoid, type Collection } from '../api/collections';
+import { CollectDialog } from '../components/collect-dialog';
 import {
   canVoid,
   METHOD_COLOR,
@@ -55,6 +56,8 @@ export function CollectionsPage() {
   const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
+  const canRecord = useCan('collection.record');
+  const [collectOpen, setCollectOpen] = useState(false);
   const url = useUrlState();
   const today = todayDhaka();
   const from = url.get('from') || today;
@@ -163,14 +166,22 @@ export function CollectionsPage() {
       <PageHeader
         title={t('title')}
         actions={
-          <Link
-            href="/collections/conflicts/"
-            className="inline-flex h-10 items-center gap-2 rounded-sm border border-line-strong bg-surface px-4 text-base font-medium shadow-e1 hover:bg-surface-hover"
-          >
-            <GitMerge className="size-4 text-danger" aria-hidden />
-            {t('conflicts')}
-            <ArrowRight className="size-4 text-fg-tertiary" aria-hidden />
-          </Link>
+          <div className="flex items-center gap-2">
+            {canRecord && (
+              <Button variant="primary" onClick={() => setCollectOpen(true)}>
+                <Plus className="size-4" aria-hidden />
+                {t('collect')}
+              </Button>
+            )}
+            <Link
+              href="/collections/conflicts/"
+              className="inline-flex h-10 items-center gap-2 rounded-sm border border-line-strong bg-surface px-4 text-base font-medium shadow-e1 hover:bg-surface-hover"
+            >
+              <GitMerge className="size-4 text-danger" aria-hidden />
+              {t('conflicts')}
+              <ArrowRight className="size-4 text-fg-tertiary" aria-hidden />
+            </Link>
+          </div>
         }
       >
         <span>{t('subtitle')}</span>
@@ -320,6 +331,7 @@ export function CollectionsPage() {
         }}
         empty={<EmptyState icon={Receipt} title={t('emptyTitle')} body={t('emptyBody')} />}
       />
+      <CollectDialog open={collectOpen} onOpenChange={setCollectOpen} />
       <CollectionDrawer id={drawerId} onClose={() => url.set({ drawer: null })} />
     </>
   );

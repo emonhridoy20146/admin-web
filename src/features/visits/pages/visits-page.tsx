@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Camera, MapPin, MapPinCheck, MapPinOff, ShieldAlert, TriangleAlert, Users, X, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Camera, MapPin, MapPinCheck, MapPinOff, Plus, ShieldAlert, TriangleAlert, Users, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
@@ -17,7 +17,9 @@ import { Segmented } from '@/shared/ui/primitives';
 import { Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
+import { useCan } from '@/shared/auth/session';
 import { useVisits, type Visit } from '../api/visits';
+import { CreateVisitDialog } from '../components/create-visit-dialog';
 import { coWorkState, durationMin, geoState, KINDS, OUTCOMES, rangeFor, RANGES, type GeoState } from '../model/visit';
 import { PhotoLightbox } from '../components/photo-lightbox';
 import { VisitOutcomeBadge } from '../components/outcome-badge';
@@ -57,6 +59,8 @@ export function VisitsPage() {
   const openId = url.get('drawer');
   const open = q.data?.items.find((v) => v.id === openId) ?? null;
   const [photo, setPhoto] = useState<number | null>(null);
+  const canRecord = useCan('visit.record');
+  const [createOpen, setCreateOpen] = useState(false);
   const multiDay = !!session || range === '7d' || range === '30d';
 
   const geoCell = (v: Visit) => {
@@ -117,7 +121,17 @@ export function VisitsPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader
+        title={t('title')}
+        actions={
+          canRecord ? (
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              {t('create')}
+            </Button>
+          ) : undefined
+        }
+      >
         <span>{t('subtitle')}</span>
       </PageHeader>
 
@@ -257,6 +271,7 @@ export function VisitsPage() {
         )}
       </Drawer>
       <PhotoLightbox ids={open?.photoMediaIds ?? []} index={photo} onIndex={setPhoto} />
+      <CreateVisitDialog open={createOpen} onOpenChange={setCreateOpen} />
     </>
   );
 }

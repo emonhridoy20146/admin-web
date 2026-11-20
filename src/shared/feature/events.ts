@@ -39,5 +39,8 @@ export const EV = {
   assignmentChanged: 'assignment.changed',
   targetChanged: 'target.changed',
   taskChanged: 'task.changed',
+  collectionCreated: 'collection.created',
+  promiseCreated: 'promise.created',
+  visitCreated: 'visit.created',
   branchChanged: 'branch.changed',
 } as const;

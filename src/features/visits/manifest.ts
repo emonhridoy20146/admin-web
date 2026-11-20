@@ -7,7 +7,7 @@ export const visitsManifest: FeatureManifest = {
   name: 'visits',
   flag: 'module.visits',
   routes: [{ path: '/visits', title: 'visits:title', permission: 'visit.view', navGroup: 'field', icon: MapPinCheck, order: 50 }],
-  permissions: ['visit.view'],
+  permissions: ['visit.view', 'visit.record'],
   commands: [{ id: 'visits.open', title: 'visits:title', icon: MapPinCheck, href: '/visits/', permission: 'visit.view' }],
   messages: { bn, en },
 };

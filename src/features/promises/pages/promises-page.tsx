@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ArrowRight, Handshake } from 'lucide-react';
+import { ArrowRight, Handshake, Plus } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
@@ -23,6 +23,7 @@ import { Drawer } from '@/shared/ui/overlay';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useCancelPromise, usePromises, type PromiseItem } from '../api/promises';
 import { canCancel, daysTo, isLate, paidRatio, STATUSES, windowFor, WINDOWS } from '../model/promise';
+import { CreatePromiseDialog } from '../components/create-promise-dialog';
 
 const TONE: Record<string, Tone> = { open: 'promised', kept: 'paid', partially_kept: 'dueToday', broken: 'danger', superseded: 'neutral', cancelled: 'neutral' };
 
@@ -43,6 +44,7 @@ export function PromisesPage() {
   const open = q.data?.items.find((p) => p.id === openId) ?? null;
   const [cancelOpen, setCancelOpen] = useState(false);
   const cancel = useCancelPromise();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const when = (p: PromiseItem) => {
     const d = daysTo(p.promisedDate, today);
@@ -91,7 +93,17 @@ export function PromisesPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader
+        title={t('title')}
+        actions={
+          canManage ? (
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              {t('create')}
+            </Button>
+          ) : undefined
+        }
+      >
         <span>{t('subtitle')}</span>
       </PageHeader>
 
@@ -167,6 +179,8 @@ export function PromisesPage() {
           </div>
         )}
       </Drawer>
+
+      <CreatePromiseDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       <ReasonDialog
         open={cancelOpen}

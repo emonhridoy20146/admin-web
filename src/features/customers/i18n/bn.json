@@ -401,5 +401,10 @@
     "soldOn": "বিক্রি {{date}}",
     "open": "ইনভয়েস খুলুন",
     "openFull": "পুরো ইনভয়েস দেখুন"
+  },
+  "action": {
+    "collectCash": "নগদ আদায়",
+    "newPromise": "নতুন প্রতিশ্রুতি",
+    "recordVisit": "ভিজিট রেকর্ড"
   }
 }

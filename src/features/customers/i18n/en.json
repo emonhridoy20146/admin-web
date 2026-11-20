@@ -401,5 +401,10 @@
     "soldOn": "Sold {{date}}",
     "open": "Open invoice",
     "openFull": "Open full invoice"
+  },
+  "action": {
+    "collectCash": "Collect cash",
+    "newPromise": "New promise",
+    "recordVisit": "Record visit"
   }
 }
