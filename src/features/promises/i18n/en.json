@@ -27,13 +27,13 @@
   },
   "rel": {
     "today": "Today",
-    "in": "In {{n}} days",
-    "ago": "{{n}} days ago"
+    "in": "In {{n}}",
+    "ago": "{{n}} ago"
   },
   "paidOf": "{{amount}} paid",
   "paidShare": "{{pct}} paid",
   "paidLine": "{{paid}} paid so far ({{pct}})",
-  "lateHint": "The date passed {{n}} days ago and the full amount has not arrived.",
+  "lateHint": "The date passed {{n}} ago and the full amount has not arrived.",
   "empty": "No promises in this period",
   "emptyBody": "Try another period or status.",
   "plan": "Plan",

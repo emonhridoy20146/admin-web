@@ -7,7 +7,7 @@ import { BulkAssignDialog } from '@/features/assignments';
 import { useGate } from '@/shared/feature/useGate';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatDate, formatMoney, formatNumber, formatRelative } from '@/shared/lib/format';
+import { formatDate, formatMoney, formatNumber, formatRelative, formatDaySpan } from '@/shared/lib/format';
 import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
@@ -124,7 +124,7 @@ export function CustomersPage() {
       priority: 2,
       sortKey: 'daysOverdue',
       mobile: 'meta',
-      cell: (r) => (r.daysOverdue > 0 ? <span className={cn('font-medium', r.daysOverdue > 30 ? 'text-st-overdue' : 'text-fg')}>{t('days', { n: formatNumber(r.daysOverdue) })}</span> : <span className="text-fg-tertiary">—</span>),
+      cell: (r) => (r.daysOverdue > 0 ? <span className={cn('font-medium', r.daysOverdue > 30 ? 'text-st-overdue' : 'text-fg')}>{t('days', { n: formatDaySpan(r.daysOverdue) })}</span> : <span className="text-fg-tertiary">—</span>),
     },
     { id: 'installment', header: t('col.installment'), align: 'end', priority: 4, cell: (r) => (r.installmentPoisha != null ? <MoneyText poisha={r.installmentPoisha} /> : <span className="text-fg-tertiary">—</span>) },
     {

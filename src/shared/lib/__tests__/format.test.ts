@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatDuration, formatMoney, formatMoneyCompact, formatNumber, formatPercent, formatRelative, groupLakh, pickText, toBnDigits } from '../format';
+import { formatDate, formatDateTime, formatDaySpan, formatDuration, formatMoney, formatMoneyCompact, formatNumber, formatPercent, formatRelative, groupLakh, pickText, toBnDigits } from '../format';
 import { addDays, dhakaDayStartIso, startOfTodayDhakaIso, todayDhaka } from '../time';
 
 const bn = { locale: 'bn' as const, bnDigits: true };
@@ -54,6 +54,20 @@ describe('date formatting (Asia/Dhaka)', () => {
     expect(formatDuration(45, bn)).toBe('৪৫ মি');
     expect(formatDuration(60 * 24 * 2 + 300, en)).toBe('2d 5h');
     expect(formatDuration(60 * 24, bn)).toBe('১ দিন');
+  });
+
+  it('shows a count of days as years, months and days (two largest units)', () => {
+    expect(formatDaySpan(0, en)).toBe('0 days');
+    expect(formatDaySpan(1, en)).toBe('1 day');
+    expect(formatDaySpan(20, bn)).toBe('২০ দিন');
+    expect(formatDaySpan(30, en)).toBe('1 month');
+    expect(formatDaySpan(45, bn)).toBe('১ মাস ১৫ দিন');
+    expect(formatDaySpan(364, en)).toBe('12 months 4 days');
+    expect(formatDaySpan(365, bn)).toBe('১ বছর');
+    expect(formatDaySpan(584, bn)).toBe('১ বছর ৭ মাস');
+    expect(formatDaySpan(584, en)).toBe('1 year 7 months');
+    expect(formatDaySpan(370, en)).toBe('1 year 5 days');
+    expect(formatDaySpan(-3, en)).toBe('0 days');
   });
 
   it('computes the Dhaka business day', () => {

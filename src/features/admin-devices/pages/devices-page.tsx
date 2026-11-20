@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { CircleCheck, CircleSlash, Hourglass, ShieldAlert, Smartphone, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatDate, formatNumber, formatRelative, pickText } from '@/shared/lib/format';
+import { formatDate, formatRelative, pickText, formatDaySpan } from '@/shared/lib/format';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader } from '@/shared/ui/page';
 import { DataTable, type Column } from '@/shared/ui/data-table';
@@ -81,7 +81,7 @@ export function DevicesPage() {
         return (
           <span className="block">
             <span className="tabular block text-fg-secondary">{d.lastSeenAt ? formatRelative(d.lastSeenAt) : t('never')}</span>
-            {statusOf(d) === 'active' && idle !== null && idle >= IDLE_WARN_DAYS ? <span className="block text-xs text-warning">{t('idle', { n: formatNumber(idle) })}</span> : null}
+            {statusOf(d) === 'active' && idle !== null && idle >= IDLE_WARN_DAYS ? <span className="block text-xs text-warning">{t('idle', { n: formatDaySpan(idle) })}</span> : null}
           </span>
         );
       },

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, CalendarClock, CloudUpload, Receipt, UserRound } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
-import { formatDate, formatMoney, formatNumber, pickText } from '@/shared/lib/format';
+import { formatDate, formatMoney, formatNumber, pickText, formatDaySpan } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
 import { todayDhaka } from '@/shared/lib/time';
 import { Badge, StatusBadge } from '@/shared/ui/badge';
@@ -139,7 +139,7 @@ function Figure({ label, children }: { label: string; children: React.ReactNode 
 function CreditLine({ term }: { term: { dueDate: string; days: number; settled: boolean } }) {
   const { t } = useTranslation('customers');
   const tone = term.settled ? 'text-fg' : term.days < 0 ? 'text-st-overdue' : term.days <= 3 ? 'text-st-due-today' : 'text-fg';
-  const when = term.settled ? t('invoice.creditSettled') : term.days < 0 ? t('invoice.creditOver', { n: formatNumber(-term.days) }) : term.days === 0 ? t('invoice.creditToday') : t('invoice.creditLeft', { n: formatNumber(term.days) });
+  const when = term.settled ? t('invoice.creditSettled') : term.days < 0 ? t('invoice.creditOver', { n: formatDaySpan(-term.days) }) : term.days === 0 ? t('invoice.creditToday') : t('invoice.creditLeft', { n: formatDaySpan(term.days) });
   return (
     <p className={cn('mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm', tone)}>
       <CalendarClock className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
@@ -234,7 +234,7 @@ function LineBadge({ r }: { r: LineVM }) {
 function PaidOn({ r }: { r: LineVM }) {
   const { t } = useTranslation('customers');
   if (r.state === 'rolled') return <span className="text-xs text-fg-tertiary">{r.movedTo ? t('invoice.movedTo', { n: formatNumber(r.movedTo) }) : t('invoice.moved')}</span>;
-  const late = r.daysLate > 0 && (r.state === 'missed' || r.state === 'partial') ? <span className="block text-xs font-medium text-st-overdue">{t('invoice.daysPast', { n: formatNumber(r.daysLate) })}</span> : null;
+  const late = r.daysLate > 0 && (r.state === 'missed' || r.state === 'partial') ? <span className="block text-xs font-medium text-st-overdue">{t('invoice.daysPast', { n: formatDaySpan(r.daysLate) })}</span> : null;
   if (!r.payments.length) {
     if (r.paidPoisha > 0) return <>{late}<span className="text-xs text-fg-tertiary">{t('invoice.paidDateUnknown')}</span></>;
     return late ?? <span className="text-xs text-fg-tertiary">—</span>;
@@ -251,7 +251,7 @@ function PaidOn({ r }: { r: LineVM }) {
           </li>
         ))}
       </ul>
-      {r.state === 'paid_late' && <span className="block text-xs text-fg-tertiary">{t('invoice.paidLate', { n: formatNumber(r.daysLate) })}</span>}
+      {r.state === 'paid_late' && <span className="block text-xs text-fg-tertiary">{t('invoice.paidLate', { n: formatDaySpan(r.daysLate) })}</span>}
     </div>
   );
 }
@@ -353,7 +353,7 @@ function TermsCard({ plan, today }: { plan: Plan; today: string }) {
     [t('invoice.first'), lines[0]?.dueDate ? formatDate(lines[0].dueDate) : '—'],
     [t('finalDue'), plan.finalDueDate ? formatDate(plan.finalDueDate) : '—'],
     [t('invoice.lateFee'), plan.penalty ? (plan.penalty.enabled ? (pct != null ? t('invoice.lateFeeRate', { rate: formatNumber(pct, { decimals: pct % 1 ? 2 : 0 }) }) : t('invoice.lateFeeOn')) : t('invoice.lateFeeOff')) : '—'],
-    [t('invoice.missed'), missed ? <span className="font-medium text-st-overdue">{t('invoice.missedDays', { n: formatNumber(missed), days: formatNumber(plan.daysOverdue ?? 0) })}</span> : formatNumber(0)],
+    [t('invoice.missed'), missed ? <span className="font-medium text-st-overdue">{t('invoice.missedDays', { n: formatNumber(missed), days: formatDaySpan(plan.daysOverdue ?? 0) })}</span> : formatNumber(0)],
     [t('invoice.next'), next ? `${formatDate(next.date)} · ${formatMoney(next.amountPoisha)}` : '—'],
   ];
   return (
