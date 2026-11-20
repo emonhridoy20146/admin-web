@@ -22,6 +22,7 @@ import { extraStatuses, toCustomerRow, type CustomerRowVM } from '../model/custo
 import { PAY_STATES, PS_CLASS } from '../model/pay-state';
 import { CustomerDrawer } from '../components/customer-drawer';
 import { PayLegend, PayStateBadge } from '../components/pay-state';
+import { WorkMarks, WorkMarksLegend } from '../components/work-marks';
 
 const FILTERS = ['overdue', 'due_today', 'promised_today', 'bad_suggested', 'tagged_bad', 'no_location', 'unassigned', 'paid_up'] as const;
 const SORTS = ['-daysOverdue', '-totalOutstanding', 'nextDueDate', 'name'] as const;
@@ -135,11 +136,14 @@ export function CustomersPage() {
           <span className="inline-flex flex-wrap gap-1 text-xs">
             {r.openInvoices.installment > 0 && <span className="rounded-xs bg-surface-hover px-1.5 py-0.5 text-fg-secondary">{t('openInv.installment', { n: formatNumber(r.openInvoices.installment) })}</span>}
             {r.openInvoices.credit > 0 && <span className="rounded-xs bg-info-bg px-1.5 py-0.5 text-info">{t('openInv.credit', { n: formatNumber(r.openInvoices.credit) })}</span>}
+            {r.invoiceTotal != null && r.invoiceTotal > r.openInvoices.installment + r.openInvoices.credit && <span className="px-0.5 py-0.5 text-fg-tertiary">{t('invTotal', { n: formatNumber(r.invoiceTotal) })}</span>}
           </span>
         ) : (
           <span className="text-fg-tertiary">—</span>
         ),
     },
+    // FR-W-037: what was done with the customer this month, shown in every filter
+    { id: 'marks', header: t('marks.col'), priority: 2, mobile: 'badges', cell: (r) => <WorkMarks c={r.item} className="ms-0 mt-1 sm:mt-0" /> },
     { id: 'nextDue', header: t('col.nextDue'), priority: 3, mobile: 'meta', cell: (r) => (r.nextDue ? formatDate(r.nextDue, { withYear: false }) : <span className="text-fg-tertiary">—</span>) },
     {
       id: 'promise',
@@ -193,6 +197,11 @@ export function CustomersPage() {
             {query.data.total >= 10_000 ? t('totalCapped', { n: formatNumber(10_000) }) : t('total', { n: formatNumber(query.data.total) })}
           </span>
         )}
+        {query.data?.invoiceTotals && (
+          <span className="tabular font-medium text-fg-secondary" data-testid="invoice-totals">
+            {t('invoiceTotals', { total: formatNumber(query.data.invoiceTotals.total ?? 0), open: formatNumber(query.data.invoiceTotals.open ?? 0) })}
+          </span>
+        )}
         <span>{t('subtitle')}</span>
       </PageHeader>
 
@@ -226,6 +235,9 @@ export function CustomersPage() {
         onToggle={(s) => (pager.reset(), url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s], cursor: null }))}
         onClear={() => (pager.reset(), url.set({ pay: null, cursor: null }))}
       />
+      <div className="mb-2">
+        <WorkMarksLegend />
+      </div>
 
       <DataTable
         tableId="customers"

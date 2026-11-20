@@ -20,6 +20,7 @@ import { isApiError } from '@/shared/api/problem';
 import { useCustomer, useRefreshCustomer } from '../api/customers';
 import { ContactAttempts } from '../components/contact-attempts';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from '../components/customer-parts';
+import { MonthActivity } from '../components/work-marks';
 import { sortPlans } from '../model/plan';
 import { PaymentsTab } from '../components/payments-tab';
 import { InvoicesTab } from '../components/invoices-tab';
@@ -113,6 +114,7 @@ export function CustomerDetailPage() {
           </header>
 
           <CustomerFigures c={c} className="mb-4" />
+          <MonthActivity c={c} className="mb-4" />
           <div className="mb-5 space-y-3">
             <BadSuggestionCallout c={c} />
             <PendingCallout c={c} />

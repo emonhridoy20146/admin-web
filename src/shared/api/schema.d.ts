@@ -2856,13 +2856,61 @@ export interface components {
                 installment?: number;
                 credit?: number;
             };
+            /** @description Added in 1.24.0. Invoices of the customer (cancelled ones not counted) and how many still have a balance */
+            invoiceCount?: {
+                total?: number;
+                open?: number;
+            };
+            activity?: components["schemas"]["CustomerActivity"];
             /** Format: date-time */
             erpFetchedAt?: string;
+        };
+        /**
+         * @description Added in 1.24.0 (FR-CUS-017). What happened with the customer in the current Asia/Dhaka month, for the row
+         *     markers (visited, paid, promised) and the customer header. `paidPoisha` is ERP money; `pendingPoisha` is field
+         *     money not in the ERP yet. Show the two apart and never add them together.
+         */
+        CustomerActivity: {
+            /**
+             * @description The Dhaka month the numbers are for
+             * @example 2026-11
+             */
+            month: string;
+            /** @description Visits recorded this month */
+            visitCount: number;
+            visitedToday: boolean;
+            /**
+             * Format: date-time
+             * @description Last visit of this month
+             */
+            lastVisitAt?: string | null;
+            /** @description ERP payments dated this month (office and field, removed ones left out), from the recent ERP payments */
+            paidPoisha: number;
+            /**
+             * Format: date
+             * @description Date of the newest ERP payment this month
+             */
+            lastPaidDate?: string | null;
+            /** @description Field collections recorded this month that are not in the ERP yet */
+            pendingPoisha: number;
+            /** @description Promises created this month (cancelled ones not counted) */
+            promisesMade: number;
+            /** @description Promises due this month that were kept, fully or partly */
+            promisesKept: number;
+            /** @description Promises due this month that were broken */
+            promisesBroken: number;
         };
         CustomerPage: {
             items?: components["schemas"]["CustomerListItem"][];
             nextCursor?: string | null;
             total?: number;
+            /** @description Added in 1.24.0 (FR-CUS-018), only with includeTotal=true. Invoices of every customer the query matches (not one page): all, with a balance, and those by kind */
+            invoiceTotals?: {
+                total?: number;
+                open?: number;
+                installmentOpen?: number;
+                creditOpen?: number;
+            };
         };
         /**
          * @description One collectable ERP receivable. Since 1.13.0 this is documented as one ERP invoice

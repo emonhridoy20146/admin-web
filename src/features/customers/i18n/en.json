@@ -439,5 +439,46 @@
       "repeated": "This number is typed twice",
       "empty": "Type at least one number"
     }
-  }
+  },
+  "marks": {
+    "col": "This month",
+    "visitToday": "Visited today",
+    "visitMonth": "Visited {{n}} times this month",
+    "visitNone": "Not visited this month",
+    "paid": "{{amount}} in the ERP this month",
+    "pending": "{{amount}} collected, pending in ERP",
+    "paidNone": "Nothing paid this month",
+    "promiseOpen": "Promise open: {{date}}",
+    "promiseBroken": "A promise was broken this month",
+    "promiseKept": "A promise was kept this month",
+    "promiseNone": "No promise this month",
+    "pinSet": "Map pin set",
+    "pinMissing": "No map pin",
+    "legend": {
+      "title": "Marks (this month):",
+      "visit": "Visit",
+      "paid": "Money in",
+      "promise": "Promise",
+      "pin": "Map pin"
+    }
+  },
+  "month": {
+    "title": "This month",
+    "visits": "Visits",
+    "visitsN": "{{n}} times",
+    "visitedToday": "Visited today",
+    "lastOn": "Last on {{date}}",
+    "paid": "In the ERP",
+    "pending": "Pending in ERP",
+    "pendingNote": "Collected in the field, not in the ERP yet",
+    "promises": "Promises",
+    "promiseOpen": "Open",
+    "promisesN": "{{n}} new",
+    "kept": "{{n}} kept",
+    "broken": "{{n}} broken",
+    "none": "None",
+    "invoices": "Invoices: {{total}} · with a balance: {{open}}"
+  },
+  "invoiceTotals": "Invoices: {{total}} · with a balance: {{open}}",
+  "invTotal": "{{n}} in all"
 }

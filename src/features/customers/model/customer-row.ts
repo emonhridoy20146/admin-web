@@ -35,6 +35,10 @@ export interface CustomerRowVM {
   missedCount: number | null;
   /** open invoices by kind; null when the server does not send them yet */
   openInvoices: { installment: number; credit: number } | null;
+  /** 1.24.0: every invoice of the customer (cancelled ones not counted); null on an older server */
+  invoiceTotal: number | null;
+  /** the list item itself, for the work marks (FR-W-037) */
+  item: CustomerListItem;
 }
 
 /** Statuses the pay-state badge already says (overdue, due today, paid up, current) are left out next to it. */
@@ -81,5 +85,7 @@ export function toCustomerRow(c: CustomerListItem, locale: Locale): CustomerRowV
     payState: payStateOf(c),
     missedCount: c.missedCount ?? null,
     openInvoices: c.openInvoices ? { installment: c.openInvoices.installment ?? 0, credit: c.openInvoices.credit ?? 0 } : null,
+    invoiceTotal: c.invoiceCount?.total ?? null,
+    item: c,
   };
 }

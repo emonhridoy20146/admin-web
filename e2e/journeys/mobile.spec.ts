@@ -92,3 +92,16 @@ test('390 px: add phone numbers on the customer page with ≥ 44 px targets and 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('390 px: the work marks show on every customer card and the page does not scroll sideways (FR-W-037)', async ({ page }) => {
+  await login(page, 'manager');
+  await page.goto('/customers/');
+  await expect(page.locator('main a[href^="/customers/"][href$="/"]:visible').first()).toBeVisible();
+  const marks = page.locator('[data-testid=work-marks]:visible');
+  await expect(marks.first()).toBeVisible();
+  expect(await marks.first().locator('[data-mark]').count()).toBe(4);
+  await expect(page.getByTestId('work-marks-legend')).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/marks-390.png` });
+});

@@ -198,6 +198,34 @@ const pinClientIds = new Map<string, { id: string; customerId: string }>();
 const inBd = (lat: number, lng: number) => lat >= 20.3 && lat <= 26.8 && lng >= 87.9 && lng <= 92.8;
 const exportJobs = new Map<string, { at: number; type: string; format: string }>();
 
+/** FR-CUS-017/018 (contract 1.24.0): this month's work on a customer and its invoice count, as field-api derives them. */
+function mockActivity(c: db.MockCustomer): Pick<S['CustomerListItem'], 'activity' | 'invoiceCount'> {
+  const month = db.today().slice(0, 7);
+  const id = c.item.id;
+  const visits = db.visits.filter((v) => v.row.customer?.id === id && db.dhakaDate(v.row.checkInAt ?? '').startsWith(month));
+  const lastVisitAt = visits.map((v) => v.row.checkInAt ?? '').sort().pop() ?? null;
+  const paid = (c.detail.payments ?? []).filter((p) => !p.reversed && (p.date ?? '').startsWith(month));
+  const pending = db.collections.filter((x) => x.customer?.id === id && ['received', 'posting', 'posting_failed', 'conflict'].includes(x.status ?? '') && db.dhakaDate(x.recordedAt ?? '').startsWith(month));
+  const promises = db.promises.filter((p) => p.row.customer?.id === id);
+  const due = promises.filter((p) => (p.row.promisedDate ?? '').startsWith(month));
+  const plans = (c.detail.plans ?? []).filter((p) => p.status !== 'cancelled');
+  return {
+    activity: {
+      month,
+      visitCount: visits.length,
+      visitedToday: visits.some((v) => db.dhakaDate(v.row.checkInAt ?? '') === db.today()),
+      lastVisitAt,
+      paidPoisha: paid.reduce((n, p) => n + (p.amountPoisha ?? 0), 0),
+      lastPaidDate: paid.map((p) => p.date ?? '').sort().pop() ?? null,
+      pendingPoisha: pending.reduce((n, x) => n + (x.amountPoisha ?? 0), 0),
+      promisesMade: promises.filter((p) => db.dhakaDate(p.row.createdAt ?? '').startsWith(month) && p.row.status !== 'cancelled').length,
+      promisesKept: due.filter((p) => p.row.status === 'kept' || p.row.status === 'partially_kept').length,
+      promisesBroken: due.filter((p) => p.row.status === 'broken').length,
+    },
+    invoiceCount: { total: plans.length, open: plans.filter((p) => p.status !== 'closed' && (p.outstandingPoisha ?? 0) > 0).length },
+  };
+}
+
 /** FR-CUS-016: the mock keeps the same list the server builds (ERP numbers first, then the added ones). */
 function mockPhoneRows(d: components['schemas']['CustomerDetail']): components['schemas']['PhoneDetail'][] {
   if (d.phoneDetails?.length) return [...d.phoneDetails];
@@ -983,9 +1011,13 @@ export const handlers = [
     };
     const k = key[sort] ?? key['-daysOverdue']!;
     all = [...all].sort((a, b) => (k(a) < k(b) ? -1 : k(a) > k(b) ? 1 : 0));
-    const p = page(all.map((c) => c.item), url);
-    // like field-api: `total` only when asked for (includeTotal=true), which is what the header count relies on
-    if (url.searchParams.get('includeTotal') === 'true') return HttpResponse.json(p);
+    const p = page(all.map((c) => ({ ...c.item, ...mockActivity(c) })), url);
+    // like field-api: `total` (and since 1.24.0 `invoiceTotals`) only when asked for (includeTotal=true)
+    if (url.searchParams.get('includeTotal') === 'true') {
+      const counts = all.map((c) => ({ ...mockActivity(c).invoiceCount, inst: c.item.openInvoices?.installment ?? 0, credit: c.item.openInvoices?.credit ?? 0 }));
+      const sum = (f: (x: (typeof counts)[number]) => number) => counts.reduce((n, x) => n + f(x), 0);
+      return HttpResponse.json({ ...p, invoiceTotals: { total: sum((x) => x.total ?? 0), open: sum((x) => x.open ?? 0), installmentOpen: sum((x) => x.inst), creditOpen: sum((x) => x.credit) } });
+    }
     const { total: _total, ...rest } = p;
     void _total;
     return HttpResponse.json(rest);
@@ -994,7 +1026,7 @@ export const handlers = [
     const c = db.customerById(params.id!);
     if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
     recomputeCustomer(c);
-    return HttpResponse.json(c.detail, { headers: { ETag: `"${c.detail.version}"` } });
+    return HttpResponse.json({ ...c.detail, ...mockActivity(c) }, { headers: { ETag: `"${c.detail.version}"` } });
   })),
   http.post(`${BASE}/customers/:id/refresh`, authed(({ params }) => {
     const c = db.customerById(params.id!)!;
