@@ -198,6 +198,20 @@ const pinClientIds = new Map<string, { id: string; customerId: string }>();
 const inBd = (lat: number, lng: number) => lat >= 20.3 && lat <= 26.8 && lng >= 87.9 && lng <= 92.8;
 const exportJobs = new Map<string, { at: number; type: string; format: string }>();
 
+/** FR-CUS-016: the mock keeps the same list the server builds (ERP numbers first, then the added ones). */
+function mockPhoneRows(d: components['schemas']['CustomerDetail']): components['schemas']['PhoneDetail'][] {
+  if (d.phoneDetails?.length) return [...d.phoneDetails];
+  return (d.phones ?? []).filter(Boolean).map((number, i) => ({ number, source: 'erp' as const, primary: i === 0 }));
+}
+function mockMobile(v: string): string | null {
+  let d = [...v.trim()].map((ch) => ('০১২৩৪৫৬৭৮৯'.includes(ch) ? String('০১২৩৪৫৬৭৮৯'.indexOf(ch)) : ch)).join('');
+  if (/[^0-9 \-()+.]/.test(d)) return null;
+  d = d.replace(/\D/g, '');
+  if (d.length === 13 && d.startsWith('880')) d = d.slice(2);
+  else if (d.length === 10 && /^1[3-9]/.test(d)) d = `0${d}`;
+  return /^01[3-9]\d{8}$/.test(d) ? d : null;
+}
+
 export const handlers = [
   http.post(`${BASE}/auth/login`, async ({ request }) => {
     await lag();
@@ -490,6 +504,47 @@ export const handlers = [
     recomputeCustomer(c);
     db.addAudit({ actor: actor(ctx.user), action: 'customer.location.cleared', entity: 'customer', entityId: c.item.id, branchId: c.branchId, before, after: {}, reason: '' });
     return HttpResponse.json({ removed: true, location: c.item.location });
+  })),
+  // FR-CUS-016 (contract 1.23.0): numbers added in the field system; ERP numbers stay first
+  http.post(`${BASE}/customers/:id/phones`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'customer.phone.manage');
+    if (deny) return deny;
+    const c = db.customerById(params.id!);
+    if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+    const b = (await request.json()) as { phones?: { number?: string; label?: string | null }[] };
+    if (!Array.isArray(b.phones) || b.phones.length < 1 || b.phones.length > 5) return problem(400, 'VALIDATION_FAILED', 'One to five numbers');
+    const rows = mockPhoneRows(c.detail);
+    const numbers = b.phones.map((x) => mockMobile(x.number ?? ''));
+    if (numbers.some((n) => !n)) return problem(400, 'VALIDATION_FAILED', 'Bangladesh mobile number, 01XXXXXXXXX');
+    const added: string[] = [];
+    const skipped: { number: string; reason: 'duplicate' | 'limit' }[] = [];
+    numbers.forEach((n, i) => {
+      if (rows.some((r) => r.number === n)) return void skipped.push({ number: n!, reason: 'duplicate' });
+      if (rows.filter((r) => r.source === 'field').length >= 5) return void skipped.push({ number: n!, reason: 'limit' });
+      const label = b.phones![i]!.label?.trim();
+      rows.push({ number: n!, source: 'field', primary: false, ...(label ? { label } : {}), addedBy: { id: ctx.user.id, name: ctx.user.name?.en ?? '' }, addedAt: new Date().toISOString() });
+      added.push(n!);
+    });
+    c.detail.phoneDetails = rows;
+    c.detail.phones = rows.map((r) => r.number!);
+    if (added.length) db.addAudit({ actor: actor(ctx.user), action: 'customer.phone.added', entity: 'customer', entityId: c.item.id, branchId: c.branchId, before: {}, after: { numbers: added.map((n) => `…${n.slice(-4)}`) }, reason: '' });
+    return HttpResponse.json({ added, skipped, phones: c.detail.phones, phoneDetails: rows });
+  })),
+  http.delete(`${BASE}/customers/:id/phones/:number`, authed(({ params, ctx }) => {
+    const deny = need(ctx, 'customer.phone.manage');
+    if (deny) return deny;
+    const c = db.customerById(params.id!);
+    if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+    const n = mockMobile(decodeURIComponent(String(params.number)));
+    if (!n) return problem(400, 'VALIDATION_FAILED', 'Bangladesh mobile number, 01XXXXXXXXX');
+    const rows = mockPhoneRows(c.detail);
+    const hit = rows.find((r) => r.number === n);
+    if (hit?.source === 'erp') return problem(422, 'BUSINESS_RULE', 'This number comes from the ERP', undefined, { rule: 'PHONE_FROM_ERP' });
+    const left = rows.filter((r) => r.number !== n);
+    c.detail.phoneDetails = left;
+    c.detail.phones = left.map((r) => r.number!);
+    if (hit) db.addAudit({ actor: actor(ctx.user), action: 'customer.phone.removed', entity: 'customer', entityId: c.item.id, branchId: c.branchId, before: { numbers: [`…${n.slice(-4)}`] }, after: {}, reason: '' });
+    return HttpResponse.json({ removed: !!hit, phones: c.detail.phones, phoneDetails: left });
   })),
   http.post(`${BASE}/location-proposals/:id/decision`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'customer.location.approve');

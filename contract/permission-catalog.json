@@ -143,6 +143,19 @@
     }
   },
   {
+    "key": "customer.phone.manage",
+    "module": "customers",
+    "description": "Add or remove extra phone numbers of a customer (1.23.0; kept in FOS, never sent to the ERP)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
     "key": "customer.location.propose",
     "module": "customers",
     "description": "Propose a corrected pin",

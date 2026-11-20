@@ -64,6 +64,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - Admin tasks for staff done 2026-11-18 on contract 1.20.0 (owner request; field-api ADR-037): `/tasks` with give / verify / send back / cancel, nav badge, journeys and axe (FR-W-035, ADR-W21).
 - Admin field operations done 2026-11-20: Create Promise on `/promises` (`promise.create`), Collect Cash on `/collections` (`collection.record`), Record Visit on `/visits` (`visit.record`), all with no device location required from admin panel, shared `CustomerPicker` component. Auto ERP sync every 10 minutes for users with `erp.sync`.
 - Route history time scrubber and the sidebar in four groups done 2026-11-20; CI on `main` repaired 2026-11-21 (type error in the scrubber model, unit test added).
+- Extra phone numbers done 2026-11-21 on contract 1.23.0 (owner request; field-api ADR-042): ERP / added marks, add several at once, remove an added one (FR-W-036).
 - Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api

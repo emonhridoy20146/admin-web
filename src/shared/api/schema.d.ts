@@ -749,6 +749,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customers/{id}/phones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 1.23.0 (FR-CUS-016, owner request 2026-11-21): add one to five mobile numbers to a customer in one call. The numbers
+         *     are kept in FOS only: nothing is written to the ERP and the ERP sync never removes them (ADR-042). Each number is
+         *     normalized to `01XXXXXXXXX` (Bangla digits, spaces, dashes and `+880` are accepted). A number the customer already
+         *     has (from the ERP or added before) is skipped as `duplicate`, so repeating a request changes nothing; at most five
+         *     added numbers per customer (`limit`). One invalid number refuses the whole request with 400. Audited as
+         *     `customer.phone.added` (last four digits only), reaches the phones through sync.
+         *     Permission `customer.phone.manage`; out of scope → 404. Offline phones use the sync mutation `customer_phone`.
+         */
+        post: operations["addCustomerPhones"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/phones/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description 1.23.0 (FR-CUS-016): remove a number that was added in FOS. A number that came from the ERP cannot be removed here
+         *     (422 `PHONE_FROM_ERP`: the office owns it). Idempotent: a number the customer does not have answers `removed: false`.
+         *     Audited as `customer.phone.removed`. Permission `customer.phone.manage`; out of scope → 404.
+         */
+        delete: operations["removeCustomerPhone"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/location-proposals": {
         parameters: {
             query?: never;
@@ -2985,7 +3031,10 @@ export interface components {
             discountPoisha?: number;
         };
         CustomerDetail: components["schemas"]["CustomerListItem"] & {
+            /** @description ERP numbers first (ERP order), then the numbers added in FOS (1.23.0). Indexes of ERP numbers do not change */
             phones?: string[];
+            /** @description Added in 1.23.0. The same numbers in the same order, with where each came from */
+            phoneDetails?: components["schemas"]["PhoneDetail"][];
             guarantor?: {
                 name?: string;
                 phone?: string;
@@ -3494,6 +3543,61 @@ export interface components {
              */
             status: "pending" | "approved" | "rejected";
         };
+        /** @description Added in 1.23.0. One phone number of a customer and where it came from */
+        PhoneDetail: {
+            /** @example 01711000001 */
+            number: string;
+            /**
+             * @description erp = sent by the office system; field = added in the app or the admin panel
+             * @enum {string}
+             */
+            source: "erp" | "field";
+            /** @description The first ERP number, the one the office uses */
+            primary: boolean;
+            /** @description Whose number it is, as typed (field numbers only) */
+            label?: string;
+            /** @description Field numbers only */
+            addedBy?: {
+                id?: string;
+                name?: string;
+            };
+            /**
+             * Format: date-time
+             * @description Field numbers only
+             */
+            addedAt?: string;
+        };
+        /** @description Added in 1.23.0 */
+        AddPhonesRequest: {
+            phones: {
+                /** @example 01811000004 */
+                number: string;
+                /** @example wife */
+                label?: string | null;
+            }[];
+        };
+        /** @description Added in 1.23.0 */
+        AddPhonesResult: {
+            /** @description Numbers added by this call, normalized */
+            added: string[];
+            skipped: {
+                number: string;
+                /**
+                 * @description duplicate = the customer already has it; limit = five added numbers already
+                 * @enum {string}
+                 */
+                reason: "duplicate" | "limit";
+            }[];
+            phones: string[];
+            phoneDetails: components["schemas"]["PhoneDetail"][];
+        };
+        /** @description Added in 1.23.0 */
+        RemovePhoneResult: {
+            /** @description false when the customer did not have this added number (nothing changed) */
+            removed: boolean;
+            phones: string[];
+            phoneDetails: components["schemas"]["PhoneDetail"][];
+        };
         /** @description Added in 1.17.0 */
         DeleteLocationResult: {
             /** @description false when the customer had no pin (nothing changed) */
@@ -3737,10 +3841,10 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /**
-             * @description attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
+             * @description customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
              * @enum {string}
              */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -5639,6 +5743,71 @@ export interface operations {
             };
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+        };
+    };
+    addCustomerPhones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPhonesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddPhonesResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    removeCustomerPhone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                /** @description The mobile number, any accepted spelling */
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemovePhoneResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            /** @description BUSINESS_RULE PHONE_FROM_ERP */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listLocationProposals: {

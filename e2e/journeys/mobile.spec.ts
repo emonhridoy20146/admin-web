@@ -63,3 +63,32 @@ test('390 px: Sync from ERP fits in the header, is a ≥ 44 px target, and the p
   expect(box.x + box.width).toBeLessThanOrEqual(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('390 px: add phone numbers on the customer page with ≥ 44 px targets and no sideways scroll (FR-CUS-016)', async ({ page }) => {
+  await login(page, 'manager');
+  await page.goto('/customers/');
+  const first = page.locator('main a[href^="/customers/"][href$="/"]:visible').first();
+  await expect(first).toBeVisible();
+  await page.goto((await first.getAttribute('href'))!);
+  const add = page.getByRole('button', { name: custBn.phone.add });
+  await expect(add).toBeVisible();
+  expect((await add.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await add.click();
+  const dialog = page.getByRole('dialog', { name: custBn.phone.addTitle });
+  await dialog.getByRole('textbox', { name: 'নম্বর ১' }).fill('01811000004');
+  await dialog.getByRole('button', { name: custBn.phone.another }).click();
+  await dialog.getByRole('textbox', { name: 'নম্বর ২' }).fill('01311000005');
+  const save = dialog.getByRole('button', { name: custBn.phone.save });
+  expect((await save.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/phones-dialog-390.png` });
+  await save.click();
+  await expect(dialog).toBeHidden();
+  const list = page.getByTestId('customer-phones');
+  await expect(list.getByText(custBn.phone.added)).toHaveCount(2);
+  const remove = list.getByRole('button').first();
+  const box = (await remove.boundingBox())!;
+  expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/phones-list-390.png` });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
