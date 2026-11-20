@@ -79,9 +79,15 @@ test('customers: installment / credit invoice filter, colour filter, colour badg
   await page.getByRole('group', { name: custBn.invoiceKind.label }).getByRole('button', { name: custBn.invoiceKind.credit }).click();
   await expect(page).toHaveURL(/kind=credit/);
   await waitForRows(page);
-  const rows = page.locator('tbody tr');
-  const n = await rows.count();
-  for (let i = 0; i < n; i++) await expect(rows.nth(i)).toContainText(new RegExp(custBn.openInv.credit.replace('{{n}}', '[০-৯]+')));
+  // The list keeps the previous rows on screen while the filtered page loads, so count and check together
+  // and retry until the filtered rows are there: every row must show its open credit invoices.
+  const credit = new RegExp(custBn.openInv.credit.replace('{{n}}', '[০-৯]+'));
+  await expect(async () => {
+    const rows = page.locator('tbody tr');
+    const n = await rows.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) await expect(rows.nth(i)).toContainText(credit, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
 });
 
 test('invoice viewer: credit invoice terms, installment schedule with paid-on dates and receipts, Back closes it', async ({ page }) => {
