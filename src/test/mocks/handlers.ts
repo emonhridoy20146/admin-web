@@ -1344,6 +1344,46 @@ export const handlers = [
     rows.sort((a, b) => (b.collectedPoisha?.total ?? 0) - (a.collectedPoisha?.total ?? 0));
     return HttpResponse.json(rows);
   })),
+  http.get(`${BASE}/reports/collection-board`, authed(({ ctx, url }) => {
+    // FR-REP-007 (1.26.0): verified money per collector; every branch unless reports.leaderboardScope = branch
+    const own = ctx.user.branchIds?.[0];
+    if (!perms(ctx.user).has('report.view') && !(own && db.settings['reports.leaderboardVisibleToStaff'])) return problem(403, 'FORBIDDEN', 'The leaderboard is not visible to you', 'report.view');
+    const period = url.searchParams.get('period');
+    if (period !== 'month' && period !== 'all') return problem(400, 'VALIDATION_FAILED', 'period must be month or all');
+    const today = db.today();
+    const month = period === 'month' ? (url.searchParams.get('month') ?? today.slice(0, 7)) : null;
+    if (month && (!/^\d{4}-\d{2}$/.test(month) || `${month}-01` > today)) return problem(400, 'VALIDATION_FAILED', 'this month or earlier (YYYY-MM)');
+    const everywhere = db.settings['reports.leaderboardScope'] !== 'branch';
+    const asked = url.searchParams.get('branchId');
+    const allowed = everywhere || ctx.user.role === 'super_admin' ? db.branches.map((b) => b.id!) : (ctx.user.branchIds ?? []);
+    if (asked && !allowed.includes(asked)) return problem(404, 'NOT_FOUND', 'Branch not found');
+    const inView = asked ? [asked] : allowed;
+    const sums = new Map<string, { postedPoisha: number; count: number }>();
+    for (const c of db.collections) {
+      if (c.status !== 'posted' && c.status !== 'resolved_posted') continue;
+      if (!inView.includes(db.collectionBranch(c) ?? '') || (month && !c.recordedAt!.startsWith(month))) continue;
+      const s = sums.get(c.collector!.id!) ?? { postedPoisha: 0, count: 0 };
+      s.postedPoisha += c.amountPoisha ?? 0;
+      s.count++;
+      sums.set(c.collector!.id!, s);
+    }
+    const people = new Set([...sums.keys(), ...db.staff.filter((u) => u.active && u.branchIds?.some((b) => inView.includes(b))).map((u) => u.id!)]);
+    const items: S['CollectionBoardRow'][] = [...people].flatMap((id) => {
+      const u = db.userById(id);
+      if (!u) return [];
+      const p = sums.get(id) ?? { postedPoisha: 0, count: 0 };
+      return [{ rank: null, userId: id, name: { bn: u.name?.bn ?? '', en: u.name?.en ?? '' }, employeeCode: u.employeeCode ?? '', role: u.role!, branchId: u.branchIds?.[0] ?? null, postedPoisha: p.postedPoisha, count: p.count, me: id === ctx.user.id }];
+    });
+    const byName = (a: S['CollectionBoardRow'], b: S['CollectionBoardRow']) => (a.name.en ?? '').localeCompare(b.name.en ?? '');
+    const ranked = items.filter((r) => r.postedPoisha > 0).sort((a, b) => b.postedPoisha - a.postedPoisha || byName(a, b));
+    ranked.forEach((r, i) => (r.rank = i > 0 && ranked[i - 1]!.postedPoisha === r.postedPoisha ? ranked[i - 1]!.rank : i + 1));
+    const rest = items.filter((r) => r.postedPoisha === 0).sort(byName);
+    const mine = ranked.find((r) => r.me) ?? rest.find((r) => r.me);
+    return HttpResponse.json({
+      period, month, scope: everywhere ? 'all' : 'branch', branchId: asked, generatedAt: new Date().toISOString(), items: [...ranked, ...rest],
+      me: mine ? { rank: mine.rank, of: ranked.length, postedPoisha: mine.postedPoisha } : null,
+    } satisfies S['CollectionBoard']);
+  })),
   http.get(`${BASE}/reports/leaderboard`, authed(({ ctx, url }) => {
     // FR-REP-005: managers with report.view; field staff only when the setting allows it
     const staffView = ctx.user.role === 'field_staff';

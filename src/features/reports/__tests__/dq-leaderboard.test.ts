@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DataQuality } from '../api/reports';
 import { ISSUE_GROUP, ISSUES, issueTotals, worstIssue } from '../model/data-quality';
-import { creditDecimals, periodDate, sharedRanks, splitRanked } from '../model/leaderboard';
+import { BOARD_PERIODS, BOARDS, creditDecimals, periodDate, sharedRanks, splitRanked } from '../model/leaderboard';
 
 describe('data quality (FR-CUS-009)', () => {
   const report: DataQuality = {
@@ -51,3 +51,16 @@ describe('leaderboard (FR-REP-005)', () => {
     expect(creditDecimals(11.5)).toBe(2);
   });
 });
+
+describe('collection board (FR-REP-007)', () => {
+  it('the ranking stays the page default; the board has a month and an all-time view', () => {
+    expect(BOARDS[0]).toBe('ranking');
+    expect(BOARD_PERIODS).toEqual(['month', 'all']);
+  });
+  it('people level on top share first place; nothing verified means no rank', () => {
+    const rows = [{ rank: 1 }, { rank: 1 }, { rank: 3 }, { rank: null }];
+    expect([...sharedRanks(rows)]).toEqual([1]);
+    expect(splitRanked(rows).unranked).toEqual([{ rank: null }]);
+  });
+});
+

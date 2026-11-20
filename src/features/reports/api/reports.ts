@@ -82,13 +82,29 @@ export function useDataQualityItems(issue: DataQualityIssue | undefined, cursor:
   });
 }
 
+export type CollectionBoardRow = components['schemas']['CollectionBoardRow'];
+export type BoardPeriod = 'month' | 'all';
+
+/** FR-REP-007 (contract 1.26.0): everyone who collected, ranked by money the ERP has accepted, for a month or all time. */
+export function useCollectionBoard(period: BoardPeriod, month: string, enabled = true) {
+  const branchId = useBranchId();
+  return useQuery({
+    queryKey: ['reports', 'collection-board', { branchId, period, month: period === 'month' ? month : null }],
+    queryFn: () => unwrap(api.GET('/reports/collection-board', { params: { query: { branchId, period, ...(period === 'month' ? { month } : {}) } } })),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
 /** FR-REP-005: ranked staff for a day or a month by one measure; ties share a rank (server rules). */
-export function useLeaderboard(period: LeaderPeriod, date: string, metric: LeaderMetric) {
+export function useLeaderboard(period: LeaderPeriod, date: string, metric: LeaderMetric, enabled = true) {
   const branchId = useBranchId();
   return useQuery({
     queryKey: ['reports', 'leaderboard', { branchId, period, date, metric }],
     queryFn: () => unwrap(api.GET('/reports/leaderboard', { params: { query: { branchId, period, date, metric } } })),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    enabled,
   });
 }

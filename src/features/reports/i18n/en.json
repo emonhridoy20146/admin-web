@@ -246,6 +246,30 @@
       "visit_credit": "Single visits count 1; a joint visit counts the share set in Co-work settings.",
       "promises_kept": "Promises due in this period that the customer kept.",
       "target_achievement": "Collected divided by the target for the working days so far."
+    },
+    "board": {
+      "which": "Board",
+      "tabs": {
+        "ranking": "Branch ranking",
+        "collection": "Collection board"
+      },
+      "title": "Collection board",
+      "subtitle": "Everyone who collected, ranked by the money the ERP has accepted. Managers and admins are ranked by their collections alone.",
+      "periods": {
+        "month": "Month",
+        "all": "All time"
+      },
+      "month": "Month",
+      "person": "Person",
+      "posted": "Verified collections",
+      "count": "Collections",
+      "first": "First place",
+      "empty": "Nobody has a verified collection in this period",
+      "scope": {
+        "all": "Every branch",
+        "branch": "Branches in your scope"
+      },
+      "how": "Only field collections the ERP has accepted are counted; money still pending in the ERP is not. These are field-system amounts, not ERP balances. Staff see this board in the app when the leaderboard is switched on for their branch (Settings → Reports)."
     }
   }
 }

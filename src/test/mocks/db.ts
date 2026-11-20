@@ -503,7 +503,7 @@ export const settings: Record<string, unknown> = {
   'location.sampling': { fastSec: 15, slowSec: 45, stillSec: 180, distanceFilterM: 25, maxAccuracyM: 50 }, 'location.gapMin': 10, 'location.lostAfterMin': 30,
   'collections.geofenceM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.requireApproval': false,
   'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
-  'reports.leaderboardVisibleToStaff': false, 'reports.leaderboardMinPresentDays': 1, 'reports.dataQualityMaxBranchKm': 30,
+  'reports.leaderboardVisibleToStaff': false, 'reports.leaderboardScope': 'all', 'reports.leaderboardMinPresentDays': 1, 'reports.dataQualityMaxBranchKm': 30,
   'customers.staffVisibility': 'branch', 'customers.staffPinApproval': 'when_missing',
 };
 /** Values a branch has of its own (branchId → key → value); everything else falls back to `settings`. */
