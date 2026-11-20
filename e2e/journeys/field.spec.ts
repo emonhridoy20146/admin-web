@@ -224,6 +224,30 @@ test('attendance: day list, correct an entry with a reason, month matrix', async
   await expect(page.getByText(attendanceBn.correction.saved)).toBeVisible();
   await page.getByRole('group', { name: attendanceBn.view.label }).getByRole('button', { name: attendanceBn.view.month }).click();
   await expect(page.getByRole('table')).toContainText(attendanceBn.col.lateMin);
+  // contract 1.25.0: overtime in the month, and how many absent days the late days count as
+  const head = page.getByRole('table').getByRole('columnheader');
+  await expect(head.filter({ hasText: attendanceBn.col.overtime })).toBeVisible();
+  await expect(head.filter({ hasText: attendanceBn.col.lateAbsences })).toBeVisible();
+  // every two late days of a month are one absent day: check it on each row from the numbers shown,
+  // in last month (a whole month, so there are late days whatever today's date is)
+  await page.getByRole('button', { name: attendanceBn.prevMonth }).click();
+  await page.waitForLoadState('networkidle');
+  await expect(head.filter({ hasText: attendanceBn.col.lateAbsences })).toBeVisible();
+  const bn = (t: string) => Number(t.replace(/[০-৯]/g, (c) => String('০১২৩৪৫৬৭৮৯'.indexOf(c))).replace('—', '0'));
+  const cols = await head.allTextContents();
+  const lateCol = cols.indexOf(attendanceBn.status.late);
+  const absCol = cols.indexOf(attendanceBn.col.lateAbsences);
+  expect(lateCol).toBeGreaterThan(0);
+  const rows = page.getByRole('table').locator('tbody tr');
+  const n = await rows.count();
+  expect(n).toBeGreaterThan(3);
+  let counted = 0;
+  for (let i = 0; i < n; i++) {
+    const cells = await rows.nth(i).locator('th, td').allTextContents();
+    expect(bn(cells[absCol]!)).toBe(Math.floor(bn(cells[lateCol]!) / 2));
+    counted += bn(cells[absCol]!);
+  }
+  expect(counted).toBeGreaterThan(0);
   await expect(page.locator('tbody tr').first()).toBeVisible();
 });
 

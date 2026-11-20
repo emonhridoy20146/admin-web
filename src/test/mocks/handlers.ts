@@ -619,10 +619,13 @@ export const handlers = [
     const items = db.staff.filter((s) => s.active && s.branchIds?.some((b) => sc.includes(b))).map((s) => {
       const days = dates.map((d) => db.attendanceDay(s, d));
       const count = (...st: string[]) => days.filter((d) => st.includes(d.status!)).length;
-      const sum = (k: 'lateMin' | 'breakMin' | 'dutyMin') => days.reduce((a, d) => a + (d[k] ?? 0), 0);
+      const sum = (k: 'lateMin' | 'breakMin' | 'dutyMin' | 'overBreakMin' | 'overtimeMin') => days.reduce((a, d) => a + (d[k] ?? 0), 0);
+      const late = days.filter((d) => (d.lateMin ?? 0) > 0).length;
+      const perAbsent = Number(db.settings['attendance.lateDaysPerAbsent'] ?? 2);
       return {
         userId: s.id, userName: s.name?.en, present: count('present', 'on_duty', 'on_break', 'off_duty', 'late'), late: days.filter((d) => (d.lateMin ?? 0) > 0).length, absent: count('absent'),
         leave: count('leave'), holiday: count('holiday'), weeklyOff: count('weekly_off'), lateMin: sum('lateMin'), breakMin: sum('breakMin'), dutyMin: sum('dutyMin'), overBreakDays: days.filter((d) => (d.breakMin ?? 0) > 60).length,
+        overBreakMin: sum('overBreakMin'), overtimeMin: sum('overtimeMin'), overtimeDays: days.filter((d) => (d.overtimeMin ?? 0) > 0).length, offDaysWorked: 0, lateAbsences: perAbsent > 0 ? Math.floor(late / perAbsent) : 0,
       };
     });
     return HttpResponse.json({ month, items });

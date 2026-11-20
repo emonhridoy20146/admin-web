@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { countDay, dhakaIso, index, lastDay, monthDays, monthOf, shiftMonth, sortDay, validateCorrection } from '../model/attendance';
+import { countDay, dhakaIso, index, lastDay, monthDays, monthOf, offDayWorked, shiftMonth, sortDay, validateCorrection } from '../model/attendance';
 
 describe('attendance model', () => {
+  it('a day off that was worked is marked only when it earned overtime (contract 1.25.0)', () => {
+    expect(offDayWorked({ flags: ['worked_on_off_day', 'overtime'], overtimeMin: 240 })).toBe(true);
+    // work during approved leave carries the flag but no overtime
+    expect(offDayWorked({ flags: ['worked_on_off_day'], overtimeMin: 0 })).toBe(false);
+    expect(offDayWorked({ flags: ['overtime'], overtimeMin: 45 })).toBe(false);
+    // an older server sends neither
+    expect(offDayWorked({ flags: [] })).toBe(false);
+    expect(offDayWorked(undefined)).toBe(false);
+  });
   it('handles months', () => {
     expect(monthOf('2026-11-15')).toBe('2026-11');
     expect(shiftMonth('2026-01', -1)).toBe('2025-12');

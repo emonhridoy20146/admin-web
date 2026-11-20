@@ -53,11 +53,17 @@
     "break": "Break",
     "duty": "Duty",
     "action": "Correct",
-    "lateMin": "Total late"
+    "lateMin": "Total late",
+    "overtime": "Overtime",
+    "lateAbsences": "Late as absent"
   },
   "corrected": "Corrected",
   "autoClosed": "Auto-closed",
   "lateBy": "{{d}} late",
+  "overBreak": "Break over by {{d}}",
+  "overtimeBy": "{{d}} overtime",
+  "offDayWorked": "Worked on a day off",
+  "lateAbsencesHelp": "Absent days that the late days of the month count as for pay. Not included in Absent.",
   "correct": "Correct",
   "correctFor": "Correct attendance of {{name}}",
   "empty": "No field staff in this branch",

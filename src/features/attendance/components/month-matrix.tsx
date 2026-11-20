@@ -51,7 +51,11 @@ export function MonthMatrix({ staff, days, byUser, summary, today, onPick }: {
               {(['present', 'late', 'absent', 'leave'] as const).map((k) => (
                 <th key={k} scope="col" className="border-b border-s border-line px-2.5 py-2 text-end font-medium whitespace-nowrap">{t(`status.${k}`)}</th>
               ))}
+              <th scope="col" className="border-b border-line px-2.5 py-2 text-end font-medium whitespace-nowrap">
+                <Tooltip content={t('lateAbsencesHelp')}><span tabIndex={0} className="underline decoration-dotted underline-offset-4">{t('col.lateAbsences')}</span></Tooltip>
+              </th>
               <th scope="col" className="border-b border-line px-3 py-2 text-end font-medium whitespace-nowrap">{t('col.lateMin')}</th>
+              <th scope="col" className="border-b border-line px-3 py-2 text-end font-medium whitespace-nowrap">{t('col.overtime')}</th>
             </tr>
           </thead>
           <tbody>
@@ -67,7 +71,7 @@ export function MonthMatrix({ staff, days, byUser, summary, today, onPick }: {
                     return (
                       <td key={d} className="border-b border-line px-0.5 py-1 text-center group-last:border-0">
                         {st ? (
-                          <Tooltip content={`${formatDate(d, { withYear: false })} · ${t(`status.${st}`)}${(day.lateMin ?? 0) > 0 ? ` · ${t('lateBy', { d: formatDuration(day.lateMin ?? 0) })}` : ''}${day.corrected ? ` · ${t('corrected')}` : ''}`}>
+                          <Tooltip content={`${formatDate(d, { withYear: false })} · ${t(`status.${st}`)}${(day.lateMin ?? 0) > 0 ? ` · ${t('lateBy', { d: formatDuration(day.lateMin ?? 0) })}` : ''}${(day.overBreakMin ?? 0) > 0 ? ` · ${t('overBreak', { d: formatDuration(day.overBreakMin ?? 0) })}` : ''}${(day.overtimeMin ?? 0) > 0 ? ` · ${t('overtimeBy', { d: formatDuration(day.overtimeMin ?? 0) })}` : ''}${day.corrected ? ` · ${t('corrected')}` : ''}`}>
                             <span tabIndex={0} className={cn('mx-auto grid size-7 place-items-center rounded-xs text-[11px] font-semibold', CELL[st], day.corrected && 'ring-1 ring-line-strong')}>
                               <span aria-hidden>{t(`short.${st}`)}</span>
                               <span className="sr-only">{t(`status.${st}`)}</span>
@@ -83,7 +87,9 @@ export function MonthMatrix({ staff, days, byUser, summary, today, onPick }: {
                   <td className={cn('tabular border-b border-line px-2.5 py-1.5 text-end group-last:border-0', (s?.late ?? 0) > 0 && 'font-medium text-warning')}>{formatNumber(s?.late ?? 0)}</td>
                   <td className={cn('tabular border-b border-line px-2.5 py-1.5 text-end group-last:border-0', (s?.absent ?? 0) > 0 && 'font-medium text-danger')}>{formatNumber(s?.absent ?? 0)}</td>
                   <td className="tabular border-b border-line px-2.5 py-1.5 text-end group-last:border-0">{formatNumber(s?.leave ?? 0)}</td>
+                  <td className={cn('tabular border-b border-line px-2.5 py-1.5 text-end group-last:border-0', (s?.lateAbsences ?? 0) > 0 && 'font-medium text-danger')}>{(s?.lateAbsences ?? 0) > 0 ? formatNumber(s?.lateAbsences ?? 0) : '—'}</td>
                   <td className="tabular border-b border-line px-3 py-1.5 text-end whitespace-nowrap group-last:border-0">{(s?.lateMin ?? 0) > 0 ? formatDuration(s?.lateMin ?? 0) : '—'}</td>
+                  <td className={cn('tabular border-b border-line px-3 py-1.5 text-end whitespace-nowrap group-last:border-0', (s?.overtimeMin ?? 0) > 0 && 'font-medium text-info')}>{(s?.overtimeMin ?? 0) > 0 ? formatDuration(s?.overtimeMin ?? 0) : '—'}</td>
                 </tr>
               );
             })}

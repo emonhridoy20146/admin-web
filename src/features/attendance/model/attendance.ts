@@ -47,6 +47,11 @@ export interface DayCounts {
   notStarted: number;
 }
 
+/** Worked on a weekly day off or a holiday: all of that work is overtime (field-api FR-ATT-011). Work during approved leave has the flag too, but no overtime. */
+export function offDayWorked(d: Pick<AttendanceDay, 'flags' | 'overtimeMin'> | undefined): boolean {
+  return !!d && (d.flags ?? []).includes('worked_on_off_day') && (d.overtimeMin ?? 0) > 0;
+}
+
 export function countDay(days: AttendanceDay[] | undefined): DayCounts {
   const c: DayCounts = { worked: 0, late: 0, absent: 0, leave: 0, onDuty: 0, notStarted: 0 };
   for (const d of days ?? []) {
