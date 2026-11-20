@@ -1,7 +1,11 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.26.0** (2026-11-21: 1.20.0 → 1.26.0 in five steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.27.0** (2026-11-21: 1.20.0 → 1.27.0 in six steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.27.0, owner request 2026-11-21: where the cash on hand came from; FR-W-044, master FR-CASH-007)
+- **A row on Cash on hand opens a drawer with the collections behind that collector's cash**: customer (link to the customer page), invoice, receipt number, time, the amount still in hand (and "বাকি, মোট …" when a deposit covered part of it) and the collection's status; the total, the number of collections and deposits waiting for verification on top. The open drawer is in the URL (`?hand=`).
+- A note explains the rule (deposits pay off the oldest collections first) and that this is field-system cash, not an ERP balance.
+- Mock API: `GET /cash/positions/{id}/collections`. Tests: journey with axe.
 ### Added (contract 1.26.0, owner request 2026-11-21: one board of verified collections; FR-W-043, master FR-REP-007)
 - **"আদায় বোর্ড" on the Leaderboard page** (switch at the top; the branch ranking stays the default): everyone who collected, in every branch, ranked by the money the ERP has accepted, for a month or for all time. A crown marks first place; a manager or admin who collects is on it with a role mark. Pending money is not counted, and the note under the table says these are field-system amounts, not ERP balances.
 - **Settings → Reports → "আদায় বোর্ডে যা থাকবে"** (`reports.leaderboardScope`): every branch, or each person's own branches only.

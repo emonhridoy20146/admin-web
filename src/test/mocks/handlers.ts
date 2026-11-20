@@ -1178,6 +1178,22 @@ export const handlers = [
   })),
 
   // ---------- cash ----------
+  http.get(`${BASE}/cash/positions/:id/collections`, authed(({ ctx, url, params }) => {
+    // FR-CASH-007 (1.27.0): the newest cash collections add up to the position (deposits pay off the oldest first)
+    const pos = db.cashPositions.find((p) => p.userId === params.id);
+    const u = db.userById(String(params.id));
+    if (!pos || !u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '') || (ctx.user.role === 'field_staff' && ctx.user.id !== u.id)) return problem(404, 'NOT_FOUND', 'User not found');
+    const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? 1 : -1));
+    let left = pos.onHandPoisha ?? 0;
+    const items: S['CashInHandItem'][] = [];
+    for (const c of cash) {
+      if (left <= 0) break;
+      const part = Math.min(left, c.amountPoisha ?? 0);
+      left -= part;
+      items.push({ collectionId: c.id!, receiptNo: c.receiptNo!, recordedAt: c.recordedAt!, businessDate: c.recordedAt!.slice(0, 10), customer: { id: c.customer?.id, name: c.customer?.name, code: c.customer?.code }, erpPlanId: c.erpPlanId ?? '', amountPoisha: c.amountPoisha ?? 0, inHandPoisha: part, status: c.status! });
+    }
+    return HttpResponse.json({ userId: u.id!, userName: pos.userName ?? '', onHandPoisha: (pos.onHandPoisha ?? 0) - left, pendingDepositsPoisha: pos.pendingDepositsPoisha ?? 0, count: items.length, items, generatedAt: new Date().toISOString() } satisfies S['CashInHand']);
+  })),
   http.get(`${BASE}/cash/positions`, authed(({ ctx, url }) => {
     const sc = scope(ctx, url);
     return HttpResponse.json(db.cashPositions.filter((p) => sc.includes(db.userById(p.userId)?.branchIds?.[0] ?? '')));

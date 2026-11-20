@@ -1,4 +1,5 @@
 'use client';
+import { InHandDrawer } from '../components/in-hand-drawer';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -50,6 +51,9 @@ export function CashPage() {
   const pendingCount = useDeposits('pending', undefined, 100);
   const loading = positions.isLoading;
   const todayStart = startOfTodayDhakaIso();
+  // FR-W-044: a row opens the collections behind that collector's cash (kept in the URL so the view can be shared)
+  const hand = url.get('hand') || null;
+  const handName = positions.data?.find((p) => p.userId === hand)?.userName ?? '';
 
   const columns: Column<CashPosition>[] = [
     {
@@ -235,6 +239,7 @@ export function CashPage() {
             columns={columns}
             rows={sorted}
             rowKey={(p) => p.userId ?? ''}
+            onRowClick={(p) => p.userId && url.set({ hand: p.userId }, { push: true })}
             loading={loading}
             error={positions.error}
             onRetry={() => positions.refetch()}
@@ -242,6 +247,7 @@ export function CashPage() {
           />
         </Section>
       </section>
+      <InHandDrawer userId={hand} userName={handName} onClose={() => url.set({ hand: null })} />
     </>
   );
 }

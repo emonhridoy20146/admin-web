@@ -1020,6 +1020,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cash/me/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description cash.view (1.27.0, FR-CASH-007). The collections behind the caller's cash on hand: which customer and invoice the money came from. */
+        get: operations["myCashInHand"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cash/positions/{id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description cash.view (1.27.0, FR-CASH-007). The same for one staff member (`id` = user id) in the caller's scope; a field staff member may only read their own. Out of scope answers 404. */
+        get: operations["cashInHandOf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cash/positions": {
         parameters: {
             query?: never;
@@ -3259,6 +3293,38 @@ export interface components {
             pendingDepositsPoisha?: number;
             todayCashPoisha?: number;
             todayMobilePoisha?: number;
+        };
+        /** @description 1.27.0 (FR-CASH-007). Deposits (pending and verified) pay off cash collections oldest-first; what is left is the cash in hand, listed newest first. `onHandPoisha` equals the position's and covers every item, also when more than 200 exist (`count` > `items.length`). Field-system cash, not an ERP balance. */
+        CashInHand: {
+            userId: string;
+            userName: string;
+            onHandPoisha: number;
+            pendingDepositsPoisha: number;
+            /** @description Collections with cash still in hand */
+            count: number;
+            items: components["schemas"]["CashInHandItem"][];
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        CashInHandItem: {
+            collectionId: string;
+            receiptNo: string;
+            /** Format: date-time */
+            recordedAt: string;
+            /** Format: date */
+            businessDate: string;
+            customer: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                code?: string;
+            };
+            /** @description The invoice (ERP plan) the money was collected for */
+            erpPlanId: string;
+            /** @description The whole collection */
+            amountPoisha: number;
+            /** @description The part not yet covered by a deposit; less than amountPoisha for the one collection a deposit covers only partly */
+            inHandPoisha: number;
+            status: components["schemas"]["CollectionStatus"];
         };
         DepositCreate: {
             /** Format: uuid */
@@ -6365,6 +6431,49 @@ export interface operations {
                     "application/json": components["schemas"]["CashPosition"];
                 };
             };
+        };
+    };
+    myCashInHand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashInHand"];
+                };
+            };
+        };
+    };
+    cashInHandOf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashInHand"];
+                };
+            };
+            404: components["responses"]["Problem"];
         };
     };
     cashPositions: {
