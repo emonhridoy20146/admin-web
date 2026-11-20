@@ -16,6 +16,7 @@ import { sortStatuses } from '../model/customer-row';
 import { currentPin } from '../model/pin';
 import { frequencyLabel, guarantorPhones, isCollectable, itemLabel, rolledCount, visibleLines } from '../model/plan';
 import type { CustomerDetail } from '../api/customers';
+import { CustomerPhones } from './customer-phones';
 import { SetPinDialog } from './set-pin-dialog';
 import { DeletePinDialog } from './delete-pin-dialog';
 
@@ -144,11 +145,7 @@ export function ContactCard({ c }: { c: CustomerDetail }) {
   return (
     <dl className="space-y-3 text-base">
       <Item icon={Phone} label={t('phones')}>
-        <span className="flex flex-col">
-          {(c.phones?.length ? c.phones : [c.phone]).filter(Boolean).map((p) => (
-            <a key={p} href={`tel:${p}`} className="tabular font-mono text-sm text-fg hover:text-primary">{p}</a>
-          ))}
-        </span>
+        <CustomerPhones c={c} />
       </Item>
       <Item icon={MapPin} label={t('address')}>
         {c.areaName && <span className="block font-medium" lang={locale}>{pickText(c.areaName, locale)}</span>}

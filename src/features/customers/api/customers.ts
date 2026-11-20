@@ -133,3 +133,24 @@ export function useDeleteLocation(customerId: string) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
   });
 }
+
+/**
+ * FR-CUS-016 (contract 1.23.0): add one to five phone numbers at once. They are kept in the field system only (never
+ * sent to the ERP). A number the customer already has is skipped by the server, so a retry is harmless.
+ */
+export function useAddPhones(customerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phones: { number: string; label?: string }[]) => unwrap(api.POST('/customers/{id}/phones', { params: { path: { id: customerId } }, body: { phones } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
+  });
+}
+
+/** FR-CUS-016: remove a number that was added in the field system (an ERP number cannot be removed here). */
+export function useRemovePhone(customerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (number: string) => unwrap(api.DELETE('/customers/{id}/phones/{number}', { params: { path: { id: customerId, number } } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['customers'] }),
+  });
+}

@@ -1,7 +1,13 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.22.0** (2026-11-21: 1.20.0 → 1.22.0, additive; 1.20.1 resync floor and contract in health, 1.21.0 attendance photo linked after the event, 1.22.0 rough indoor points on the live map; no screen change needed; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.23.0** (2026-11-21: 1.22.0 → 1.23.0, additive: extra phone numbers of a customer; permission catalog synced, 55 keys; types regenerated with `pnpm gen:api`). Before that 1.20.0 → 1.22.0 the same day (no screen change).
+### Added (contract 1.23.0, owner request 2026-11-21: several phone numbers for a customer; FR-W-036, master FR-CUS-016)
+- **Phone numbers on the customer page and drawer**: the ERP numbers come first with an "ERP" mark (the first one "ERP · প্রধান"), numbers added in the field system have a "নতুন যোগ" mark with whose number it is, who added it and when (`components/customer-phones.tsx`).
+- **Add several numbers at once** ("নম্বর যোগ করুন", permission `customer.phone.manage`): a dialog with one row per number (number + whose number), "আরেকটি নম্বর" up to the room left (five added numbers per customer). Bangla digits, spaces, dashes and `+880` are accepted; a wrong number, one the customer already has, or one typed twice is named under its field before anything is sent. The dialog says the numbers stay in the field system and are not sent to the ERP.
+- **Remove an added number** with a confirm dialog that names it. An ERP number has no remove button.
+- Mock API: `POST /customers/{id}/phones`, `DELETE /customers/{id}/phones/{number}` with the server's rules (duplicate, limit, `PHONE_FROM_ERP`).
+- Tests: unit (`phones.test.ts`: marks, normalizing, form checks), journeys `customer-phones.spec.ts` (add two, marks and order, remove, viewer is read-only; axe on the dialog) and a 390 px journey (44 px targets, no sideways scroll).
 ### Fixed (2026-11-21: `main` did not pass CI)
 - Route history time scrubber (added 2026-11-20, sidebar regrouped into Field work / People / Insights / Admin the same day): `stopIndexAtPct` did not compile under strict index checks, so `pnpm typecheck` and the CI run on `main` failed. Fixed, and a scrubber marker now keeps its place in the sorted stop list when another stop has no start time (it pointed at the wrong stop before). Unit test for the scrubber model added.
 ### Added (2026-11-20: admin can create promises and collect cash; auto ERP sync)

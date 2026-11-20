@@ -406,5 +406,38 @@
     "collectCash": "Collect cash",
     "newPromise": "New promise",
     "recordVisit": "Record visit"
+  },
+  "phone": {
+    "none": "No phone number",
+    "erpMain": "ERP · main",
+    "erp": "ERP",
+    "added": "Added",
+    "addedBy": "Added by {{name}} · {{date}}",
+    "add": "Add numbers",
+    "full": "The most extra numbers ({{n}}) are already added",
+    "addTitle": "Add phone numbers",
+    "addDesc": "You can add several numbers at once. The ERP numbers stay as they are.",
+    "numberN": "Number {{n}}",
+    "whose": "Whose number",
+    "whoseHelp": "For example: wife, shop, son (optional)",
+    "another": "Another number",
+    "roomLeft": "{{n}} more numbers can be added for this customer",
+    "dropRow": "Drop number {{n}}",
+    "save": "Save numbers",
+    "savedN": "Numbers added: {{n}}.",
+    "skippedN": "Already there: {{n}}.",
+    "nothingNew": "The customer already has these numbers; nothing new was added",
+    "keptHere": "These numbers are kept in the field system; they are not sent to the ERP and an ERP sync does not remove them.",
+    "removeAria": "Remove the number {{number}}",
+    "removeTitle": "Remove this number?",
+    "removeDesc": "The number leaves the customer's list. An ERP number cannot be removed here.",
+    "removeConfirm": "Remove number",
+    "removed": "{{number}} removed",
+    "err": {
+      "invalid": "Enter a Bangladesh mobile number (01XXXXXXXXX)",
+      "duplicate": "The customer already has this number",
+      "repeated": "This number is typed twice",
+      "empty": "Type at least one number"
+    }
   }
 }
