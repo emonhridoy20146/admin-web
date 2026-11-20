@@ -5,6 +5,7 @@ import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { AsOf } from '@/shared/ui/page';
 import { useCustomer } from '../api/customers';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from './customer-parts';
+import { MonthActivity } from './work-marks';
 import { sortPlans } from '../model/plan';
 
 /** Row → drawer (FR-W-005). URL `?drawer=customer:<id>` makes it shareable; Esc closes and focus returns. */
@@ -31,6 +32,7 @@ export function CustomerDrawer({ id, onClose, footer }: { id: string | null; onC
         ) : (
           <>
             <CustomerFigures c={c} className="sm:grid-cols-2" />
+            <MonthActivity c={c} className="[&_dl]:sm:grid-cols-2" />
             {c.erpFetchedAt && <AsOf at={c.erpFetchedAt} />}
             <BadSuggestionCallout c={c} />
             <PendingCallout c={c} />

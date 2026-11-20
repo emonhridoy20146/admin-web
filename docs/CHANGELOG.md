@@ -1,7 +1,13 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.23.0** (2026-11-21: 1.22.0 → 1.23.0, additive: extra phone numbers of a customer; permission catalog synced, 55 keys; types regenerated with `pnpm gen:api`). Before that 1.20.0 → 1.22.0 the same day (no screen change).
+Contract pinned: field-api `openapi.yaml` **1.24.0** (2026-11-21: 1.20.0 → 1.24.0 in three steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.24.0, owner request 2026-11-21: who has been dealt with this month; FR-W-037, FR-W-038, master FR-CUS-017/018)
+- **Four work marks on every customer row, in every filter and on the phone-size cards** (column "এ মাসের কাজ", `components/work-marks.tsx`): visited (today / this month), money (in the ERP this month / collected and still pending in ERP), promise (open / broken / kept this month) and map pin (set / missing). A mark that is on has its status colour and icon, one that is off is a grey outline; each has its meaning in words for screen readers and in a tooltip with the numbers. A key above the table says which icon is which.
+- **"এ মাসে" on the customer drawer and page**: visits (count, last or "today"), money in the ERP this month, money pending in ERP as its own number (never added to the ERP money), promises (open, new, kept, broken) and how many invoices the customer has and how many still have a balance.
+- **Invoice count in the list header** ("ইনভয়েস Nটি · বাকি আছে Mটি") for the branch or all branches in view, and "মোট N" in a row's invoice cell when the customer has more invoices than the open ones.
+- Mock API: `activity`, `invoiceCount` and `invoiceTotals` derived from the mock visits, payments, collections and promises.
+- Tests: unit `activity.test.ts` (mark rules, older server), journeys `customer-activity.spec.ts` (marks in two filters with axe, header count, month block) and a 390 px journey.
 ### Added (contract 1.23.0, owner request 2026-11-21: several phone numbers for a customer; FR-W-036, master FR-CUS-016)
 - **Phone numbers on the customer page and drawer**: the ERP numbers come first with an "ERP" mark (the first one "ERP · প্রধান"), numbers added in the field system have a "নতুন যোগ" mark with whose number it is, who added it and when (`components/customer-phones.tsx`).
 - **Add several numbers at once** ("নম্বর যোগ করুন", permission `customer.phone.manage`): a dialog with one row per number (number + whose number), "আরেকটি নম্বর" up to the room left (five added numbers per customer). Bangla digits, spaces, dashes and `+880` are accepted; a wrong number, one the customer already has, or one typed twice is named under its field before anything is sent. The dialog says the numbers stay in the field system and are not sent to the ERP.

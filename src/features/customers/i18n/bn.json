@@ -439,5 +439,46 @@
       "repeated": "এই নম্বরটি দুইবার লেখা হয়েছে",
       "empty": "অন্তত একটি নম্বর লিখুন"
     }
-  }
+  },
+  "marks": {
+    "col": "এ মাসের কাজ",
+    "visitToday": "আজ ভিজিট হয়েছে",
+    "visitMonth": "এ মাসে {{n}} বার ভিজিট",
+    "visitNone": "এ মাসে ভিজিট হয়নি",
+    "paid": "এ মাসে ERP-তে জমা {{amount}}",
+    "pending": "আদায় {{amount}}, ERP-তে অপেক্ষমাণ",
+    "paidNone": "এ মাসে কোনো টাকা জমা হয়নি",
+    "promiseOpen": "প্রতিশ্রুতি আছে: {{date}}",
+    "promiseBroken": "এ মাসে প্রতিশ্রুতি ভেঙেছে",
+    "promiseKept": "এ মাসে প্রতিশ্রুতি রেখেছে",
+    "promiseNone": "এ মাসে প্রতিশ্রুতি নেই",
+    "pinSet": "ম্যাপে পিন আছে",
+    "pinMissing": "ম্যাপে পিন নেই",
+    "legend": {
+      "title": "চিহ্ন (এ মাস):",
+      "visit": "ভিজিট",
+      "paid": "টাকা জমা",
+      "promise": "প্রতিশ্রুতি",
+      "pin": "ম্যাপ পিন"
+    }
+  },
+  "month": {
+    "title": "এ মাসে",
+    "visits": "ভিজিট",
+    "visitsN": "{{n}} বার",
+    "visitedToday": "আজ ভিজিট হয়েছে",
+    "lastOn": "সর্বশেষ {{date}}",
+    "paid": "ERP-তে জমা",
+    "pending": "ERP-তে অপেক্ষমাণ",
+    "pendingNote": "মাঠে আদায়, এখনো ERP-তে ওঠেনি",
+    "promises": "প্রতিশ্রুতি",
+    "promiseOpen": "চলমান",
+    "promisesN": "নতুন {{n}}টি",
+    "kept": "রেখেছে {{n}}টি",
+    "broken": "ভেঙেছে {{n}}টি",
+    "none": "হয়নি",
+    "invoices": "মোট ইনভয়েস {{total}}টি · বাকি আছে {{open}}টি"
+  },
+  "invoiceTotals": "ইনভয়েস {{total}}টি · বাকি আছে {{open}}টি",
+  "invTotal": "মোট {{n}}"
 }

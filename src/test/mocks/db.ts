@@ -30,6 +30,8 @@ export const oid = (prefix = '67') => prefix + (idSeq++).toString(16).padStart(2
 
 export const now = () => DateTime.now().setZone(ZONE);
 export const today = () => now().toISODate()!;
+/** Dhaka business date of a UTC instant ('' for an empty value). */
+export const dhakaDate = (iso: string) => (iso ? (DateTime.fromISO(iso, { zone: 'utc' }).setZone(ZONE).toISODate() ?? '') : '');
 const isoAt = (d: DateTime) => d.toUTC().toISO()!;
 
 export const catalog = catalogJson as {
