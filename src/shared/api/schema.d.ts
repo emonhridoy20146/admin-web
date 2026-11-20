@@ -3705,6 +3705,13 @@ export interface components {
              */
             trackingProvider?: "free" | "paid";
             trackingProviderFallback?: boolean;
+            /**
+             * @description Added in 1.22.0. attendance = no tracked point yet today: the position of the last attendance event (work-in), ADR-041
+             * @enum {string}
+             */
+            source?: "track" | "attendance";
+            /** @description Added in 1.22.0. Less accurate than location.maxAccuracyM (indoors); draw as approximate */
+            lowAccuracy?: boolean;
         };
         Stop: {
             start?: string;
@@ -3729,8 +3736,11 @@ export interface components {
         SyncMutation: {
             /** Format: uuid */
             mutationId: string;
-            /** @enum {string} */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request";
+            /**
+             * @description attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
+             * @enum {string}
+             */
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -4484,8 +4494,15 @@ export interface operations {
                         /** @enum {string} */
                         status?: "ok" | "degraded";
                         version?: string;
+                        /** @description API contract version this build implements; use it to check a deploy (added in 1.20.1) */
+                        contract?: string;
                         mongo?: string;
                         erp?: string;
+                        /**
+                         * @description Added in 1.21.0. Where photos and exports are kept (ADR-039); memory = this instance only, phone uploads fail.
+                         * @enum {string}
+                         */
+                        storage?: "s3" | "db" | "memory";
                     };
                 };
             };
@@ -8095,7 +8112,15 @@ export interface operations {
                     "application/json": components["schemas"]["SyncPullResponse"];
                 };
             };
-            410: components["responses"]["Problem"];
+            /** @description CURSOR_EXPIRED: the cursor cannot be continued (ahead of the feed, older than 30 days, or taken before the server widened what the device may hold, e.g. ADR-038 in 1.20.1). Call GET /sync/bootstrap; keep the outbox. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     syncPush: {
