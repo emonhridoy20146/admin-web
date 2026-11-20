@@ -7,7 +7,7 @@ import en from './i18n/en.json';
 export const targetsManifest: FeatureManifest = {
   name: 'targets',
   flag: 'module.targets',
-  routes: [{ path: '/targets', title: 'targets:title', permission: 'target.view', navGroup: 'field', icon: Target, order: 66 }],
+  routes: [{ path: '/targets', title: 'targets:title', permission: 'target.view', navGroup: 'people', icon: Target, order: 30 }],
   permissions: ['target.view', 'target.manage'],
   events: { emits: ['target.changed'] },
   commands: [{ id: 'targets.open', title: 'targets:title', icon: Target, href: '/targets/', permission: 'target.view' }],

@@ -7,7 +7,7 @@ import en from './i18n/en.json';
 export const assignmentsManifest: FeatureManifest = {
   name: 'assignments',
   flag: 'module.assignments',
-  routes: [{ path: '/areas', title: 'assignments:title', permission: 'assignment.view', navGroup: 'field', icon: MapPinned, order: 55 }],
+  routes: [{ path: '/areas', title: 'assignments:title', permission: 'assignment.view', navGroup: 'people', icon: MapPinned, order: 40 }],
   permissions: ['assignment.view', 'assignment.manage'],
   events: { emits: [EV.assignmentChanged], listens: [EV.handoverChanged] },
   commands: [{ id: 'assignments.open', title: 'assignments:title', icon: MapPinned, href: '/areas/', permission: 'assignment.view' }],

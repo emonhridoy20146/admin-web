@@ -96,3 +96,57 @@ export function collectedOnRoute(events: WorkEvent[]): number {
 }
 
 export const COLLECTION_TOKEN = '--info-fg';
+
+// ── Time scrubber ─────────────────────────────────────────────────────────────
+
+export interface ScrubSegment {
+  from: string;
+  to: string;
+  kind: 'moving' | 'gap';
+  leftPct: number;
+  widthPct: number;
+}
+
+export interface ScrubStop {
+  index: number;
+  leftPct: number;
+  kind: StopKind;
+}
+
+export interface ScrubModel {
+  startMs: number;
+  totalMs: number;
+  segments: ScrubSegment[];
+  stops: ScrubStop[];
+}
+
+export function buildScrubber(
+  rawSegments: { from?: string; to?: string; kind?: string }[] | undefined,
+  stops: Stop[] | undefined,
+): ScrubModel | null {
+  const segs = (rawSegments ?? []).filter((s) => s.from && s.to);
+  if (!segs.length) return null;
+  const startMs = Math.min(...segs.map((s) => Date.parse(s.from!)));
+  const endMs = Math.max(...segs.map((s) => Date.parse(s.to!)));
+  const totalMs = endMs - startMs;
+  if (totalMs <= 0) return null;
+  const pct = (ms: number) => Math.max(0, Math.min(100, ((ms - startMs) / totalMs) * 100));
+  const segments: ScrubSegment[] = segs.map((s) => {
+    const fMs = Date.parse(s.from!);
+    const tMs = Date.parse(s.to!);
+    return { from: s.from!, to: s.to!, kind: s.kind === 'gap' ? 'gap' : 'moving', leftPct: pct(fMs), widthPct: Math.max(0.3, pct(tMs) - pct(fMs)) };
+  });
+  const sortedStops = sortStops(stops);
+  const scrubStops: ScrubStop[] = sortedStops.filter((s) => s.start).map((s, i) => ({ index: i, leftPct: pct(Date.parse(s.start!)), kind: stopKind(s) }));
+  return { startMs, totalMs, segments, stops: scrubStops };
+}
+
+/** Given a 0–100 position on the scrubber bar, return the nearest past stop index (or null). */
+export function stopIndexAtPct(pct: number, model: ScrubModel, sortedStops: Stop[]): number | null {
+  const ms = model.startMs + (pct / 100) * model.totalMs;
+  for (let i = sortedStops.length - 1; i >= 0; i--) {
+    const start = sortedStops[i].start ? Date.parse(sortedStops[i].start!) : null;
+    if (start !== null && start <= ms) return i;
+  }
+  return null;
+}

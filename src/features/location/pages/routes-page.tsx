@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, MapPin, MapPinCheck, Route, ShieldAlert, UserRound, Wallet, WifiOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, MapPin, MapPinCheck, Route, ShieldAlert, UserRound, Wallet, WifiOff } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
@@ -17,9 +17,9 @@ import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { Button } from '@/shared/ui/button';
 import { Field, Input, Select } from '@/shared/ui/form';
-import { useHistory, useStaff } from '../api/location';
+import { useHistory, useStaff, type Stop } from '../api/location';
 import { MoneyText } from '@/shared/ui/money';
-import { COLLECTION_TOKEN, collectedOnRoute, gaps, sortStops, STOP_TOKEN, stopKind, workEvents } from '../model/location';
+import { buildScrubber, COLLECTION_TOKEN, collectedOnRoute, gaps, sortStops, stopIndexAtPct, STOP_TOKEN, stopKind, type ScrubModel, workEvents } from '../model/location';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -56,6 +56,8 @@ export function RoutesPage() {
     setStopAt(null);
     if (track.length) setFit(boundsOf(track, 0.003));
   }, [track]);
+
+  const scrub = useMemo(() => buildScrubber(q.data?.segments, stops), [q.data?.segments, stops]);
 
   const paths: MapPath[] = useMemo(() => (track.length > 1 ? [{ points: track, token: '--primary' }] : []), [track]);
   const markers: MapMarker[] = useMemo(
@@ -123,6 +125,8 @@ export function RoutesPage() {
             <Stat label={t('routes.mockPoints')} value={formatNumber(sum?.mockPoints ?? 0)} danger={(sum?.mockPoints ?? 0) > 0} />
           </dl>
 
+          {scrub && <RouteScrubber model={scrub} stops={stops} stopAt={stopAt} onSeek={(i) => { if (i !== null) showStop(i); else setStopAt(null); }} />}
+
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="h-[46vh] min-h-72 lg:h-[calc(100vh-22rem)] lg:min-h-96">
               <MapView label={t('routes.map', { name })} center={center} zoom={13} initialBounds={home ? null : DEFAULT_AREA} paths={paths} markers={markers} fit={fit} onMarkerClick={(id) => !id.startsWith('c') && showStop(Number(id))} />
@@ -155,6 +159,12 @@ export function RoutesPage() {
                               {s.start ? formatTime(s.start) : ''}{s.end ? ` – ${formatTime(s.end)}` : ''} · {formatDuration(s.dwellMin ?? 0)}
                               {typeof s.distanceToPinM === 'number' ? ` · ${t('routes.fromPin', { n: formatNumber(s.distanceToPinM) })}` : ''}
                             </p>
+                            {s.visitId && canCustomer && s.customerId && (
+                              <Link href={`/visits/?userId=${userId}&customer=${s.customerId}`} className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary hover:underline" aria-label={t('routes.visitLink')}>
+                                <ExternalLink className="size-3" aria-hidden />
+                                {t('routes.visitLink')}
+                              </Link>
+                            )}
                           </div>
                         </li>
                       );
@@ -216,6 +226,58 @@ export function RoutesPage() {
         </>
       ) : null}
     </>
+  );
+}
+
+function RouteScrubber({ model, stops, stopAt, onSeek }: { model: ScrubModel; stops: Stop[]; stopAt: number | null; onSeek: (i: number | null) => void }) {
+  const { t } = useTranslation('location');
+  const barRef = useRef<HTMLDivElement>(null);
+
+  const seekAt = (clientX: number) => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    onSeek(stopIndexAtPct(pct, model, stops));
+  };
+
+  return (
+    <div className="mb-4 rounded-md border border-line bg-surface p-3 shadow-e1">
+      <p className="mb-2 text-xs font-medium text-fg-secondary">{t('routes.scrubber')}</p>
+      <div
+        ref={barRef}
+        role="slider"
+        aria-label={t('routes.scrubberHelp')}
+        aria-valuenow={stopAt ?? 0}
+        className="relative h-5 cursor-pointer select-none rounded-sm bg-surface-subtle"
+        onClick={(e) => seekAt(e.clientX)}
+        onMouseMove={(e) => { if (e.buttons === 1) seekAt(e.clientX); }}
+        onTouchMove={(e) => { if (e.touches[0]) seekAt(e.touches[0].clientX); }}
+      >
+        {model.segments.map((seg, i) => (
+          <div
+            key={i}
+            className={cn('absolute top-1 h-3 rounded-sm', seg.kind === 'gap' ? 'bg-warning/40' : 'bg-primary/50')}
+            style={{ left: `${seg.leftPct}%`, width: `${seg.widthPct}%` }}
+            title={t(`routes.${seg.kind}`)}
+          />
+        ))}
+        {model.stops.map((s) => (
+          <button
+            key={s.index}
+            type="button"
+            aria-pressed={stopAt === s.index}
+            onClick={(e) => { e.stopPropagation(); onSeek(s.index); }}
+            className={cn('absolute top-0 size-5 -translate-x-1/2 rounded-full border-2 border-surface transition-transform hover:scale-125', stopAt === s.index ? 'scale-125 border-primary' : 'border-line', s.kind === 'customer' ? 'bg-success' : 'bg-warning')}
+            style={{ left: `${s.leftPct}%` }}
+            aria-label={t('routes.showStop', { n: formatNumber(s.index + 1) })}
+          />
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-xs text-fg-tertiary">
+        <span className="inline-flex items-center gap-1"><span className="inline-block size-2 rounded-sm bg-primary/50" />{t('routes.moving')}</span>
+        <span className="inline-flex items-center gap-1"><span className="inline-block size-2 rounded-sm bg-warning/40" />{t('routes.gap')}</span>
+      </div>
+    </div>
   );
 }
 

@@ -78,6 +78,11 @@
     "collection": "আদায়",
     "visit": "ভিজিট",
     "collectedField": "মাঠে আদায়",
-    "legendCollection": "আদায়ের জায়গা"
+    "legendCollection": "আদায়ের জায়গা",
+    "scrubber": "টাইমলাইন",
+    "scrubberHelp": "টেনে দেখুন কর্মী কখন কোথায় ছিলেন",
+    "moving": "চলেছেন",
+    "gap": "সংযোগ ছিল না",
+    "visitLink": "ভিজিট দেখুন"
   }
 }

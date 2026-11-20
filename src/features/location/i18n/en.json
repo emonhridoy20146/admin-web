@@ -78,6 +78,11 @@
     "collection": "Collection",
     "visit": "Visit",
     "collectedField": "Field collected",
-    "legendCollection": "Where money was collected"
+    "legendCollection": "Where money was collected",
+    "scrubber": "Timeline",
+    "scrubberHelp": "Drag to see where the staff was at a given time",
+    "moving": "Moving",
+    "gap": "No signal",
+    "visitLink": "See visit"
   }
 }

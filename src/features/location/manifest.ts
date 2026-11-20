@@ -7,8 +7,8 @@ export const locationManifest: FeatureManifest = {
   name: 'location',
   flag: 'module.location',
   routes: [
-    { path: '/live', title: 'location:live.title', permission: 'location.view', navGroup: 'field', icon: Navigation, order: 57 },
-    { path: '/routes', title: 'location:routes.title', permission: 'location.history.view', navGroup: 'field', icon: Route, order: 58 },
+    { path: '/live', title: 'location:live.title', permission: 'location.view', navGroup: 'insights', icon: Navigation, order: 10 },
+    { path: '/routes', title: 'location:routes.title', permission: 'location.history.view', navGroup: 'insights', icon: Route, order: 20 },
   ],
   permissions: ['location.view', 'location.history.view'],
   commands: [

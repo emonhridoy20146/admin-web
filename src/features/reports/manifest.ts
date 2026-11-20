@@ -7,9 +7,9 @@ export const reportsManifest: FeatureManifest = {
   name: 'reports',
   flag: 'module.reports',
   routes: [
-    { path: '/reports', title: 'reports:title', permission: 'report.view', navGroup: 'field', icon: ChartColumn, order: 80 },
-    { path: '/leaderboard', title: 'reports:lb.title', permission: 'report.view', navGroup: 'field', icon: Trophy, order: 67 },
-    { path: '/data-quality', title: 'reports:dq.title', permission: 'report.view', navGroup: 'field', icon: ShieldCheck, order: 81 },
+    { path: '/reports', title: 'reports:title', permission: 'report.view', navGroup: 'insights', icon: ChartColumn, order: 30 },
+    { path: '/leaderboard', title: 'reports:lb.title', permission: 'report.view', navGroup: 'insights', icon: Trophy, order: 40 },
+    { path: '/data-quality', title: 'reports:dq.title', permission: 'report.view', navGroup: 'insights', icon: ShieldCheck, order: 50 },
   ],
   permissions: ['report.view', 'report.export', 'collection.view', 'audit.view'],
   commands: [
