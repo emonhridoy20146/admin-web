@@ -4,14 +4,20 @@ import { EV, emit } from '@/shared/feature/events';
 
 export type SettingsMap = Record<string, unknown>;
 
-export function useSettings() {
-  return useQuery({ queryKey: ['admin-settings', 'global'], queryFn: async () => (await unwrap(api.GET('/settings'))) as SettingsMap });
+/** Org-wide settings, or what applies in one branch (its own values where it has them, the org's otherwise). */
+export function useSettings(branchId?: string) {
+  return useQuery({
+    queryKey: ['admin-settings', branchId ?? 'global'],
+    queryFn: async () => (await unwrap(api.GET('/settings', { params: { query: branchId ? { branchId } : {} } }))) as SettingsMap,
+  });
 }
 
+/** With `branchId` the changes are saved for that branch only (the server refuses keys a branch cannot override). */
 export function useSaveSettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ changes, reason }: { changes: SettingsMap; reason: string }) => unwrap(api.PATCH('/settings', { body: { changes, reason } })),
+    mutationFn: ({ changes, reason, branchId }: { changes: SettingsMap; reason: string; branchId?: string }) =>
+      unwrap(api.PATCH('/settings', { body: { changes, reason, ...(branchId ? { branchId } : {}) } })),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-settings'] }),
   });
 }

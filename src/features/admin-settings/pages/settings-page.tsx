@@ -6,7 +6,7 @@ import { Check } from 'lucide-react';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
 import { cn } from '@/shared/lib/cn';
-import { formatMoney, formatNumber, formatPercent } from '@/shared/lib/format';
+import { formatMoney, formatNumber, formatPercent, pickText } from '@/shared/lib/format';
 import { PageHeader } from '@/shared/ui/page';
 import { Card } from '@/shared/ui/card';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
@@ -14,27 +14,34 @@ import { Input, Select } from '@/shared/ui/form';
 import { Switch } from '@/shared/ui/primitives';
 import { StagedBar } from '@/shared/ui/staged-bar';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
+import { useBranches } from '@/features/shell';
 import { useSaveSettings, useSettings } from '../api/settings';
 import { BranchLocations } from '../components/branch-locations';
-import { diff, KNOWN, SECTIONS, toDraft, type Draft, type FieldDef } from '../model/schema';
+import { BreakWindows } from '../components/break-windows';
+import { diff, FIELDS, KNOWN, read, SECTIONS, toDraft, type BreakWindow, type Draft, type FieldDef } from '../model/schema';
 
 export function SettingsPage() {
   const { t } = useTranslation('admin-settings');
-  useUi((s) => s.locale);
+  const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const canManage = useCan('settings.manage');
-  const q = useSettings();
+  // '' = the whole organisation; a branch id = that branch's own values (only settings a branch may override).
+  const [branchId, setBranchId] = useState('');
+  const branches = useBranches();
+  const q = useSettings(branchId || undefined);
   const save = useSaveSettings();
   const [draft, setDraft] = useState<Draft>({});
   const [showErrors, setShowErrors] = useState(false);
   const [open, setOpen] = useState(false);
   const current = useMemo(() => q.data ?? {}, [q.data]);
-  const { changes, errors } = useMemo(() => diff(current, draft), [current, draft]);
-  const nChanges = Object.keys(changes).length;
+  const { changes, errors, fieldChanges } = useMemo(() => diff(current, draft, { branchOnly: !!branchId }), [current, draft, branchId]);
+  const nChanges = Object.keys(fieldChanges).length;
   const showBar = nChanges > 0 || Object.keys(errors).some((k) => k in draft);
   const others = Object.keys(current).filter((k) => !KNOWN.has(k));
+  const sections = SECTIONS.map((sec) => ({ ...sec, fields: sec.fields.filter((f) => !branchId || f.branch) })).filter((sec) => sec.fields.length > 0);
+  const branchName = pickText(branches.data?.find((b) => b.id === branchId)?.name, locale) || branchId;
 
-  const value = (f: FieldDef) => (f.key in draft ? draft[f.key] : toDraft(f, current[f.key]));
+  const value = (f: FieldDef) => (f.key in draft ? draft[f.key] : toDraft(f, read(f, current)));
   const set = (key: string, v: unknown) => setDraft((d) => ({ ...d, [key]: v }));
 
   return (
@@ -42,11 +49,27 @@ export function SettingsPage() {
       <PageHeader title={t('title')}>
         <span>{t('subtitle')}</span>
       </PageHeader>
+      {(branches.data?.length ?? 0) > 1 && (
+        <Card className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
+          <label htmlFor="set-scope" className="text-base font-medium text-fg">{t('scope.label')}</label>
+          <Select
+            id="set-scope"
+            value={branchId}
+            onChange={(e) => (setBranchId(e.target.value), setDraft({}), setShowErrors(false))}
+            className="w-full sm:w-72"
+            aria-describedby="set-scope-d"
+          >
+            <option value="">{t('scope.all')}</option>
+            {branches.data?.map((b) => <option key={b.id} value={b.id}>{pickText(b.name, locale) || b.code}</option>)}
+          </Select>
+          <p id="set-scope-d" className="basis-full text-sm text-fg-secondary">{branchId ? t('scope.branchNote', { name: branchName }) : t('scope.allNote')}</p>
+        </Card>
+      )}
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
       <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
         <nav aria-label={t('title')} className="hidden lg:block">
           <ul className="sticky top-20 space-y-0.5 text-sm">
-            {[...SECTIONS.map((s) => s.id), 'branches', ...(others.length ? ['other'] : [])].map((id) => (
+            {[...sections.map((s) => s.id), ...(branchId ? [] : ['branches', ...(others.length ? ['other'] : [])])].map((id) => (
               <li key={id}>
                 <a href={`#set-${id}`} className="block rounded-sm px-3 py-1.5 text-fg-secondary hover:bg-surface-hover hover:text-fg">{t(`sections.${id}.title`)}</a>
               </li>
@@ -56,7 +79,7 @@ export function SettingsPage() {
         <div className="min-w-0 space-y-5">
           {q.isLoading
             ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-56 w-full rounded-md" />)
-            : SECTIONS.map((sec) => (
+            : sections.map((sec) => (
                 <Card key={sec.id} id={`set-${sec.id}`} className="scroll-mt-20 p-0">
                   <div className="border-b border-line px-5 py-4">
                     <h2 className="text-md font-semibold text-fg">{t(`sections.${sec.id}.title`)}</h2>
@@ -64,13 +87,13 @@ export function SettingsPage() {
                   </div>
                   <div className="divide-y divide-line">
                     {sec.fields.map((f) => (
-                      <FieldRow key={f.key} f={f} value={value(f)} changed={f.key in changes} error={showErrors || f.key in draft ? errors[f.key] : undefined} disabled={!canManage} onChange={(v) => set(f.key, v)} />
+                      <FieldRow key={f.key} f={f} value={value(f)} changed={f.key in fieldChanges} error={showErrors || f.key in draft ? errors[f.key] : undefined} disabled={!canManage} onChange={(v) => set(f.key, v)} />
                     ))}
                   </div>
                 </Card>
               ))}
-          <BranchLocations canManage={canManage} />
-          {others.length > 0 && (
+          {!branchId && <BranchLocations canManage={canManage} />}
+          {!branchId && others.length > 0 && (
             <Card id="set-other" className="scroll-mt-20 p-0">
               <div className="border-b border-line px-5 py-4">
                 <h2 className="text-md font-semibold text-fg">{t('sections.other.title')}</h2>
@@ -105,23 +128,23 @@ export function SettingsPage() {
       <ReasonDialog
         open={open}
         onOpenChange={setOpen}
-        title={t('saveTitle', { n: formatNumber(nChanges) })}
+        title={branchId ? t('saveTitleBranch', { n: formatNumber(nChanges), name: branchName }) : t('saveTitle', { n: formatNumber(nChanges) })}
         minLength={5}
         confirmLabel={t('saveConfirm')}
         onSubmit={async ({ reason }) => {
-          await save.mutateAsync({ changes, reason });
+          await save.mutateAsync({ changes, reason, ...(branchId ? { branchId } : {}) });
           setDraft({});
           toast.success(t('saved'));
         }}
       >
         <ul className="max-h-56 space-y-1.5 overflow-y-auto rounded-sm border border-line bg-surface-subtle p-3 text-sm">
-          {Object.entries(changes).map(([k, v]) => {
-            const f = SECTIONS.flatMap((s) => s.fields).find((x) => x.key === k)!;
+          {Object.entries(fieldChanges).map(([k, v]) => {
+            const f = FIELDS.find((x) => x.key === k)!;
             return (
               <li key={k} className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <span className="text-fg-secondary">{t(`fields.${k}.label`)}</span>
                 <span className="tabular">
-                  <span className="text-fg-tertiary line-through">{display(f, current[k], t)}</span>
+                  <span className="text-fg-tertiary line-through">{display(f, read(f, current), t)}</span>
                   <span className="mx-1.5 text-fg-tertiary" aria-hidden>→</span>
                   <span className="font-medium text-fg">{display(f, v, t)}</span>
                 </span>
@@ -153,6 +176,10 @@ function display(f: FieldDef, v: unknown, t: (k: string, o?: Record<string, unkn
     }
     case 'multi':
       return (v as string[]).map((o) => t(`enum.${o}`)).join(', ') || t('none');
+    case 'windows': {
+      const names = t('weekdays', { returnObjects: true }) as unknown as string[];
+      return (v as BreakWindow[]).map((w) => `${names[w.weekday]} ${w.start}–${w.end}`).join(', ') || t('none');
+    }
     default:
       return String(v);
   }
@@ -225,6 +252,9 @@ function FieldRow({ f, value, onChange, changed, error, disabled }: { f: FieldDe
       );
       break;
     }
+    case 'windows':
+      control = <BreakWindows id={id} value={(value as BreakWindow[]) ?? []} onChange={onChange} disabled={disabled} describedBy={describedBy} invalid={!!error} />;
+      break;
     default:
       control = (
         <div className="flex items-center gap-2">
@@ -253,7 +283,7 @@ function FieldRow({ f, value, onChange, changed, error, disabled }: { f: FieldDe
         </label>
         <p id={describedBy} className={cn('mt-0.5 text-xs', error ? 'text-danger' : 'text-fg-tertiary')}>
           {error ? t(error) : help}
-          {!error && <span className="ms-1 font-mono">{f.key}</span>}
+          {!error && <span className="ms-1 font-mono">{f.src ? `${f.src.key}.${f.src.prop}` : f.key}</span>}
         </p>
       </div>
       <div className="sm:justify-self-end">{control}</div>

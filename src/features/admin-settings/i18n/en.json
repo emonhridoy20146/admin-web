@@ -4,7 +4,7 @@
   "sections": {
     "duty": {
       "title": "Duty hours",
-      "desc": "When staff are on duty. Location is only collected inside these hours."
+      "desc": "When staff are on duty, their weekly days off and breaks. Staff with a shift of their own (Calendar) follow that shift instead."
     },
     "cash": {
       "title": "Cash on hand",
@@ -20,11 +20,11 @@
     },
     "tags": {
       "title": "Bad-customer tags",
-      "desc": "Who may tag customers and whether a manager must approve."
+      "desc": "Whether a manager must approve a tag set by field staff."
     },
     "promises": {
       "title": "Promises to pay",
-      "desc": "Limits for promise dates staff can record."
+      "desc": "When a promise that was not kept is marked broken."
     },
     "location": {
       "title": "Location",
@@ -66,15 +66,27 @@
     },
     "duty.weeklyOff": {
       "label": "Weekly days off",
-      "help": "No duty, no tracking on these days."
+      "help": "No duty, no tracking on these days. Pick none for a branch that works every day."
     },
     "duty.lateGraceMin": {
       "label": "Late after",
-      "help": "Minutes after shift start before work-in counts as late."
+      "help": "Minutes after shift start before work-in counts as late. A late work-in is then late by the whole time since the shift start."
     },
     "duty.maxBreakMin": {
       "label": "Longest break",
       "help": "Total break minutes per day before it is flagged."
+    },
+    "duty.breakWindows": {
+      "label": "Weekly break windows",
+      "help": "Break time inside a window is allowed on top of the longest break and is never flagged. Example: Friday 12:30–15:30 for prayer and lunch in a branch with no weekly day off."
+    },
+    "attendance.overtimeAfterMin": {
+      "label": "Overtime counts from",
+      "help": "Work past the shift end is overtime only when it reaches this many minutes. Work on a weekly day off or a holiday always counts."
+    },
+    "attendance.lateDaysPerAbsent": {
+      "label": "Late days that make one absent day",
+      "help": "Counted per month for pay and shown next to absences. 0 turns the rule off."
     },
     "cash.limitPoisha": {
       "label": "Default cash limit",
@@ -84,29 +96,9 @@
       "label": "When over the limit",
       "help": ""
     },
-    "cash.warnAtRatio": {
-      "label": "Warn at",
-      "help": "Percent of the limit at which the collector and manager are warned."
-    },
-    "collections.farFromPinM": {
-      "label": "Far from pin",
-      "help": "Collections recorded further than this from the customer's pin are flagged."
-    },
     "collections.photoRequiredAbovePoisha": {
       "label": "Receipt photo above",
       "help": "0 means a photo is never required."
-    },
-    "tags.staffCanSet": {
-      "label": "Field staff can tag",
-      "help": "If off, only managers tag customers."
-    },
-    "tags.approvalMode": {
-      "label": "Manager approval",
-      "help": "Tags by staff wait for a manager before they apply."
-    },
-    "promises.maxHorizonDays": {
-      "label": "Furthest promise date",
-      "help": ""
     },
     "promises.graceDays": {
       "label": "Grace before broken",
@@ -135,6 +127,14 @@
     "location.stillSec": {
       "label": "Interval while still",
       "help": ""
+    },
+    "location.gapMin": {
+      "label": "Show a gap after",
+      "help": "A route with no point for longer than this is drawn with a gap."
+    },
+    "location.lostAfterMin": {
+      "label": "\"Tracking stopped\" after",
+      "help": "No point and no sign of life from the phone for this long while on duty raises the alert."
     },
     "app.minVersion": {
       "label": "Minimum app version",
@@ -179,6 +179,14 @@
     "customers.staffPinApproval": {
       "label": "Staff map pins",
       "help": "A pin for a customer with no usable location can apply at once; moving an existing pin always waits for a manager."
+    },
+    "collections.geofenceM": {
+      "label": "Far from pin",
+      "help": "A collection or visit recorded further than this from the customer pin is flagged, and the app asks the staff member to confirm."
+    },
+    "tags.requireApproval": {
+      "label": "Manager approval",
+      "help": "Tags by staff wait for a manager before they apply."
     }
   },
   "units": {
@@ -225,7 +233,10 @@
     "shiftOrder": "Must be after the shift start.",
     "slowFast": "Must be at least the moving interval.",
     "selfieEvents": "Pick at least one moment while photos are required.",
-    "ratio0": "Between 0 and 100."
+    "ratio0": "Between 0 and 100.",
+    "windowOrder": "A window must end after it starts.",
+    "windowOverlap": "Two windows of the same day overlap.",
+    "windowsMax": "At most 14 windows."
   },
   "changed_one": "{{n}} unsaved change",
   "changed_other": "{{n}} unsaved changes",
@@ -260,5 +271,29 @@
     "saved": "Map point of {{name}} saved",
     "remove": "Remove point",
     "removed": "Map point of {{name}} removed"
-  }
+  },
+  "scope": {
+    "label": "Settings for",
+    "all": "All branches (organisation)",
+    "allNote": "These values apply everywhere unless a branch has its own.",
+    "branchNote": "Only settings a branch can have of its own are shown. What you save here applies to {{name}} only."
+  },
+  "windows": {
+    "add": "Add a break window",
+    "none": "No break window.",
+    "day": "Day of window {{n}}",
+    "from": "Window {{n}} starts",
+    "to": "Window {{n}} ends",
+    "remove": "Remove window {{n}}"
+  },
+  "weekdaysLong": [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ],
+  "saveTitleBranch": "Save {{n}} setting changes for {{name}}?"
 }
