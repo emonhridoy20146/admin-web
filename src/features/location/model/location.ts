@@ -137,7 +137,9 @@ export function buildScrubber(
     return { from: s.from!, to: s.to!, kind: s.kind === 'gap' ? 'gap' : 'moving', leftPct: pct(fMs), widthPct: Math.max(0.3, pct(tMs) - pct(fMs)) };
   });
   const sortedStops = sortStops(stops);
-  const scrubStops: ScrubStop[] = sortedStops.filter((s) => s.start).map((s, i) => ({ index: i, leftPct: pct(Date.parse(s.start!)), kind: stopKind(s) }));
+  // `index` is the position in the sorted stop list (the same index `stopIndexAtPct` returns), so a stop
+  // without a start time must not shift the ones after it.
+  const scrubStops: ScrubStop[] = sortedStops.flatMap((s, i) => (s.start ? [{ index: i, leftPct: pct(Date.parse(s.start)), kind: stopKind(s) }] : []));
   return { startMs, totalMs, segments, stops: scrubStops };
 }
 
@@ -145,8 +147,8 @@ export function buildScrubber(
 export function stopIndexAtPct(pct: number, model: ScrubModel, sortedStops: Stop[]): number | null {
   const ms = model.startMs + (pct / 100) * model.totalMs;
   for (let i = sortedStops.length - 1; i >= 0; i--) {
-    const start = sortedStops[i].start ? Date.parse(sortedStops[i].start!) : null;
-    if (start !== null && start <= ms) return i;
+    const start = sortedStops[i]?.start;
+    if (start && Date.parse(start) <= ms) return i;
   }
   return null;
 }

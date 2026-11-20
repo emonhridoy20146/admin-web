@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodePolyline } from '@/shared/map/geo';
 import { locationManifest } from '../manifest';
-import { batteryPct, collectedOnRoute, counts, freshnessOf, gaps, sortLatest, sortStops, stopKind, workEvents } from '../model/location';
+import { batteryPct, buildScrubber, collectedOnRoute, counts, freshnessOf, gaps, sortLatest, sortStops, stopIndexAtPct, stopKind, workEvents } from '../model/location';
 
 describe('location', () => {
   it('has a manifest with both routes', () => {
@@ -65,5 +65,35 @@ describe('location', () => {
     expect(ev[1]).toMatchObject({ customerId: 'c1', amountPoisha: 150000, method: 'cash', receiptNo: 'R-1' });
     expect(ev[2]).toMatchObject({ customerId: null, lat: null, amountPoisha: null });
     expect(collectedOnRoute(ev)).toBe(150000);
+  });
+  it('builds the time scrubber and finds the stop under a position', () => {
+    expect(buildScrubber([], [])).toBeNull();
+    expect(buildScrubber([{ from: '2026-11-16T03:00:00Z', to: '2026-11-16T03:00:00Z' }], [])).toBeNull();
+    const stops = [
+      { start: '2026-11-16T05:00:00Z', customerId: 'c1' },
+      { start: '2026-11-16T03:30:00Z' },
+      { customerId: 'c2' },
+    ];
+    const model = buildScrubber(
+      [
+        { from: '2026-11-16T03:00:00Z', to: '2026-11-16T04:00:00Z', kind: 'moving' },
+        { from: '2026-11-16T04:00:00Z', to: '2026-11-16T07:00:00Z', kind: 'gap' },
+      ],
+      stops,
+    )!;
+    expect(model.totalMs).toBe(4 * 3600_000);
+    expect(model.segments.map((s) => [s.kind, s.leftPct, s.widthPct])).toEqual([
+      ['moving', 0, 25],
+      ['gap', 25, 75],
+    ]);
+    const sorted = sortStops(stops);
+    // Every marker points at its place in the sorted list, also when a stop has no start time.
+    for (const m of model.stops) expect(sorted[m.index]!.start).toBeTruthy();
+    expect(model.stops).toHaveLength(2);
+    const first = model.stops.find((m) => m.leftPct === 12.5)!;
+    expect(sorted[first.index]!.start).toBe('2026-11-16T03:30:00Z');
+    expect(stopIndexAtPct(5, model, sorted)).toBeNull();
+    expect(stopIndexAtPct(20, model, sorted)).toBe(first.index);
+    expect(sorted[stopIndexAtPct(100, model, sorted)!]!.start).toBe('2026-11-16T05:00:00Z');
   });
 });

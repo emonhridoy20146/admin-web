@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additive; PR #16 gave 1.17.0, PR #18 gave 1.19.0 (several branches), PR #17 gives 1.20.0 with tasks; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+### Fixed (2026-11-21: `main` did not pass CI)
+- Route history time scrubber (added 2026-11-20, sidebar regrouped into Field work / People / Insights / Admin the same day): `stopIndexAtPct` did not compile under strict index checks, so `pnpm typecheck` and the CI run on `main` failed. Fixed, and a scrubber marker now keeps its place in the sorted stop list when another stop has no start time (it pointed at the wrong stop before). Unit test for the scrubber model added.
 ### Added (2026-11-20: admin can create promises and collect cash; auto ERP sync)
 - **Create Promise** from the promises page: admin users with `promise.create` can record a promise on behalf of a customer via a dialog with customer picker, amount, date, plan and note. No device location required from the admin panel.
 - **Collect Cash** from the collections page: admin users with `collection.record` can record a cash collection via a dialog with customer picker, amount, payment method, receipt number, transaction ID, plan and note. `geo` is sent as `null` with `geoUnavailableReason: permission_denied` since the admin panel has no GPS.
