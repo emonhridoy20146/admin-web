@@ -96,6 +96,44 @@ test('system health: server, ERP link and phone sync are shown, problems first',
   expect(await page.locator('tbody tr').count()).toBeGreaterThan(5);
 });
 
+test('settings: one branch gets its own duty hours: no weekly day off and a Friday break window; the organisation keeps Friday off', async ({ page }) => {
+  await login(page);
+  await nav(page, settingsBn.title);
+  const off = page.getByRole('group', { name: settingsBn.fields['duty.weeklyOff'].label });
+  const friday = settingsBn.weekdays[5]!;
+  await expect(off.getByRole('button', { name: friday, pressed: true })).toBeVisible();
+
+  // switch to the branch: only what a branch may override stays on the page
+  await page.getByLabel(settingsBn.scope.label).selectOption({ label: 'ভোলা' });
+  await expect(page.getByText(settingsBn.scope.branchNote.replace('{{name}}', 'ভোলা'))).toBeVisible();
+  await expect(page.getByLabel(settingsBn.fields['app.minVersion'].label)).toHaveCount(0);
+  await expect(page.getByLabel(settingsBn.fields['attendance.lateDaysPerAbsent'].label)).toHaveCount(0);
+
+  await off.getByRole('button', { name: friday }).click();
+  await expect(off.getByRole('button', { name: friday, pressed: false })).toBeVisible();
+  const windows = page.getByRole('group', { name: settingsBn.fields['duty.breakWindows'].label });
+  await expect(windows.getByText(settingsBn.windows.none)).toBeVisible();
+  await windows.getByRole('button', { name: settingsBn.windows.add }).click();
+  await expect(windows.getByLabel(settingsBn.windows.from.replace('{{n}}', '১'))).toHaveValue('12:30');
+  // a window that ends before it starts is refused before anything is sent
+  await windows.getByLabel(settingsBn.windows.to.replace('{{n}}', '১')).fill('11:00');
+  await page.getByRole('button', { name: settingsBn.review }).click();
+  await expect(page.getByText(settingsBn.errors.windowOrder)).toBeVisible();
+  await windows.getByLabel(settingsBn.windows.to.replace('{{n}}', '১')).fill('15:30');
+
+  // by keyboard: the "fix the fields" toast is still over the corner of the save bar
+  await page.getByRole('button', { name: settingsBn.review }).press('Enter');
+  await confirmWithReason(page, 'ভোলায় সাপ্তাহিক ছুটি নেই, শুক্রবার লম্বা বিরতি', settingsBn.saveConfirm);
+  await expect(page.getByText(settingsBn.saved)).toBeVisible();
+  await expect(off.getByRole('button', { name: friday, pressed: false })).toBeVisible();
+  await expect(windows.getByLabel(settingsBn.windows.to.replace('{{n}}', '১'))).toHaveValue('15:30');
+
+  // the organisation's own value did not change
+  await page.getByLabel(settingsBn.scope.label).selectOption({ label: settingsBn.scope.all });
+  await expect(off.getByRole('button', { name: friday, pressed: true })).toBeVisible();
+  await expect(windows.getByText(settingsBn.windows.none)).toBeVisible();
+});
+
 test('settings: attendance photo is required by default; drop one moment and save with a reason', async ({ page }) => {
   await login(page);
   await nav(page, settingsBn.title);

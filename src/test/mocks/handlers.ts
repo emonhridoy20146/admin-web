@@ -951,14 +951,23 @@ export const handlers = [
   })),
 
   // ---------- settings & flags ----------
-  http.get(`${BASE}/settings`, authed(() => HttpResponse.json(db.settings))),
+  http.get(`${BASE}/settings`, authed(({ url }) => {
+    const branchId = url.searchParams.get('branchId');
+    return HttpResponse.json({ ...db.settings, ...(branchId ? db.settingOverrides[branchId] : {}) });
+  })),
   http.patch(`${BASE}/settings`, authed(async ({ request, ctx }) => {
     const deny = need(ctx, 'settings.manage');
     if (deny) return deny;
     const b = (await request.json()) as { changes: Record<string, unknown>; reason: string; branchId?: string };
-    const before = Object.fromEntries(Object.keys(b.changes).map((k) => [k, db.settings[k]]));
-    Object.assign(db.settings, b.changes);
-    db.addAudit({ actor: actor(ctx.user), action: 'settings.update', entity: 'settings', entityId: 'global', before, after: b.changes, reason: b.reason });
+    // as field-api: a key it does not define is refused, and so is a branch value for an org-only setting
+    const unknown = Object.keys(b.changes).find((k) => !(k in db.settings));
+    if (unknown) return problem(400, 'VALIDATION_FAILED', 'Unknown setting', unknown, { fields: [{ path: unknown, message: 'Unknown setting' }] });
+    const orgOnly = b.branchId ? Object.keys(b.changes).find((k) => !db.BRANCH_SETTINGS.has(k)) : undefined;
+    if (orgOnly) return problem(422, 'BUSINESS_RULE', 'SETTING_NOT_BRANCH_OVERRIDABLE', orgOnly, { key: orgOnly });
+    const target = b.branchId ? (db.settingOverrides[b.branchId] ??= {}) : db.settings;
+    const before = Object.fromEntries(Object.keys(b.changes).map((k) => [k, target[k] ?? db.settings[k]]));
+    Object.assign(target, b.changes);
+    db.addAudit({ actor: actor(ctx.user), action: 'settings.update', entity: 'settings', entityId: b.branchId ?? 'global', before, after: b.changes, reason: b.reason });
     return HttpResponse.json({});
   })),
   http.get(`${BASE}/feature-flags/effective`, authed(({ url, ctx }) => {

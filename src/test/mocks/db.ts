@@ -494,17 +494,22 @@ export function effective(u: MockUser) {
 }
 
 // ---------- settings ----------
+/** The keys field-api defines (its module manifests). `PATCH /settings` answers 400 for any other key, as the server does. */
 export const settings: Record<string, unknown> = {
-  'duty.shiftStart': '09:00', 'duty.shiftEnd': '18:00', 'duty.weeklyOff': [5], 'duty.lateGraceMin': 15, 'duty.maxBreakMin': 60,
-  'cash.limitPoisha': 5_000_000, 'cash.limitMode': 'warn', 'cash.warnAtRatio': 0.8,
-  'location.trackingProvider': 'free', 'location.providerConfig': {}, 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50, 'location.fastSec': 15, 'location.slowSec': 45, 'location.stillSec': 180,
-  'collections.farFromPinM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.approvalMode': false, 'tags.staffCanSet': true,
-  'promises.maxHorizonDays': 60, 'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
+  'attendance.defaultShift': { start: '09:00', end: '18:00', weeklyOff: [5], lateGraceMin: 15, maxBreakMin: 60, breakWindows: [] },
+  'attendance.overtimeAfterMin': 30, 'attendance.lateDaysPerAbsent': 2,
+  'cash.limitPoisha': 5_000_000, 'cash.limitMode': 'warn',
+  'location.trackingProvider': 'free', 'location.providerConfig': {}, 'location.retentionDays': 90, 'location.trackDuringBreak': false, 'location.maxAccuracyM': 50,
+  'location.sampling': { fastSec: 15, slowSec: 45, stillSec: 180, distanceFilterM: 25, maxAccuracyM: 50 }, 'location.gapMin': 10, 'location.lostAfterMin': 30,
+  'collections.geofenceM': 300, 'collections.photoRequiredAbovePoisha': 0, 'tags.requireApproval': false,
+  'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
   'reports.leaderboardVisibleToStaff': false, 'reports.leaderboardMinPresentDays': 1, 'reports.dataQualityMaxBranchKm': 30,
   'customers.staffVisibility': 'branch', 'customers.staffPinApproval': 'when_missing',
-  'map.tileProvider': 'protomaps-bd',
 };
-
+/** Values a branch has of its own (branchId → key → value); everything else falls back to `settings`. */
+export const settingOverrides: Record<string, Record<string, unknown>> = {};
+/** Settings a branch may override (`branchOverridable` in field-api). */
+export const BRANCH_SETTINGS = new Set(['attendance.defaultShift', 'attendance.overtimeAfterMin', 'attendance.selfieRequired', 'attendance.selfieEvents', 'cash.limitPoisha', 'cash.limitMode', 'collections.geofenceM', 'collections.photoRequiredAbovePoisha', 'customers.staffVisibility', 'customers.staffPinApproval', 'tags.requireApproval', 'promises.graceDays', 'location.sampling', 'location.trackDuringBreak', 'cowork.visitCredit', 'cowork.maxMembers', 'reports.leaderboardVisibleToStaff', 'reports.leaderboardMinPresentDays', 'reports.dataQualityMaxBranchKm']);
 // ---------- audit ----------
 export const audit: S['AuditEntry'][] = [];
 export function addAudit(e: Omit<S['AuditEntry'], 'id' | 'at' | 'requestId'> & { at?: string }) {
@@ -971,8 +976,10 @@ export function branchDefault(branchId: string, date: string): S['TargetValue'] 
 }
 /** No target on the weekly off, a holiday or approved leave. */
 export function isWorkingDay(u: MockUser, date: string): boolean {
-  const off = (settings['duty.weeklyOff'] as number[] | undefined) ?? [5];
-  if (off.includes(DateTime.fromISO(date, { zone: ZONE }).weekday)) return false;
+  const own = u.branchIds?.[0] ? settingOverrides[u.branchIds[0]]?.['attendance.defaultShift'] : undefined;
+  const off = ((own ?? settings['attendance.defaultShift']) as { weeklyOff?: number[] }).weeklyOff ?? [5];
+  // luxon: Monday = 1 … Sunday = 7; the setting: Sunday = 0 … Saturday = 6
+  if (off.includes(DateTime.fromISO(date, { zone: ZONE }).weekday % 7)) return false;
   return attendanceDay(u, date).status !== 'leave';
 }
 export function staffTarget(u: MockUser, date: string): S['StaffTarget'] {
