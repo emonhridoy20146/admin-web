@@ -1,7 +1,7 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.20.0** (1.14.0 → 1.20.0, additive; PR #16 gave 1.17.0, PR #18 gave 1.19.0 (several branches), PR #17 gives 1.20.0 with tasks; 1.18.0 is the storage change, no admin screen; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.22.0** (2026-11-21: 1.20.0 → 1.22.0, additive; 1.20.1 resync floor and contract in health, 1.21.0 attendance photo linked after the event, 1.22.0 rough indoor points on the live map; no screen change needed; types regenerated with `pnpm gen:api`).
 ### Fixed (2026-11-21: `main` did not pass CI)
 - Route history time scrubber (added 2026-11-20, sidebar regrouped into Field work / People / Insights / Admin the same day): `stopIndexAtPct` did not compile under strict index checks, so `pnpm typecheck` and the CI run on `main` failed. Fixed, and a scrubber marker now keeps its place in the sorted stop list when another stop has no start time (it pointed at the wrong stop before). Unit test for the scrubber model added.
 ### Added (2026-11-20: admin can create promises and collect cash; auto ERP sync)
