@@ -111,7 +111,8 @@ export function CustomerDetailPage() {
                 <RefreshCw className="size-3.5" aria-hidden />
                 {t('refresh')}
               </Button>
-              <PrintButton name={`${c.code ?? ''} ${pickText(c.name, locale)}`.trim()} />
+              {/* an open invoice has its own print button (it names the file after the invoice) */}
+              {!url.get('invoice') && <PrintButton name={`${c.code ?? ''} ${pickText(c.name, locale)}`.trim()} />}
             </div>
           </header>
 
