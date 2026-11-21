@@ -164,6 +164,10 @@
       "label": "Field staff can see the leaderboard",
       "help": "Managers always see it. When on, staff see their own branch in the app."
     },
+    "reports.leaderboardScope": {
+      "label": "Collection board covers",
+      "help": "The board of verified collections (Reports → Leaderboard, and the app). Every branch: everyone who may open it sees all branches. Own branches: each person sees only the branches they belong to."
+    },
     "reports.leaderboardMinPresentDays": {
       "label": "Days present to be ranked",
       "help": "Staff present fewer days in the period are listed without a rank. 0 ranks everyone."
@@ -211,7 +215,9 @@
     "branch": "Whole branch",
     "assigned": "Assigned only",
     "when_missing": "Apply at once when the customer has no pin",
-    "always": "Always wait for a manager"
+    "always": "Always wait for a manager",
+    "boardAll": "Every branch",
+    "boardBranch": "Own branches only"
   },
   "weekdays": [
     "Sun",

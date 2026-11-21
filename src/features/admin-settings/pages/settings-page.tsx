@@ -169,7 +169,7 @@ function display(f: FieldDef, v: unknown, t: (k: string, o?: Record<string, unkn
     case 'bool':
       return v ? t('on') : t('off');
     case 'enum':
-      return t(`enum.${String(v)}`);
+      return t(`enum.${f.labels?.[String(v)] ?? String(v)}`);
     case 'weekdays': {
       const names = t('weekdays', { returnObjects: true }) as unknown as string[];
       return (v as number[]).map((d) => names[d]).join(', ') || '—';
@@ -200,7 +200,7 @@ function FieldRow({ f, value, onChange, changed, error, disabled }: { f: FieldDe
     case 'enum':
       control = (
         <Select id={id} value={String(value)} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="w-full sm:w-64" aria-describedby={describedBy}>
-          {f.options.map((o) => <option key={o} value={o}>{t(`enum.${o}`)}</option>)}
+          {f.options.map((o) => <option key={o} value={o}>{t(`enum.${f.labels?.[o] ?? o}`)}</option>)}
         </Select>
       );
       break;

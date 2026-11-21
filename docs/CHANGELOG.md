@@ -1,7 +1,11 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.25.0** (2026-11-21: 1.20.0 → 1.25.0 in four steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.26.0** (2026-11-21: 1.20.0 → 1.26.0 in five steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.26.0, owner request 2026-11-21: one board of verified collections; FR-W-043, master FR-REP-007)
+- **"আদায় বোর্ড" on the Leaderboard page** (switch at the top; the branch ranking stays the default): everyone who collected, in every branch, ranked by the money the ERP has accepted, for a month or for all time. A crown marks first place; a manager or admin who collects is on it with a role mark. Pending money is not counted, and the note under the table says these are field-system amounts, not ERP balances.
+- **Settings → Reports → "আদায় বোর্ডে যা থাকবে"** (`reports.leaderboardScope`): every branch, or each person's own branches only.
+- Mock API: `GET /reports/collection-board` by the server's rules. Tests: unit, journey with axe.
 ### Added (contract 1.25.0, owner request 2026-11-21: overtime, break over the limit, late days as absences; FR-W-042)
 - **Attendance, day list**: a new "ওভারটাইম" column; a break over the limit is red with a "বিরতি … বেশি" mark (break time inside the branch's break window is not counted by the server); a weekly day off or holiday that was worked has the mark "ছুটির দিনে কাজ".
 - **Attendance, month**: two new columns per staff member, "দেরিতে অনুপস্থিত" (absent days the late days of the month count as; explained on the header, never added into "অনুপস্থিত") and "ওভারটাইম" (total). A day's tooltip names its overtime and over-break.

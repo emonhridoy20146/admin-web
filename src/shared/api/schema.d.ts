@@ -2364,6 +2364,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/collection-board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Who collected the most money that the ERP has accepted (1.26.0, FR-REP-007, ADR-045), for a month or for all time. Field collection amounts with status posted or resolved_posted only; money still pending in the ERP is never counted. Not a balance.
+         *     Everyone who collected is on it whatever their role (a manager or an admin is ranked by collections alone); active field staff with nothing posted are listed with rank null.
+         *     Access as the leaderboard: report.view, or setting reports.leaderboardVisibleToStaff true for the caller's own branch; otherwise 403 FORBIDDEN.
+         *     With setting reports.leaderboardScope = all (default) the board covers every branch for everyone who may open it; with branch a person sees the branches of their own scope (field staff: their home branch) and another branchId answers 404.
+         *     Equal amounts share a rank (1, 2, 2, 4).
+         */
+        get: operations["collectionBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports/data-quality": {
         parameters: {
             query?: never;
@@ -4293,6 +4316,47 @@ export interface components {
             me?: {
                 rank?: number | null;
                 of?: number;
+            } | null;
+        };
+        /** @description 1.26.0 */
+        CollectionBoardRow: {
+            /** @description null while nothing of the person is posted in the period */
+            rank: number | null;
+            userId: string;
+            name: components["schemas"]["I18nText"];
+            employeeCode: string;
+            role: components["schemas"]["Role"];
+            /** @description The person's home branch */
+            branchId?: string | null;
+            /** @description Sum of the person's field collections the ERP has accepted in the period */
+            postedPoisha: number;
+            /** @description How many collections that is */
+            count: number;
+            /** @description The caller */
+            me: boolean;
+        };
+        /** @description 1.26.0 */
+        CollectionBoard: {
+            /** @enum {string} */
+            period: "month" | "all";
+            /** @description YYYY-MM; null for all time */
+            month: string | null;
+            /**
+             * @description Setting reports.leaderboardScope
+             * @enum {string}
+             */
+            scope: "all" | "branch";
+            /** @description The branch asked for; null when not narrowed */
+            branchId: string | null;
+            /** Format: date-time */
+            generatedAt: string;
+            items: components["schemas"]["CollectionBoardRow"][];
+            /** @description The caller's place; null when the caller is not on the board */
+            me: {
+                rank?: number | null;
+                /** @description How many people are ranked */
+                of?: number;
+                postedPoisha?: number;
             } | null;
         };
         /** @enum {string} */
@@ -8809,6 +8873,33 @@ export interface operations {
                     "application/json": components["schemas"]["Leaderboard"];
                 };
             };
+        };
+    };
+    collectionBoard: {
+        parameters: {
+            query: {
+                period: "month" | "all";
+                month?: string;
+                branchId?: components["parameters"]["BranchId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionBoard"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     dataQuality: {

@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import targetsBn from '../../src/features/targets/i18n/bn.json' with { type: 'json' };
 import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' };
@@ -108,3 +109,32 @@ test('leaderboard: month ranking, switch the measure and the period, equal value
   await expect(page.getByLabel(repBn.lb.when)).toHaveAttribute('type', 'date');
   await expect(page.locator('tbody tr').first()).toBeVisible();
 });
+
+test('collection board: verified money of everyone across branches, a crown on first place, all time and one month', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, repBn.lb.title);
+  await page.getByRole('group', { name: repBn.lb.board.which }).getByRole('button', { name: repBn.lb.board.tabs.collection }).click();
+  await page.waitForURL(/board=collection/);
+  await expect(page.getByText(repBn.lb.board.subtitle)).toBeVisible();
+  await expect(page.getByLabel(repBn.lb.board.month)).toHaveAttribute('type', 'month');
+
+  // all time (the mock has a week of collections, so there is always somebody on top)
+  await page.getByRole('group', { name: repBn.lb.period }).getByRole('button', { name: repBn.lb.board.periods.all }).click();
+  await page.waitForURL(/span=all/);
+  await expect(page.getByLabel(repBn.lb.board.month)).toHaveCount(0);
+  await expect(page.getByRole('columnheader', { name: repBn.lb.board.posted })).toBeVisible();
+  // a manager of one branch sees every branch on this board
+  await expect(page.getByText(repBn.lb.board.scope.all, { exact: true })).toBeVisible();
+  const first = page.locator('tbody tr').first();
+  await expect(first.locator('td').first()).toContainText('১');
+  await expect(first.getByRole('img', { name: repBn.lb.board.first })).toBeVisible();
+  await expect(page.getByRole('list', { name: repBn.lb.top }).getByRole('listitem')).toHaveCount(3);
+  await expect(page.getByText(repBn.lb.board.how)).toBeVisible();
+  const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+
+  // back to the ranking: its own controls return
+  await page.getByRole('group', { name: repBn.lb.board.which }).getByRole('button', { name: repBn.lb.board.tabs.ranking }).click();
+  await expect(page.getByRole('group', { name: repBn.lb.by })).toBeVisible();
+});
+

@@ -16,7 +16,8 @@ import { Avatar, Segmented } from '@/shared/ui/primitives';
 import { MoneyText } from '@/shared/ui/money';
 import { PrintButton, PrintOnly } from '@/shared/ui/print';
 import { useLeaderboard, type LeaderboardRow, type LeaderMetric } from '../api/reports';
-import { creditDecimals, METRICS, PERIODS, periodDate, sharedRanks, splitRanked } from '../model/leaderboard';
+import { CollectionBoard } from '../components/collection-board';
+import { BOARDS, creditDecimals, METRICS, PERIODS, periodDate, sharedRanks, splitRanked } from '../model/leaderboard';
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_MONTH = /^\d{4}-\d{2}$/;
@@ -34,10 +35,11 @@ export function LeaderboardPage() {
   const url = useUrlState();
   const today = todayDhaka();
   const period = oneOf(url.get('period'), PERIODS, 'month');
+  const board = oneOf(url.get('board'), BOARDS, 'ranking');
   const metric = oneOf(url.get('metric'), METRICS, 'collected');
   const raw = url.get('date');
   const date = period === 'month' ? (ISO_MONTH.test(raw) ? raw : today.slice(0, 7)) : ISO_DAY.test(raw) ? raw : today;
-  const q = useLeaderboard(period, periodDate(period, date), metric);
+  const q = useLeaderboard(period, periodDate(period, date), metric, board === 'ranking');
   const rows = q.data?.items ?? [];
   const { ranked, unranked } = splitRanked(rows);
   const shared = sharedRanks(rows);
@@ -96,9 +98,15 @@ export function LeaderboardPage() {
 
   return (
     <>
-      <PageHeader title={t('lb.title')} actions={<PrintButton name={`${t('lb.title')} - ${t(`lb.metric.${metric}`)} - ${periodDate(period, date)}`} />}>
-        <span>{t('lb.subtitle')}</span>
+      <PageHeader title={t('lb.title')} actions={<PrintButton name={board === 'collection' ? t('lb.board.title') : `${t('lb.title')} - ${t(`lb.metric.${metric}`)} - ${periodDate(period, date)}`} />}>
+        <span>{board === 'collection' ? t('lb.board.subtitle') : t('lb.subtitle')}</span>
       </PageHeader>
+
+      <div className="mb-4">
+        <Segmented label={t('lb.board.which')} value={board} onChange={(v) => url.set({ board: v === 'ranking' ? null : v, period: null, date: null, metric: null, span: null, month: null })} options={BOARDS.map((b) => ({ value: b, label: t(`lb.board.tabs.${b}`) }))} />
+      </div>
+      {board === 'collection' ? <CollectionBoard /> : (
+      <>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
@@ -158,6 +166,8 @@ export function LeaderboardPage() {
         <Badge tone="neutral" icon={false}>{t(`lb.metric.${metric}`)}</Badge>
         {t(`lb.how.${metric}`)}
       </p>
+      </>
+      )}
     </>
   );
 }

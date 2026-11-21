@@ -1,7 +1,10 @@
-import type { LeaderboardRow, LeaderMetric, LeaderPeriod } from '../api/reports';
+import type { BoardPeriod, LeaderboardRow, LeaderMetric, LeaderPeriod } from '../api/reports';
 
 export const PERIODS: LeaderPeriod[] = ['day', 'month'];
 export const METRICS: LeaderMetric[] = ['collected', 'visit_credit', 'promises_kept', 'target_achievement'];
+/** The two boards of the page: the branch ranking by one measure (FR-REP-005) and verified collections of everyone (FR-REP-007). */
+export const BOARDS = ['ranking', 'collection'] as const;
+export const BOARD_PERIODS: BoardPeriod[] = ['month', 'all'];
 
 /** The API takes YYYY-MM-DD for a day and YYYY-MM for a month. */
 export function periodDate(period: LeaderPeriod, date: string): string {

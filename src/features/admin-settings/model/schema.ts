@@ -13,7 +13,8 @@ type Kind =
   /** a share shown as whole percent; `min` defaults to 1 % (0 % allowed only where the setting means "nothing") */
   | { type: 'ratio'; min?: number }
   | { type: 'bool' }
-  | { type: 'enum'; options: string[] }
+  /** `labels` names the i18n key (`enum.<key>`) of an option whose plain name means something else in another setting */
+  | { type: 'enum'; options: string[]; labels?: Record<string, string> }
   | { type: 'weekdays' }
   /** any subset of fixed options, stored as a JSON array in the options' order */
   | { type: 'multi'; options: string[] }
@@ -118,6 +119,8 @@ export const SECTIONS: SectionDef[] = [
     fields: [
       // FR-REP-005 / OD-15: managers always see the leaderboard; field staff only when this is on
       { key: 'reports.leaderboardVisibleToStaff', type: 'bool', branch: true },
+      // FR-REP-007: the collection board covers every branch, or only the viewer's own
+      { key: 'reports.leaderboardScope', type: 'enum', options: ['all', 'branch'], labels: { all: 'boardAll', branch: 'boardBranch' } },
       { key: 'reports.leaderboardMinPresentDays', type: 'int', min: 0, max: 31, unit: 'days', branch: true },
       // FR-CUS-009: a pin further than this from its branch is reported as far_from_branch
       { key: 'reports.dataQualityMaxBranchKm', type: 'int', min: 1, max: 500, unit: 'km', branch: true },
