@@ -2242,6 +2242,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description activity.view (1.28.0, FR-ACT-001; module `activity`, flag `module.activity`). Staff activity in the caller's branch scope, newest first: collections taken, visits recorded, promises made, map pins set or proposed by staff. Each line names the person and the customer.
+         *     `unseen` counts the lines since the caller last called POST /activity/seen (capped at 99), whatever the filters; `items[].unseen` marks them. Lines are kept 45 days; the records themselves stay in their modules.
+         */
+        get: operations["listActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activity/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description activity.view (1.28.0). The caller has looked at the feed; `unseen` starts again from now. Per user, idempotent. */
+        post: operations["markActivitySeen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/inbox/{id}/resolve": {
         parameters: {
             query?: never;
@@ -4154,6 +4191,52 @@ export interface components {
             target?: components["schemas"]["MyTarget"];
             /** Format: date-time */
             serverTime?: string;
+        };
+        /** @description 1.28.0 (FR-ACT-001) */
+        ActivityItem: {
+            id: string;
+            /** @enum {string} */
+            type: "collection" | "visit" | "promise" | "pin";
+            /** Format: date-time */
+            at: string;
+            branchId: string | null;
+            /** @description The staff member; null only for lines written before the event named them */
+            actor: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                employeeCode?: string;
+            } | null;
+            customer: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                code?: string;
+            } | null;
+            /**
+             * @description What a click opens (a pin opens the customer)
+             * @enum {string}
+             */
+            entity: "collection" | "visit" | "promise" | "customer";
+            entityId: string;
+            /** @description Small facts for the line: collection amountPoisha, method, flags; visit outcome, flags; promise promisedDate; pin applied (true = applied at once, false = waits for a manager). Field-system activity, not ERP money. */
+            data: {
+                amountPoisha?: number;
+                method?: string;
+                outcome?: string;
+                /** Format: date */
+                promisedDate?: string;
+                applied?: boolean;
+                flags?: string[];
+            };
+            /** @description Newer than the caller's last "seen" */
+            unseen: boolean;
+        };
+        /** @description 1.28.0 */
+        ActivityFeed: {
+            items: components["schemas"]["ActivityItem"][];
+            unseen: number;
+            /** Format: date-time */
+            seenAt: string | null;
+            nextCursor: string | null;
         };
         InboxItem: {
             id?: string;
@@ -8757,6 +8840,59 @@ export interface operations {
                             [key: string]: number;
                         };
                         nextCursor?: string | null;
+                    };
+                };
+            };
+        };
+    };
+    listActivity: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                type?: "collection" | "visit" | "promise" | "pin";
+                /** @description Only what this staff member did */
+                userId?: string;
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityFeed"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    markActivitySeen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        seenAt: string;
+                        unseen: number;
                     };
                 };
             };

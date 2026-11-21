@@ -465,7 +465,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.activity', 'Staff activity feed', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -805,6 +805,39 @@ export const proposals: MockProposal[] = [];
     });
   });
 }
+
+// ---------- activity (FR-ACT-001, contract 1.28.0) ----------
+/** The staff activity feed, derived from the mock records the way field-api writes it from events; newest first. */
+export const activity: S['ActivityItem'][] = [];
+/** Per user: when they last marked the feed as seen. */
+export const activitySeen = new Map<string, string>();
+{
+  const person = (id?: string | null) => {
+    const u = userById(id);
+    return u ? { id: u.id!, name: { bn: u.name?.bn ?? '', en: u.name?.en ?? '' }, employeeCode: u.employeeCode ?? '' } : null;
+  };
+  const cust = (id?: string | null) => {
+    const c = customers.find((x) => x.item.id === id);
+    return c ? { id: c.item.id!, name: { bn: c.item.name?.bn ?? '', en: c.item.name?.en ?? '' }, code: c.item.code ?? '' } : null;
+  };
+  const since = now().minus({ days: 3 });
+  const recent = (iso?: string | null) => !!iso && DateTime.fromISO(iso) >= since && DateTime.fromISO(iso) <= now();
+  const push = (x: Omit<S['ActivityItem'], 'id' | 'unseen'>) => activity.push({ ...x, id: oid('67a0'), unseen: true });
+  for (const c of collections)
+    if (recent(c.recordedAt) && c.status !== 'voided')
+      push({ type: 'collection', at: c.recordedAt!, branchId: collectionBranch(c) ?? null, actor: person(c.collector?.id), customer: cust(c.customer?.id), entity: 'collection', entityId: c.id!, data: { amountPoisha: c.amountPoisha, method: c.method, ...(c.flags?.length ? { flags: [...c.flags] } : {}) } });
+  for (const v of visits)
+    if (recent(v.row.checkInAt))
+      push({ type: 'visit', at: v.row.checkInAt!, branchId: v.branchId, actor: person(v.row.userId), customer: cust(v.row.customerId), entity: 'visit', entityId: v.row.id!, data: { ...(v.row.outcome ? { outcome: v.row.outcome } : {}) } });
+  for (const p of promises)
+    if (recent(p.row.createdAt))
+      push({ type: 'promise', at: p.row.createdAt!, branchId: p.branchId, actor: person(p.row.owner?.id), customer: cust(p.row.customer?.id), entity: 'promise', entityId: p.row.id!, data: { ...(p.row.promisedDate ? { promisedDate: p.row.promisedDate } : {}) } });
+  for (const p of proposals)
+    if (recent(p.row.createdAt))
+      push({ type: 'pin', at: p.row.createdAt!, branchId: p.branchId, actor: person(p.row.proposedBy), customer: cust(p.row.customer?.id), entity: 'customer', entityId: p.row.customer?.id ?? '', data: { applied: !!p.row.autoApplied } });
+  activity.sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
 
 // ---------- location (pure functions of user + date, built on the mock visits) ----------
 function encodePolyline(points: { lat: number; lng: number }[]): string {
