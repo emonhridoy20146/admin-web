@@ -15,7 +15,9 @@ export async function login(page: Page, username = 'admin', password = PASSWORD)
 /** Client-side navigation through the sidebar keeps the in-browser mock database (a full reload re-seeds it). */
 export async function nav(page: Page, name: string | RegExp) {
   const menu = page.getByRole('navigation').first();
-  await menu.getByRole('link', { name }).first().click();
+  // the whole label, optionally followed by its count ("ইনবক্স ১২"), so "কর্মী" does not also match "কর্মীদের কাজ"
+  const exact = typeof name === 'string' ? new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( [০-৯0-9,]+)?$`) : name;
+  await menu.getByRole('link', { name: exact }).first().click();
   if (typeof name === 'string') await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
 }
 

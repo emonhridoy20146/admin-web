@@ -14,6 +14,8 @@ export interface FeatureRoute {
   order?: number;
   /** hook returning a nav badge count (e.g. inbox open count); must be a stable hook */
   useBadge?: () => number | undefined;
+  /** also a bell in the header with the `useBadge` count (FR-W-046); `label` is an i18n key, `order` left to right */
+  bell?: { icon: LucideIcon; label: string; order: number };
   /** hidden from nav (detail pages) */
   hidden?: boolean;
 }

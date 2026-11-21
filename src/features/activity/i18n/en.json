@@ -1,0 +1,41 @@
+{
+  "title": "Staff activity",
+  "subtitle": "Collections, visits, promises and map pins as staff record them. Opening this page clears the bell.",
+  "bell": "Staff activity",
+  "all": "All",
+  "type": {
+    "collection": "Collections",
+    "visit": "Visits",
+    "promise": "Promises",
+    "pin": "Map pins"
+  },
+  "line": {
+    "collection": "collected",
+    "visit": "recorded a visit",
+    "promise": "took a promise",
+    "pinSet": "set a map pin",
+    "pinProposed": "proposed a map pin"
+  },
+  "outcome": {
+    "paid": "paid",
+    "partial_paid": "paid part",
+    "promised": "promised",
+    "not_home": "not at home",
+    "refused": "refused",
+    "shifted_address": "moved",
+    "customer_dead": "customer died",
+    "product_returned_request": "wants to return the product",
+    "other": "other"
+  },
+  "promisedFor": "to pay on {{date}}",
+  "pinApplied": "applied at once",
+  "pinWaits": "waits for approval",
+  "someone": "A staff member",
+  "onlyPerson": "Only {{name}}",
+  "filterPerson": "Show only this person",
+  "new": "New",
+  "more": "Show older",
+  "empty": "Nothing yet",
+  "emptyBody": "Collections, visits, promises and pins appear here as staff record them.",
+  "how": "Money here is what staff recorded in the field, not ERP money. Lines are kept for 45 days; the records themselves stay."
+}
