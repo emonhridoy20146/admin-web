@@ -78,5 +78,32 @@
     "partOf": "left of",
     "more": "{{n}} older collections are not listed; the total above includes them.",
     "how": "Deposits pay off the oldest collections first, so the cash on hand is the newest collections. Field-system cash, not an ERP balance."
+  },
+  "depositDetail": {
+    "title": "{{name}}'s deposit",
+    "loading": "Deposit",
+    "subtitle": "The cash collections this deposit covered",
+    "covered": "Covered",
+    "unmatched": "Not matched",
+    "unmatchedNote": "deposit money with no collection behind it",
+    "list": "Collections this deposit covered",
+    "partOf": "part of",
+    "empty": "No collection behind this deposit.",
+    "rejectedEmpty": "A rejected deposit covers nothing; the cash is back on hand.",
+    "how": "A deposit pays off the oldest collections first, so this list and the cash on hand never overlap. Field-system cash, not an ERP balance.",
+    "open": "Which collections {{name}} deposited",
+    "openShort": "Which collections"
+  },
+  "promise": {
+    "none": "No promise behind this money",
+    "for": "Promised for {{date}}",
+    "onTime": "on time",
+    "late": "after the date",
+    "status": {
+      "open": "open",
+      "kept": "kept",
+      "partially_kept": "partly kept",
+      "broken": "broken"
+    }
   }
 }
