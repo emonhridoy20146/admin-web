@@ -105,6 +105,7 @@ export function TasksPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         actions={
           canManage ? (
             <Button variant="primary" onClick={() => setCreating(true)}>

@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import staffBn from '../../src/features/staff/i18n/bn.json' with { type: 'json' };
 import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' };
+import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
+import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
+import promBn from '../../src/features/promises/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import { login, nav } from '../fixtures';
 
@@ -44,3 +47,15 @@ test('staff performance and reports print to a Bangla PDF with every column and 
   await expect(page.getByText(repBn.pdf.title)).toBeVisible();
   await expect(page.getByRole('button', { name: commonBn.print.button })).toHaveCount(0);
 });
+
+test('the list pages print too: collections, cash on hand and promises have the PDF / print button and print without app chrome (FR-W-045)', async ({ page }) => {
+  await login(page);
+  for (const title of [colBn.title, cashBn.title, promBn.title]) {
+    await nav(page, title);
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(page.getByRole('button', { name: commonBn.print.button })).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await expectPrintablePdf(page);
+  }
+});
+

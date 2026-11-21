@@ -165,6 +165,7 @@ export function CollectionsPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         actions={
           <div className="flex items-center gap-2">
             {canRecord && (

@@ -40,6 +40,7 @@ export function ConflictsPage() {
     <>
       <PageHeader
         title={t('conflicts')}
+        print
         crumbs={[{ label: t('title'), href: '/collections/' }, { label: t('conflicts') }]}
       >
         <span>{t('conflictsSubtitle')}</span>

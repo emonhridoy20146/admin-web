@@ -123,6 +123,7 @@ export function VisitsPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         actions={
           canRecord ? (
             <Button variant="primary" onClick={() => setCreateOpen(true)}>

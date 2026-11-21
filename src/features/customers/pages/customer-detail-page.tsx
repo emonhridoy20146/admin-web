@@ -12,6 +12,7 @@ import { useUrlState } from '@/shared/lib/url-state';
 import { pickText } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
 import { Button } from '@/shared/ui/button';
+import { PrintButton } from '@/shared/ui/print';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorBanner, Skeleton, useErrorMessage } from '@/shared/ui/feedback';
 import { AsOf } from '@/shared/ui/page';
@@ -110,6 +111,8 @@ export function CustomerDetailPage() {
                 <RefreshCw className="size-3.5" aria-hidden />
                 {t('refresh')}
               </Button>
+              {/* an open invoice has its own print button (it names the file after the invoice) */}
+              {!url.get('invoice') && <PrintButton name={`${c.code ?? ''} ${pickText(c.name, locale)}`.trim()} />}
             </div>
           </header>
 

@@ -155,6 +155,7 @@ export function UsersPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         actions={
           canManage && (
             <Button variant="primary" onClick={() => setCreating(true)}>

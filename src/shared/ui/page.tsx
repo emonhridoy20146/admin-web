@@ -5,8 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/cn';
 import { formatTime, formatRelative } from '../lib/format';
 import { Tooltip } from './primitives';
+import { PrintButton } from './print';
 
-export function PageHeader({ title, crumbs, asOf, actions, children, className }: { title: React.ReactNode; crumbs?: { label: string; href?: string }[]; asOf?: string | null; actions?: React.ReactNode; children?: React.ReactNode; className?: string }) {
+/**
+ * `print` adds the "Print / PDF" button after the page's own actions (FR-W-045): `true` names the file after the
+ * page title, a string gives the file name (e.g. title plus the period in view).
+ */
+export function PageHeader({ title, crumbs, asOf, actions, children, className, print }: { title: React.ReactNode; crumbs?: { label: string; href?: string }[]; asOf?: string | null; actions?: React.ReactNode; children?: React.ReactNode; className?: string; print?: boolean | string }) {
+  const printName = typeof print === 'string' ? print : typeof title === 'string' ? title : undefined;
   return (
     <header className={cn('mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="min-w-0">
@@ -28,7 +34,12 @@ export function PageHeader({ title, crumbs, asOf, actions, children, className }
           </div>
         )}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2 print:hidden">{actions}</div>}
+      {(actions || print) && (
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          {actions}
+          {print && <PrintButton name={printName} />}
+        </div>
+      )}
     </header>
   );
 }

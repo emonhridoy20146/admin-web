@@ -98,6 +98,7 @@ export function HandoversPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         actions={
           canCreate ? (
             <Button variant="primary" onClick={() => url.set({ new: '1' })}>
