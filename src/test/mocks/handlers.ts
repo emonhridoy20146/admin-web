@@ -234,6 +234,19 @@ function mockActivity(c: db.MockCustomer): Pick<S['CustomerListItem'], 'activity
   };
 }
 
+/** FR-CASH-007/008: one cash collection as the server lists it, with the promise it was collected against (1.30.0). */
+function mockCashLine(c: S['Collection']): S['CashInHandItem'] {
+  const day = db.dhakaDate(c.recordedAt ?? '');
+  const match = db.promises
+    .map((p) => p.row)
+    .filter((p) => p.customer?.id === c.customer?.id && !['cancelled', 'superseded'].includes(p.status ?? '') && db.dhakaDate(p.createdAt ?? '') <= day && (p.promisedDate ?? '') >= db.dhakaDate(new Date(new Date(c.recordedAt!).getTime() - 86400_000).toISOString()))
+    .sort((a, b) => ((a.createdAt ?? '') < (b.createdAt ?? '') ? 1 : -1))[0];
+  const promise: S['CashInHandItem']['promise'] = match
+    ? { id: match.id!, promisedDate: match.promisedDate!, promisedAmountPoisha: match.promisedAmountPoisha ?? 0, status: (['open', 'kept', 'partially_kept', 'broken'] as const).find((x) => x === match.status) ?? 'open', onTime: day <= (match.promisedDate ?? '') }
+    : null;
+  return { collectionId: c.id!, receiptNo: c.receiptNo!, recordedAt: c.recordedAt!, businessDate: day, customer: { id: c.customer?.id, name: c.customer?.name, code: c.customer?.code }, erpPlanId: c.erpPlanId ?? '', amountPoisha: c.amountPoisha ?? 0, inHandPoisha: 0, status: c.status!, promise };
+}
+
 /** FR-CUS-016: the mock keeps the same list the server builds (ERP numbers first, then the added ones). */
 function mockPhoneRows(d: components['schemas']['CustomerDetail']): components['schemas']['PhoneDetail'][] {
   if (d.phoneDetails?.length) return [...d.phoneDetails];
@@ -1228,9 +1241,31 @@ export const handlers = [
       if (left <= 0) break;
       const part = Math.min(left, c.amountPoisha ?? 0);
       left -= part;
-      items.push({ collectionId: c.id!, receiptNo: c.receiptNo!, recordedAt: c.recordedAt!, businessDate: c.recordedAt!.slice(0, 10), customer: { id: c.customer?.id, name: c.customer?.name, code: c.customer?.code }, erpPlanId: c.erpPlanId ?? '', amountPoisha: c.amountPoisha ?? 0, inHandPoisha: part, status: c.status! });
+      items.push({ ...mockCashLine(c), inHandPoisha: part });
     }
     return HttpResponse.json({ userId: u.id!, userName: pos.userName ?? '', onHandPoisha: (pos.onHandPoisha ?? 0) - left, pendingDepositsPoisha: pos.pendingDepositsPoisha ?? 0, count: items.length, items, generatedAt: new Date().toISOString() } satisfies S['CashInHand']);
+  })),
+  // FR-CASH-008 (1.30.0): the collections one deposit covered (oldest first), and the promise behind each line
+  http.get(`${BASE}/cash/deposits/:id/collections`, authed(({ ctx, url, params }) => {
+    const dep = db.deposits.find((d) => d.id === params.id);
+    const u = dep ? db.userById(dep.userId!) : undefined;
+    if (!dep || !u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '') || (ctx.user.role === 'field_staff' && ctx.user.id !== u.id)) return problem(404, 'NOT_FOUND', 'Deposit not found');
+    const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? -1 : 1));
+    const order = db.deposits.filter((d) => d.userId === u.id && d.status !== 'rejected').sort((a, b) => (a.depositedAt! < b.depositedAt! ? -1 : 1));
+    let skip = order.slice(0, order.findIndex((d) => d.id === dep.id)).reduce((n, d) => n + (d.amountPoisha ?? 0), 0);
+    let left = dep.status === 'rejected' ? 0 : (dep.amountPoisha ?? 0);
+    const items: S['DepositCoverage']['items'] = [];
+    for (const c of cash) {
+      const skipped = Math.min(skip, c.amountPoisha ?? 0);
+      skip -= skipped;
+      const free = (c.amountPoisha ?? 0) - skipped;
+      if (free <= 0) continue;
+      if (left <= 0) break;
+      const covered = Math.min(left, free);
+      left -= covered;
+      items.push({ ...mockCashLine(c), inHandPoisha: free - covered, coveredPoisha: covered });
+    }
+    return HttpResponse.json({ deposit: { ...dep, userName: u.name?.en ?? '' }, coveredPoisha: items.reduce((n, i) => n + i.coveredPoisha, 0), unmatchedPoisha: left, items, generatedAt: new Date().toISOString() } satisfies S['DepositCoverage']);
   })),
   http.get(`${BASE}/cash/positions`, authed(({ ctx, url }) => {
     const sc = scope(ctx, url);

@@ -167,6 +167,54 @@ test('cash on hand: a row opens the collections the cash came from, with custome
   await expect(page).not.toHaveURL(/hand=/);
 });
 
+// Owner request 2026-11-21 (contract 1.30.0, FR-W-048, master FR-CASH-008): which collections one deposit covered;
+// the promise behind every cash line.
+test('a deposit opens the collections it covered; every cash line says which promise it was collected against', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, cashBn.title);
+  // a verified deposit from the history table
+  await page.getByRole('button', { name: cashBn.depositStatus.verified, exact: true }).click();
+  const row = page.locator('#deposits tbody tr').first();
+  await expect(row).toContainText('৳');
+  await row.locator('td').nth(1).click();
+  await expect(page).toHaveURL(/dep=/);
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText(cashBn.depositDetail.subtitle)).toBeVisible();
+  await expect(drawer.getByTestId('deposit-head')).toContainText('৳');
+  await expect(drawer.getByText(cashBn.depositDetail.covered, { exact: true })).toBeVisible();
+  await expect(drawer.getByText(cashBn.depositDetail.unmatched, { exact: true })).toBeVisible();
+  const lines = drawer.getByTestId('cash-line');
+  const n = await lines.count();
+  if (n > 0) {
+    await expect(lines.first().getByRole('link')).toHaveAttribute('href', /\/customers\/.+\//);
+    // every line says in words whether a promise stood behind the money
+    for (let i = 0; i < n; i++) await expect(lines.nth(i).getByTestId('cash-line-promise')).not.toBeEmpty();
+  } else {
+    await expect(drawer.getByText(new RegExp(`${cashBn.depositDetail.empty}|${cashBn.depositDetail.rejectedEmpty}`))).toBeVisible();
+  }
+  await expect(drawer.getByText(cashBn.depositDetail.how)).toBeVisible();
+  const r = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(page).not.toHaveURL(/dep=/);
+
+  // the pending cards open the same drawer; the cash-on-hand lines carry the promise too
+  await page.getByRole('group', { name: cashBn.deposits }).getByRole('button', { name: cashBn.depositStatus.pending }).click();
+  const open = page.getByRole('button', { name: cashBn.depositDetail.openShort, exact: true }).first();
+  if (await open.isVisible()) {
+    await open.click();
+    await expect(page.getByRole('dialog').getByText(cashBn.depositDetail.subtitle)).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
+  const pos = page.locator('#positions tbody tr').first();
+  await expect(pos).toContainText('৳');
+  await pos.locator('td').nth(1).click();
+  const hand = page.getByRole('dialog');
+  await expect(hand.getByTestId('cash-line').first()).toBeVisible();
+  await expect(hand.getByTestId('cash-line-promise').first()).not.toBeEmpty();
+});
+
 test('W-E7 create a temporary handover, see it pending, then cancel it', async ({ page }) => {
   await login(page, 'manager');
   await nav(page, handoversBn.title);

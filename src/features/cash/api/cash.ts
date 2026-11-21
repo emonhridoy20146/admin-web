@@ -7,6 +7,8 @@ import type { components } from '@/shared/api/schema';
 export type CashPosition = components['schemas']['CashPosition'];
 export type Deposit = components['schemas']['Deposit'];
 export type DepositStatus = NonNullable<Deposit['status']>;
+export type CashLine = components['schemas']['CashInHandItem'];
+export type DepositCoverage = components['schemas']['DepositCoverage'];
 
 export function useCashPositions() {
   const branchId = useBranchId();
@@ -24,6 +26,16 @@ export function useCashInHand(userId: string | null) {
     queryKey: ['cash', 'in-hand', userId],
     queryFn: () => unwrap(api.GET('/cash/positions/{id}/collections', { params: { path: { id: userId! } } })),
     enabled: !!userId,
+  });
+}
+
+/** FR-CASH-008 (contract 1.30.0): the collections one deposit covered. */
+export function useDepositCollections(depositId: string | null) {
+  useInvalidateOn([EV.collectionVoided, EV.collectionResolved, EV.depositDecided], [['cash']]);
+  return useQuery({
+    queryKey: ['cash', 'deposit-collections', depositId],
+    queryFn: () => unwrap(api.GET('/cash/deposits/{id}/collections', { params: { path: { id: depositId! } } })),
+    enabled: !!depositId,
   });
 }
 

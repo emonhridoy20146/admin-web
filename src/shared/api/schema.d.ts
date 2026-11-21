@@ -1054,6 +1054,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cash/deposits/{id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description cash.view (1.30.0, FR-CASH-008). The cash collections one deposit covered: the person's deposits (pending and verified, oldest first) pay off their cash collections oldest-first, the same order the cash in hand uses, so a deposit's lines and the cash in hand never overlap. A rejected deposit covers nothing. Scope is the deposit's: out of scope answers 404. */
+        get: operations["depositCollections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cash/positions": {
         parameters: {
             query?: never;
@@ -3362,6 +3379,30 @@ export interface components {
             /** @description The part not yet covered by a deposit; less than amountPoisha for the one collection a deposit covers only partly */
             inHandPoisha: number;
             status: components["schemas"]["CollectionStatus"];
+            /** @description Added in 1.30.0 (FR-CASH-008). The promise this money was collected against, or null when none covered that day */
+            promise?: components["schemas"]["CollectionPromise"] | null;
+        };
+        /** @description 1.30.0 (FR-CASH-008). The promise a collection was made against: same customer and invoice (a promise without an invoice covers any), made on or before the collection's business date and not yet past its promised date plus the branch's grace on that day; the newest when several match. `status` is how the promise stands now (kept / partly kept / broken are decided by ERP money, FR-PRM-003); `onTime` = collected on or before the promised date. */
+        CollectionPromise: {
+            id: string;
+            /** Format: date */
+            promisedDate: string;
+            promisedAmountPoisha: number;
+            /** @enum {string} */
+            status: "open" | "kept" | "partially_kept" | "broken";
+            onTime: boolean;
+        };
+        /** @description 1.30.0 (FR-CASH-008). Which cash collections a deposit covered, oldest first; the first and the last may be covered only in part (`coveredPoisha` < `amountPoisha`). `unmatchedPoisha` is deposit money with no collection behind it (a collection voided after the deposit). Field-system cash, not an ERP balance. */
+        DepositCoverage: {
+            deposit: components["schemas"]["Deposit"];
+            coveredPoisha: number;
+            unmatchedPoisha: number;
+            items: (components["schemas"]["CashInHandItem"] & {
+                /** @description The part of this collection this deposit covered */
+                coveredPoisha: number;
+            })[];
+            /** Format: date-time */
+            generatedAt: string;
         };
         DepositCreate: {
             /** Format: uuid */
@@ -6560,6 +6601,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CashInHand"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    depositCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositCoverage"];
                 };
             };
             404: components["responses"]["Problem"];

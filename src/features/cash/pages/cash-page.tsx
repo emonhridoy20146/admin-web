@@ -1,9 +1,10 @@
 'use client';
 import { InHandDrawer } from '../components/in-hand-drawer';
+import { DepositDrawer } from '../components/deposit-drawer';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Banknote, Check, CircleAlert, Clock, Hourglass, Landmark, X } from 'lucide-react';
+import { Banknote, Check, CircleAlert, Clock, Hourglass, Landmark, ListOrdered, X } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useCan } from '@/shared/auth/session';
@@ -54,6 +55,8 @@ export function CashPage() {
   // FR-W-044: a row opens the collections behind that collector's cash (kept in the URL so the view can be shared)
   const hand = url.get('hand') || null;
   const handName = positions.data?.find((p) => p.userId === hand)?.userName ?? '';
+  // FR-W-048: a deposit opens the collections it covered (also in the URL)
+  const dep = url.get('dep') || null;
 
   const columns: Column<CashPosition>[] = [
     {
@@ -248,6 +251,7 @@ export function CashPage() {
         </Section>
       </section>
       <InHandDrawer userId={hand} userName={handName} onClose={() => url.set({ hand: null })} />
+      <DepositDrawer depositId={dep} onClose={() => url.set({ dep: null })} />
     </>
   );
 }
@@ -386,6 +390,7 @@ function DepositsSection({
             columns={history}
             rows={items}
             rowKey={(d) => d.id ?? ''}
+            onRowClick={(d) => d.id && url.set({ dep: d.id }, { push: true })}
             loading={q.isLoading}
             error={q.error}
             onRetry={() => q.refetch()}
@@ -425,6 +430,7 @@ function DepositCard({
   const [confirm, setConfirm] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const amount = formatMoney(d.amountPoisha ?? 0);
+  const url = useUrlState();
 
   return (
     <li
@@ -464,6 +470,10 @@ function DepositCard({
             : []),
         ]}
       />
+      <Button size="sm" className="mt-3 self-start" onClick={() => d.id && url.set({ dep: d.id }, { push: true })} aria-label={t('depositDetail.open', { name })}>
+        <ListOrdered className="size-4" aria-hidden />
+        {t('depositDetail.openShort')}
+      </Button>
       {canVerify && (
         <div className="mt-4 flex gap-2 border-t border-line pt-3">
           <Button variant="primary" size="sm" className="flex-1" onClick={() => setConfirm(true)}>
