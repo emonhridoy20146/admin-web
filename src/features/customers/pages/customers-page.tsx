@@ -27,7 +27,7 @@ import { WorkMarks, WorkMarksLegend } from '../components/work-marks';
 const FILTERS = ['overdue', 'due_today', 'promised_today', 'bad_suggested', 'tagged_bad', 'no_location', 'unassigned', 'paid_up'] as const;
 const SORTS = ['-daysOverdue', '-totalOutstanding', 'nextDueDate', 'name'] as const;
 const KINDS = ['all', 'installment', 'credit'] as const;
-/** FR-W-046 (contract 1.28.0): who paid something this month and who did not. */
+/** FR-W-046 (contract 1.29.0): who paid something this month and who did not. */
 const PAID_MONTH = ['all', 'yes', 'no'] as const;
 
 export function CustomersPage() {
