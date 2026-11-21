@@ -38,7 +38,7 @@ export function PinApprovalsPage() {
 
   return (
     <>
-      <PageHeader title={t('pins.title')}>
+      <PageHeader title={t('pins.title')} print>
         <span>{t('pins.subtitle')}</span>
       </PageHeader>
       <div className="mb-4">

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 Contract pinned: field-api `openapi.yaml` **1.27.0** (2026-11-21: 1.20.0 → 1.27.0 in six steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (owner request 2026-11-21: print / PDF on the working pages; FR-W-045)
+- **"PDF / প্রিন্ট" on thirteen more pages**: collections, conflicts, cash on hand, customers, the customer page, pin approvals, promises, visits, co-work, handovers, leave, tasks, users and the audit log. The printed page has the masthead and no menus, like the reports; "Save as PDF" in the print dialog gives the PDF, named after the page (the customer page: code and name).
+- `PageHeader` takes `print` (true or a file name) and places the button after the page's own actions.
+- Tests: the print journey also prints collections, cash on hand and promises to a PDF.
 ### Added (contract 1.27.0, owner request 2026-11-21: where the cash on hand came from; FR-W-044, master FR-CASH-007)
 - **A row on Cash on hand opens a drawer with the collections behind that collector's cash**: customer (link to the customer page), invoice, receipt number, time, the amount still in hand (and "বাকি, মোট …" when a deposit covered part of it) and the collection's status; the total, the number of collections and deposits waiting for verification on top. The open drawer is in the URL (`?hand=`).
 - A note explains the rule (deposits pay off the oldest collections first) and that this is field-system cash, not an ERP balance.

@@ -112,6 +112,7 @@ export function LeavePage() {
     <>
       <PageHeader
         title={t('leave.title')}
+        print
         crumbs={[{ label: t('title'), href: '/attendance/' }, { label: t('leave.title') }]}
         actions={
           <Link href="/attendance/calendar/" className="inline-flex h-10 items-center gap-2 rounded-sm border border-line-strong bg-surface px-4 text-base font-medium text-fg shadow-e1 hover:bg-surface-hover">

@@ -88,7 +88,7 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('title')} print>
         <span>{t('subtitle')}</span>
       </PageHeader>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">

@@ -95,6 +95,7 @@ export function PromisesPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         actions={
           canManage ? (
             <Button variant="primary" onClick={() => setCreateOpen(true)}>

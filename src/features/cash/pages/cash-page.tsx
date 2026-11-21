@@ -177,7 +177,7 @@ export function CashPage() {
 
   return (
     <>
-      <PageHeader title={t('title')}>
+      <PageHeader title={t('title')} print>
         <span>{t('subtitle')}</span>
       </PageHeader>
 

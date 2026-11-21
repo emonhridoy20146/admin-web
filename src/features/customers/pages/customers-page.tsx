@@ -184,6 +184,7 @@ export function CustomersPage() {
     <>
       <PageHeader
         title={t('title')}
+        print
         asOf={asOf}
         actions={
           <Link href="/map/" className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-line bg-surface px-3 text-sm font-medium text-fg shadow-e1 hover:bg-surface-hover">
