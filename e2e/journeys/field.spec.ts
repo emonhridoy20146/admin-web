@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import tagsBn from '../../src/features/tags/i18n/bn.json' with { type: 'json' };
@@ -141,6 +142,29 @@ test('W-E6 verify and reject deposits; the pending queue updates', async ({ page
   await expect(queue).toHaveCount(before - 2);
   await page.getByRole('button', { name: cashBn.depositStatus.rejected, exact: true }).click();
   await expect(page.locator('#deposits tbody tr').first()).toContainText(/Slip amount|কারণ/);
+});
+
+test('cash on hand: a row opens the collections the cash came from, with customer, invoice and receipt', async ({ page }) => {
+  await login(page);
+  await nav(page, cashBn.title);
+  const row = page.locator('#positions tbody tr').first();
+  await expect(row).toContainText('৳'); // the loaded row, not a loading placeholder
+  await row.locator('td').nth(1).click();
+  await expect(page).toHaveURL(/hand=/);
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByText(cashBn.inHand.subtitle)).toBeVisible();
+  const items = drawer.getByRole('list', { name: cashBn.inHand.list }).getByRole('listitem');
+  await expect(items.first()).toBeVisible();
+  // each line names the customer (a link to the customer page), the invoice and the receipt
+  await expect(items.first().getByRole('link')).toHaveAttribute('href', /\/customers\/.+\//);
+  await expect(items.first()).toContainText(cashBn.inHand.invoice.replace('{{no}}', '').trim());
+  await expect(items.first()).toContainText(/[A-Z]{3}\d{2}-[A-Z]{2}\d{3}-\d{6}-\d{4}/);
+  await expect(drawer.getByText(cashBn.inHand.how)).toBeVisible();
+  const r = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(page).not.toHaveURL(/hand=/);
 });
 
 test('W-E7 create a temporary handover, see it pending, then cancel it', async ({ page }) => {

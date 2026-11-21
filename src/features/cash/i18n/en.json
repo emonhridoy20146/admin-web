@@ -13,7 +13,7 @@
     "none": "None"
   },
   "positions": "Collectors",
-  "positionsHint": "Over-limit first. The limit is set per collector.",
+  "positionsHint": "Over-limit first. The limit is set per collector. Click a row to see which collections the cash came from.",
   "col": {
     "user": "Collector",
     "onHand": "On hand",
@@ -65,5 +65,18 @@
   "emptyPending": "Nothing to verify",
   "emptyPendingBody": "New deposits from collectors will appear here.",
   "emptyDeposits": "No deposits",
-  "emptyPositions": "No collectors hold cash"
+  "emptyPositions": "No collectors hold cash",
+  "inHand": {
+    "title": "Cash on hand of {{name}}",
+    "subtitle": "The cash collections not yet covered by a deposit",
+    "count_one": "{{n}} collection",
+    "count_other": "{{n}} collections",
+    "pendingNote": "Handed in, not verified yet",
+    "empty": "No cash on hand.",
+    "list": "Collections behind the cash on hand",
+    "invoice": "Invoice {{no}}",
+    "partOf": "left of",
+    "more": "{{n}} older collections are not listed; the total above includes them.",
+    "how": "Deposits pay off the oldest collections first, so the cash on hand is the newest collections. Field-system cash, not an ERP balance."
+  }
 }

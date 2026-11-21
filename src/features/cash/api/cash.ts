@@ -17,6 +17,16 @@ export function useCashPositions() {
   });
 }
 
+/** FR-CASH-007 (contract 1.27.0): the collections behind one collector's cash on hand. */
+export function useCashInHand(userId: string | null) {
+  useInvalidateOn([EV.collectionVoided, EV.collectionResolved, EV.depositDecided], [['cash']]);
+  return useQuery({
+    queryKey: ['cash', 'in-hand', userId],
+    queryFn: () => unwrap(api.GET('/cash/positions/{id}/collections', { params: { path: { id: userId! } } })),
+    enabled: !!userId,
+  });
+}
+
 export function useDeposits(status: DepositStatus | undefined, cursor?: string, limit = 25) {
   const branchId = useBranchId();
   const query = { branchId, status, cursor, limit };
