@@ -65,9 +65,9 @@ export function BranchSwitcher() {
 
   if (!isGlobal && (user?.branchIds?.length ?? 0) <= 1)
     return (
-      <span className="inline-flex h-9 items-center gap-2 rounded-sm px-2 text-base font-medium text-fg" title={ts('branchFixed')}>
-        <Building2 className="size-4 text-fg-tertiary" aria-hidden />
-        <span className="max-w-[140px] truncate">{label}</span>
+      <span className="inline-flex h-9 max-w-full min-w-0 items-center gap-2 rounded-sm px-2 text-base font-medium text-fg" title={ts('branchFixed')}>
+        <Building2 className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
+        <span className="min-w-0 truncate sm:max-w-[140px]">{label}</span>
       </span>
     );
 
@@ -76,12 +76,12 @@ export function BranchSwitcher() {
       <DropdownTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-sm border border-line bg-surface px-2.5 text-base font-medium text-fg shadow-e1 hover:bg-surface-hover [@media(pointer:coarse)]:h-11"
+          className="inline-flex h-9 max-w-full min-w-0 items-center gap-2 rounded-sm border border-line bg-surface px-2.5 text-base font-medium text-fg shadow-e1 hover:bg-surface-hover [@media(pointer:coarse)]:h-11"
           aria-label={`${ts('branch')}: ${label}`}
         >
-          <Building2 className="size-4 text-fg-tertiary" aria-hidden />
-          <span className="max-w-[120px] truncate sm:max-w-[180px]">{label}</span>
-          <ChevronsUpDown className="size-3.5 text-fg-tertiary" aria-hidden />
+          <Building2 className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
+          <span className="min-w-0 truncate sm:max-w-[180px]">{label}</span>
+          <ChevronsUpDown className="size-3.5 shrink-0 text-fg-tertiary" aria-hidden />
         </button>
       </DropdownTrigger>
       <DropdownContent align="start" className="w-64">

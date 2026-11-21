@@ -150,6 +150,21 @@ test.describe('at 390 px', () => {
       await page.waitForLoadState('networkidle');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, path).toBeLessThanOrEqual(0);
+      // the header itself too (two bells since FR-W-046): the branch name gives way, nothing spills
+      const header = await page.evaluate(() => { const h = document.querySelector('header')!; return h.scrollWidth - h.clientWidth; });
+      expect(header, `header ${path}`).toBe(0);
     }
+  });
+});
+
+test.describe('at 340 px', () => {
+  test.use({ viewport: { width: 340, height: 740 } });
+  test('the header still fits for an admin with the branch picker', async ({ page }) => {
+    await login(page, 'admin');
+    await page.goto('/customers/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    expect(await page.evaluate(() => { const h = document.querySelector('header')!; return h.scrollWidth - h.clientWidth; })).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   });
 });

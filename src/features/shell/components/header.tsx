@@ -26,11 +26,14 @@ export function Header({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onMenu} aria-label={ts('openMenu')}>
         <Menu className="size-5" />
       </Button>
-      <BranchSwitcher />
+      {/* The branch name gives way first on a phone: with two bells in the header (FR-W-046) nothing else can shrink. */}
+      <div className="flex min-w-0 flex-1 sm:flex-initial">
+        <BranchSwitcher />
+      </div>
       <button
         type="button"
         onClick={onSearch}
-        className="ms-auto flex h-9 items-center gap-2 rounded-sm border border-line bg-surface-subtle px-3 text-sm text-fg-tertiary transition-colors hover:border-line-strong hover:text-fg-secondary max-sm:size-9 max-sm:justify-center max-sm:px-0 sm:ms-2 sm:w-[min(440px,40vw)] [@media(pointer:coarse)]:h-11 max-sm:[@media(pointer:coarse)]:w-11"
+        className="ms-auto flex h-9 shrink-0 items-center gap-2 rounded-sm border border-line bg-surface-subtle px-3 text-sm text-fg-tertiary transition-colors hover:border-line-strong hover:text-fg-secondary max-sm:size-9 max-sm:justify-center max-sm:px-0 sm:ms-2 sm:w-[min(440px,40vw)] [@media(pointer:coarse)]:h-11 max-sm:[@media(pointer:coarse)]:w-11"
         aria-label={t('search.placeholder')}
       >
         <Search className="size-4 shrink-0" aria-hidden />
@@ -40,7 +43,7 @@ export function Header({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
           <Kbd>K</Kbd>
         </span>
       </button>
-      <div className="flex items-center gap-1 sm:ms-auto">
+      <div className="flex shrink-0 items-center gap-1 sm:ms-auto">
         <ErpSyncButton />
         <ErpIndicator />
         <HeaderBells />
