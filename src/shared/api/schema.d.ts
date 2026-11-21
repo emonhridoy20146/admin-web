@@ -4656,6 +4656,8 @@ export interface components {
         PayStateFilter: components["schemas"]["PayState"][];
         /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
         InvoiceKind: "installment" | "credit";
+        /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
+        PaidThisMonth: "yes" | "no";
         Limit: number;
         Cursor: string;
         IdempotencyKey: string;
@@ -5746,6 +5748,8 @@ export interface operations {
                 payState?: components["parameters"]["PayStateFilter"];
                 /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
                 invoiceKind?: components["parameters"]["InvoiceKind"];
+                /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
+                paidThisMonth?: components["parameters"]["PaidThisMonth"];
             };
             header?: never;
             path?: never;
@@ -5776,6 +5780,8 @@ export interface operations {
                 payState?: components["parameters"]["PayStateFilter"];
                 /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
                 invoiceKind?: components["parameters"]["InvoiceKind"];
+                /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
+                paidThisMonth?: components["parameters"]["PaidThisMonth"];
             };
             header?: never;
             path?: never;

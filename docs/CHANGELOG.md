@@ -1,6 +1,10 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+Contract pinned: field-api `openapi.yaml` **1.29.0** (2026-11-21: 1.20.0 → 1.29.0 in eight steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection, 1.28.0 the staff activity feed, 1.29.0 the paid-this-month filter; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.29.0, owner request 2026-11-21: who paid this month and who did not; FR-W-047, master FR-CUS-019)
+- **Customer list: "এই মাসে — সবাই / এই মাসে দিয়েছে / এই মাসে দেয়নি"** next to the invoice-type control; in the URL as `?paid=yes|no`, combines with the status chips, pin colours and search; the invoice totals in the header follow it. The server applies the same rule the row's money mark uses (an ERP payment of this month, or field money of this month still waiting for the ERP), so a list of "not paid" never shows a paid mark.
+- Mock API applies `paidThisMonth` on the list and the map. Tests: journey (split agrees with every row's mark, axe clean).
 Contract pinned: field-api `openapi.yaml` **1.28.0** (2026-11-21: 1.20.0 → 1.28.0 in seven steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection, 1.28.0 staff activity feed; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
 ### Fixed (2026-11-21)
 - The second header bell (staff activity) pushed the header wider than a 390 px phone; on phones only the first bell shows, the feed keeps its count in the menu.
