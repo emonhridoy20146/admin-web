@@ -2,7 +2,6 @@ openapi: 3.1.0
 info:
   title: Howlader Field Operations API
   version: 1.30.0
-  version: 1.29.0
   description: |
     Contract owned by field-api. Consumers (admin-web, staff-app) generate types from this file.
     Conventions (auth, pagination, idempotency, errors) are described in docs/05-api-contract.md.
