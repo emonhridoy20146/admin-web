@@ -167,7 +167,7 @@ test('cash on hand: a row opens the collections the cash came from, with custome
   await expect(page).not.toHaveURL(/hand=/);
 });
 
-// Owner request 2026-11-21 (contract 1.30.0, FR-W-047, master FR-CASH-008): which collections one deposit covered;
+// Owner request 2026-11-21 (contract 1.30.0, FR-W-048, master FR-CASH-008): which collections one deposit covered;
 // the promise behind every cash line.
 test('a deposit opens the collections it covered; every cash line says which promise it was collected against', async ({ page }) => {
   await login(page, 'manager');

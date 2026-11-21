@@ -974,6 +974,36 @@ export const handlers = [
     return HttpResponse.json({});
   })),
 
+  // ---------- activity (FR-ACT-001, 1.28.0) ----------
+  http.get(`${BASE}/activity`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'activity.view');
+    if (deny) return deny;
+    const type = url.searchParams.get('type');
+    if (type && !['collection', 'visit', 'promise', 'pin'].includes(type)) return problem(400, 'VALIDATION_FAILED', 'type');
+    const userId = url.searchParams.get('userId');
+    const sc = scope(ctx, url);
+    const mine = db.activity.filter((a) => !a.branchId || sc.includes(a.branchId));
+    const seen = db.activitySeen.get(ctx.user.id!) ?? null;
+    const limit = Math.min(100, Number(url.searchParams.get('limit') ?? 30) || 30);
+    const cursor = url.searchParams.get('cursor');
+    const all = mine.filter((a) => (!type || a.type === type) && (!userId || a.actor?.id === userId));
+    const start = cursor ? all.findIndex((a) => a.id === cursor) + 1 : 0;
+    const page = all.slice(start, start + limit).map((a) => ({ ...a, unseen: !seen || a.at > seen }));
+    // as the server: the count covers the caller's whole scope, whatever the filters
+    const whole = new URL(url.href);
+    whole.searchParams.delete('branchId');
+    const allSc = scope(ctx, whole);
+    const unseen = Math.min(99, db.activity.filter((a) => (!a.branchId || allSc.includes(a.branchId)) && (!seen || a.at > seen)).length);
+    return HttpResponse.json({ items: page, unseen, seenAt: seen, nextCursor: start + limit < all.length ? page.at(-1)!.id : null } satisfies S['ActivityFeed']);
+  })),
+  http.post(`${BASE}/activity/seen`, authed(({ ctx }) => {
+    const deny = need(ctx, 'activity.view');
+    if (deny) return deny;
+    const at = new Date().toISOString();
+    db.activitySeen.set(ctx.user.id!, at);
+    return HttpResponse.json({ seenAt: at, unseen: 0 });
+  })),
+
   // ---------- settings & flags ----------
   http.get(`${BASE}/settings`, authed(({ url }) => {
     const branchId = url.searchParams.get('branchId');

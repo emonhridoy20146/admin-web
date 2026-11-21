@@ -56,7 +56,7 @@ test('customer drawer and page: "this month" with visits, ERP money, pending mon
   expect((await new AxeBuilder({ page }).include('[data-testid=month-activity]').analyze()).violations).toEqual([]);
 });
 
-// Owner request 2026-11-21 (contract 1.29.0, FR-W-046, master FR-CUS-019): who paid something this month and who did not.
+// Owner request 2026-11-21 (contract 1.29.0, FR-W-047, master FR-CUS-019): who paid something this month and who did not.
 test('customer list: "paid this month" / "not paid this month" split the list and agree with the money mark on every row', async ({ page }) => {
   await login(page, 'manager');
   await nav(page, custBn.title);

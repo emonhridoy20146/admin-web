@@ -10,7 +10,7 @@ import { useDepositCollections, type DepositCoverage } from '../api/cash';
 import { CashLines } from './cash-lines';
 
 /**
- * FR-W-047 (master FR-CASH-008): which cash collections one deposit covered. Deposits pay off the oldest
+ * FR-W-048 (master FR-CASH-008): which cash collections one deposit covered. Deposits pay off the oldest
  * collections first, the same rule the cash-on-hand drawer uses, so the two never overlap.
  */
 export function DepositDrawer({ depositId, onClose }: { depositId: string | null; onClose: () => void }) {

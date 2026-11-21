@@ -2,7 +2,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Bell, Check, KeyRound, Languages, LogOut, Menu, Monitor, Moon, Search, Sun } from 'lucide-react';
+import { Check, KeyRound, Languages, LogOut, Menu, Monitor, Moon, Search, Sun } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useSession } from '@/shared/auth/session';
 import { navRoutes } from '@/shared/feature/registry';
@@ -42,7 +43,7 @@ export function Header({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
       <div className="flex items-center gap-1 sm:ms-auto">
         <ErpSyncButton />
         <ErpIndicator />
-        <InboxBell />
+        <HeaderBells />
         <UserMenu />
       </div>
     </header>
@@ -93,18 +94,26 @@ const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
   </div>
 );
 
-function InboxBell() {
+/** One bell per feature route that asks for one (the inbox, the staff activity feed), each with its own count. */
+function HeaderBells() {
   const { t } = useTranslation();
   const gate = useGate();
-  const inbox = navRoutes(gate).find((r) => r.useBadge);
-  if (!inbox) return null;
-  return <BellButton href={inbox.path} useBadge={inbox.useBadge!} label={t('bell')} />;
+  const bells = navRoutes(gate)
+    .filter((r) => r.bell && r.useBadge)
+    .sort((a, b) => a.bell!.order - b.bell!.order);
+  return (
+    <>
+      {bells.map((r) => (
+        <BellButton key={r.path} href={r.path} useBadge={r.useBadge!} label={t(r.bell!.label)} icon={r.bell!.icon} />
+      ))}
+    </>
+  );
 }
-function BellButton({ href, useBadge, label }: { href: string; useBadge: () => number | undefined; label: string }) {
+function BellButton({ href, useBadge, label, icon: Icon }: { href: string; useBadge: () => number | undefined; label: string; icon: LucideIcon }) {
   const n = useBadge();
   return (
     <Link href={href} className="relative grid size-9 place-items-center rounded-sm text-fg-secondary hover:bg-surface-hover hover:text-fg [@media(pointer:coarse)]:size-11" aria-label={n ? `${label}: ${n}` : label}>
-      <Bell className="size-[18px]" aria-hidden />
+      <Icon className="size-[18px]" aria-hidden />
       {!!n && <span className="tabular absolute top-1 end-0.5 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] leading-4 font-semibold text-white ring-2 ring-surface">{formatNumber(n > 99 ? 99 : n)}</span>}
     </Link>
   );

@@ -12,7 +12,7 @@ import type { CashLine } from '../api/cash';
 const PROMISE_TONE: Record<NonNullable<CashLine['promise']>['status'], Tone> = { open: 'promised', kept: 'paid', partially_kept: 'dueToday', broken: 'danger' };
 
 /**
- * FR-W-044 / FR-W-047 (master FR-CASH-007/008): one cash collection as a line: customer (link), invoice, receipt,
+ * FR-W-044 / FR-W-048 (master FR-CASH-007/008): one cash collection as a line: customer (link), invoice, receipt,
  * time, status, the money this view is about (`shown`: in hand, or covered by a deposit) against the whole amount,
  * and the promise the money was collected against, if any. Field-system cash, not an ERP balance.
  */

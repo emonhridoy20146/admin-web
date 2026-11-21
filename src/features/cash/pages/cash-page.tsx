@@ -55,7 +55,7 @@ export function CashPage() {
   // FR-W-044: a row opens the collections behind that collector's cash (kept in the URL so the view can be shared)
   const hand = url.get('hand') || null;
   const handName = positions.data?.find((p) => p.userId === hand)?.userName ?? '';
-  // FR-W-047: a deposit opens the collections it covered (also in the URL)
+  // FR-W-048: a deposit opens the collections it covered (also in the URL)
   const dep = url.get('dep') || null;
 
   const columns: Column<CashPosition>[] = [
