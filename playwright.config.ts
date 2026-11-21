@@ -5,6 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
  * serve it (scripts/serve-static.mjs: rewrites + CSP with script hashes). Staging runs set E2E_BASE_URL instead.
  */
 const PORT = 4173;
+const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 export default defineConfig({
   testDir: 'e2e/journeys',
   outputDir: 'e2e/.results',
@@ -14,7 +15,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`,
+    baseURL: BASE_URL,
+    // The panel opens in English; the journeys assert the Bangla screens, so every test starts with Bangla chosen.
+    storageState: { cookies: [], origins: [{ origin: BASE_URL, localStorage: [{ name: 'fos.ui', value: JSON.stringify({ locale: 'bn', bnDigits: true }) }] }] },
     timezoneId: 'Asia/Dhaka',
     locale: 'bn-BD',
     trace: 'off',

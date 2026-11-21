@@ -56,6 +56,7 @@
     "pending": "Pending",
     "verified": "Verified",
     "rejected": "Rejected",
+    "deleted": "Deleted",
     "cash_ok": "Within limit",
     "cash_warning": "Near limit",
     "cash_exceeded": "Over limit",

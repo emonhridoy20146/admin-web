@@ -1,12 +1,18 @@
 'use client';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
+import { useCan } from '@/shared/auth/session';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatDateTime, formatNumber } from '@/shared/lib/format';
+import { formatDateTime, formatMoney, formatNumber } from '@/shared/lib/format';
 import { Drawer } from '@/shared/ui/overlay';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { MoneyText } from '@/shared/ui/money';
 import { StatusBadge } from '@/shared/ui/badge';
-import { useDepositCollections, type DepositCoverage } from '../api/cash';
+import { Button } from '@/shared/ui/button';
+import { ReasonDialog } from '@/shared/ui/reason-dialog';
+import { useDeleteDeposit, useDepositCollections, type DepositCoverage } from '../api/cash';
 import { CashLines } from './cash-lines';
 
 /**
@@ -17,6 +23,9 @@ export function DepositDrawer({ depositId, onClose }: { depositId: string | null
   const { t } = useTranslation('cash');
   useUi((s) => s.bnDigits);
   const q = useDepositCollections(depositId);
+  const canDelete = useCan('cash.deposit.delete');
+  const del = useDeleteDeposit();
+  const [deleting, setDeleting] = useState(false);
   const d = q.data;
   const dep = d?.deposit;
   return (
@@ -45,6 +54,13 @@ export function DepositDrawer({ depositId, onClose }: { depositId: string | null
               <StatusBadge status={dep.status ?? 'pending'} />
             </div>
             {dep.rejectReason && <p className="mt-1 text-xs text-fg-tertiary">{t('rejectReason', { reason: dep.rejectReason })}</p>}
+            {dep.status === 'deleted' && dep.deleteReason && <p className="mt-1 text-xs text-fg-tertiary">{t('depositDetail.deletedBy', { reason: dep.deleteReason })}</p>}
+            {canDelete && (dep.status === 'pending' || dep.status === 'verified') && (
+              <Button size="sm" className="mt-3" onClick={() => setDeleting(true)}>
+                <Trash2 className="size-4" aria-hidden />
+                {t('deleteDeposit')}
+              </Button>
+            )}
           </div>
           <dl className="mb-4 grid grid-cols-2 gap-3">
             <div className="rounded-md border border-line bg-surface-subtle px-3 py-2.5">
@@ -59,13 +75,29 @@ export function DepositDrawer({ depositId, onClose }: { depositId: string | null
             </div>
           </dl>
           {d.items.length === 0 ? (
-            <p className="py-10 text-center text-sm text-fg-tertiary">{dep.status === 'rejected' ? t('depositDetail.rejectedEmpty') : t('depositDetail.empty')}</p>
+            <p className="py-10 text-center text-sm text-fg-tertiary">{dep.status === 'rejected' || dep.status === 'deleted' ? t('depositDetail.rejectedEmpty') : t('depositDetail.empty')}</p>
           ) : (
             <CashLines items={d.items} label={t('depositDetail.list')} shown={(c) => (c as DepositCoverage['items'][number]).coveredPoisha} partLabel={t('depositDetail.partOf')} />
           )}
           <p className="mt-4 text-xs text-fg-tertiary">{t('depositDetail.how')}</p>
         </>
       ) : null}
+      {dep && (
+        <ReasonDialog
+          open={deleting}
+          onOpenChange={setDeleting}
+          title={t('deleteTitle', { amount: formatMoney(dep.amountPoisha ?? 0), name: dep.userName ?? '' })}
+          description={t('deleteDesc')}
+          codes={(['duplicate', 'wrong_amount', 'not_received', 'other'] as const).map((c) => [c, t(`deleteCodes.${c}`)])}
+          minLength={5}
+          destructive
+          confirmLabel={t('deleteConfirm')}
+          onSubmit={async ({ reasonCode, reason }) => {
+            await del.mutateAsync({ id: dep.id!, reason: `${t(`deleteCodes.${reasonCode}`, { lng: 'en' })}: ${reason}` });
+            toast.success(t('deleted'));
+          }}
+        />
+      )}
     </Drawer>
   );
 }

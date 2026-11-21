@@ -39,7 +39,17 @@
     "cashOnHand": "আদায়কারীর হাতে নগদ",
     "resolution": "সমাধান",
     "conflict": "ERP-এর উত্তর",
-    "openCustomer": "গ্রাহক খুলুন"
+    "openCustomer": "গ্রাহক খুলুন",
+    "voided": "বাতিল",
+    "voidKind": {
+      "withdrawn": "কর্মী নিজে মুছেছেন",
+      "admin": "অফিস বাতিল করেছে"
+    },
+    "voidedBy": "{{name}}, {{date}}",
+    "edited": "আদায়কারী সংশোধন করেছেন",
+    "editedLine": "{{name}} {{date}}-এ সংশোধন করেছেন: আগে {{was}}, এখন {{now}}",
+    "editedTimes_one": "{{count}} বার সংশোধিত; \"আগে\" মানে প্রথম আসল পরিমাণ।",
+    "editedTimes_other": "{{count}} বার সংশোধিত; \"আগে\" মানে প্রথম আসল পরিমাণ।"
   },
   "void": "বাতিল করুন",
   "voidTitle": "{{name}}-এর {{amount}} বাতিল করবেন?",
@@ -123,5 +133,6 @@
     "amount": "পরিমাণ দিন",
     "method": "একটি মাধ্যম বাছুন",
     "receipt": "রসিদ নম্বর দিন"
-  }
+  },
+  "editedBadge": "সম্পাদিত"
 }

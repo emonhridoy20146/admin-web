@@ -39,7 +39,17 @@
     "cashOnHand": "Collector's cash on hand",
     "resolution": "Resolution",
     "conflict": "ERP response",
-    "openCustomer": "Open customer"
+    "openCustomer": "Open customer",
+    "voided": "Voided",
+    "voidKind": {
+      "withdrawn": "Withdrawn by staff",
+      "admin": "Voided by office"
+    },
+    "voidedBy": "By {{name}} on {{date}}",
+    "edited": "Edited by the collector",
+    "editedLine": "Edited by {{name}} on {{date}}: was {{was}}, now {{now}}",
+    "editedTimes_one": "Edited {{count}} time; the amount shown is the first original.",
+    "editedTimes_other": "Edited {{count}} times; \"was\" is the first original amount."
   },
   "void": "Void",
   "voidTitle": "Void {{amount}} from {{name}}?",
@@ -123,5 +133,6 @@
     "amount": "Enter an amount",
     "method": "Choose a method",
     "receipt": "Enter a receipt number"
-  }
+  },
+  "editedBadge": "Edited"
 }

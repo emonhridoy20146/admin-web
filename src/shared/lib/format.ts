@@ -12,7 +12,7 @@ export interface FormatPrefs {
   bnDigits: boolean;
 }
 
-let prefs: FormatPrefs = { locale: 'bn', bnDigits: true };
+let prefs: FormatPrefs = { locale: 'en', bnDigits: false };
 export function setFormatPrefs(next: Partial<FormatPrefs>) {
   prefs = { ...prefs, ...next };
 }

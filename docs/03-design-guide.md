@@ -272,7 +272,7 @@ Toast bottom-right, 4 s, max 3; success/info only. Errors that need action are b
 WCAG 2.2 AA: contrast per tokens; keyboard: every action reachable, visible focus, `/` focuses search, `⌘K` command palette, `g i` inbox, `g c` customers; Radix provides ARIA patterns; tables use proper `<th scope>`; charts have table alternative; `lang="bn"` set on Bangla content for screen readers and font shaping; never rely on hover only (touch).
 
 ## 8. Localization
-- `next-intl` is not used (no SSR); use **i18next + react-i18next** with namespaces per feature (`customers.json`), Bangla default, English toggle per user (stored in profile).
+- `next-intl` is not used (no SSR); use **i18next + react-i18next** with namespaces per feature (`customers.json`), English default (owner decision 2026-11-22), Bangla toggle per user (stored in the browser; a saved choice is kept).
 - ICU plurals; Bangla digits toggle (user setting) applied by `formatNumber`/`formatMoney`/`formatDate` from `src/shared/lib/format.ts`; never `toLocaleString` ad hoc.
 - Dates: Bangla month names; calendar weeks start Saturday (BD convention) — confirm OD-W02.
 

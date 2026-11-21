@@ -358,9 +358,18 @@ collections.filter((c) => c.recordedAt! > isoAt(now().minus({ days: 3 }))).slice
   }
 });
 collections.filter((c) => c.status === 'posting').slice(0, 2).forEach((c) => (c.status = 'posting_failed'));
-collections.filter((c) => c.status === 'posted' && c.recordedAt! < isoAt(now().minus({ days: 2 }))).slice(3, 5).forEach((c) => {
+collections.filter((c) => c.status === 'posted' && c.recordedAt! < isoAt(now().minus({ days: 2 }))).slice(3, 5).forEach((c, i) => {
   c.status = 'voided';
-  c.resolution = { action: 'void', by: managers[0]!.id, at: c.receivedAt, reason: 'Entered twice by mistake; physical receipt cancelled.' };
+  // contract 1.33.0: the first is voided by the office, the second is a cash collection the collector withdrew
+  c.voided = i === 0
+    ? { by: managers[0]!.id, byName: managers[0]!.name?.en ?? '', at: c.receivedAt, reason: 'Entered twice by mistake; physical receipt cancelled.', kind: 'admin' }
+    : { by: c.collector!.id, byName: c.collector!.name ?? '', at: c.receivedAt, reason: 'Wrong customer', kind: 'withdrawn' };
+});
+// contract 1.33.0: a few unsent cash collections the collector corrected (amount shown is the new one)
+[...collections].filter((c) => c.status === 'posted' && c.method === 'cash').sort((a, b) => (a.recordedAt! < b.recordedAt! ? 1 : -1)).slice(0, 3).forEach((c, i) => {
+  c.status = 'received'; // an edit is only possible before the ERP has the collection
+  c.erpReceiptNo = null;
+  c.edited = { count: i + 1, at: c.receivedAt, by: c.collector!.id, byName: c.collector!.name ?? '', previousAmountPoisha: c.amountPoisha! + 50_000 };
 });
 // pending field money on customers
 for (const col of collections) {
@@ -835,6 +844,13 @@ export const activitySeen = new Map<string, string>();
   for (const p of proposals)
     if (recent(p.row.createdAt))
       push({ type: 'pin', at: p.row.createdAt!, branchId: p.branchId, actor: person(p.row.proposedBy), customer: cust(p.row.customer?.id), entity: 'customer', entityId: p.row.customer?.id ?? '', data: { applied: !!p.row.autoApplied } });
+  // contract 1.33.0: withdrawn and edited collections and deleted deposits, as the server writes them from events
+  for (const c of collections) {
+    if (c.voided?.kind === 'withdrawn' && recent(c.voided.at))
+      push({ type: 'collection_withdrawn', at: c.voided.at!, branchId: collectionBranch(c) ?? null, actor: person(c.collector?.id), customer: cust(c.customer?.id), entity: 'collection', entityId: c.id!, data: { amountPoisha: c.amountPoisha, method: c.method } });
+    if (c.edited && recent(c.edited.at))
+      push({ type: 'collection_edited', at: c.edited.at!, branchId: collectionBranch(c) ?? null, actor: person(c.collector?.id), customer: cust(c.customer?.id), entity: 'collection', entityId: c.id!, data: { amountPoisha: c.amountPoisha, previousAmountPoisha: c.edited.previousAmountPoisha, editCount: c.edited.count } });
+  }
   activity.sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 

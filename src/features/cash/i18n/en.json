@@ -38,7 +38,8 @@
   "depositStatus": {
     "pending": "To verify",
     "verified": "Verified",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "deleted": "Deleted"
   },
   "destination": {
     "branch_cashier": "Branch cashier",
@@ -62,6 +63,17 @@
     "other": "Other"
   },
   "rejectReason": "Reason: {{reason}}",
+  "deleteDeposit": "Delete deposit",
+  "deleteTitle": "Delete {{name}}'s {{amount}} deposit?",
+  "deleteDesc": "The deposit stays in the history as deleted. The money goes back to the collector's cash on hand, and they are told. This is recorded in the audit log.",
+  "deleteConfirm": "Delete deposit",
+  "deleted": "Deposit deleted",
+  "deleteCodes": {
+    "duplicate": "Entered twice",
+    "wrong_amount": "Wrong amount",
+    "not_received": "Money was not received",
+    "other": "Other"
+  },
   "emptyPending": "Nothing to verify",
   "emptyPendingBody": "New deposits from collectors will appear here.",
   "emptyDeposits": "No deposits",
@@ -89,7 +101,8 @@
     "list": "Collections this deposit covered",
     "partOf": "part of",
     "empty": "No collection behind this deposit.",
-    "rejectedEmpty": "A rejected deposit covers nothing; the cash is back on hand.",
+    "rejectedEmpty": "A rejected or deleted deposit covers nothing; the cash is back on hand.",
+    "deletedBy": "Deleted: {{reason}}",
     "how": "A deposit pays off the oldest collections first, so this list and the cash on hand never overlap. Field-system cash, not an ERP balance.",
     "open": "Which collections {{name}} deposited",
     "openShort": "Which collections"

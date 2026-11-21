@@ -39,7 +39,7 @@ import {
 } from '../api/cash';
 import { depositUserName, isCarriedOver, sortPositions, summarize, usage } from '../model/cash';
 
-const DEPOSIT_TABS = ['pending', 'verified', 'rejected'] as const;
+const DEPOSIT_TABS = ['pending', 'verified', 'rejected', 'deleted'] as const;
 
 export function CashPage() {
   const { t } = useTranslation('cash');
@@ -324,7 +324,12 @@ function DepositsSection({
       priority: 4,
       cell: (d) => (
         <span className="block max-w-[280px]">
-          {d.verifiedAt ? formatDateTime(d.verifiedAt) : '—'}
+          {d.status === 'deleted' && d.deletedAt ? formatDateTime(d.deletedAt) : d.verifiedAt ? formatDateTime(d.verifiedAt) : '—'}
+          {d.status === 'deleted' && d.deleteReason && (
+            <span className="block truncate text-xs text-fg-tertiary" title={d.deleteReason}>
+              {t('depositDetail.deletedBy', { reason: d.deleteReason })}
+            </span>
+          )}
           {d.rejectReason && (
             <span className="block truncate text-xs text-fg-tertiary" title={d.rejectReason}>
               {t('rejectReason', { reason: d.rejectReason })}

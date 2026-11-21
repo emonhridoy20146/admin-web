@@ -7,14 +7,20 @@
     "collection": "Collections",
     "visit": "Visits",
     "promise": "Promises",
-    "pin": "Map pins"
+    "pin": "Map pins",
+    "collection_withdrawn": "Withdrawn",
+    "collection_edited": "Edited",
+    "deposit_deleted": "Deposits deleted"
   },
   "line": {
     "collection": "collected",
     "visit": "recorded a visit",
     "promise": "took a promise",
     "pinSet": "set a map pin",
-    "pinProposed": "proposed a map pin"
+    "pinProposed": "proposed a map pin",
+    "collection_withdrawn": "deleted their cash collection",
+    "collection_edited": "corrected a collection",
+    "deposit_deleted": "had a deposit deleted"
   },
   "outcome": {
     "paid": "paid",
@@ -37,5 +43,7 @@
   "more": "Show older",
   "empty": "Nothing yet",
   "emptyBody": "Collections, visits, promises and pins appear here as staff record them.",
-  "how": "Money here is what staff recorded in the field, not ERP money. Lines are kept for 45 days; the records themselves stay."
+  "how": "Money here is what staff recorded in the field, not ERP money. Lines are kept for 45 days; the records themselves stay.",
+  "wasAmount": "was {{amount}}",
+  "deletedBy": "deleted by {{name}}"
 }

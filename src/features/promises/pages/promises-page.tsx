@@ -88,6 +88,7 @@ export function PromisesPage() {
     { id: 'status', header: t('col.status'), priority: 1, mobile: 'badges', cell: (p) => <Badge tone={TONE[p.status ?? 'open'] ?? 'neutral'}>{t(`status.${p.status ?? 'open'}`)}</Badge> },
     { id: 'date', header: t('col.date'), priority: 2, mobile: 'meta', cell: when },
     { id: 'owner', header: t('col.owner'), priority: 2, mobile: 'meta', cell: (p) => p.owner?.name ?? <span className="text-fg-tertiary">—</span> },
+    { id: 'madeBy', header: t('col.madeBy'), priority: 3, mobile: 'meta', cell: (p) => p.createdByName || p.owner?.name || <span className="text-fg-tertiary">—</span> },
     { id: 'created', header: t('col.created'), priority: 4, cell: (p) => (p.createdAt ? formatDate(p.createdAt, { withYear: false }) : '—') },
   ];
 
@@ -167,6 +168,7 @@ export function PromisesPage() {
               items={[
                 { label: t('col.date'), value: formatDate(open.promisedDate) },
                 { label: t('col.owner'), value: open.owner?.name ?? '—' },
+                { label: t('col.madeBy'), value: open.createdByName || open.owner?.name || '—' },
                 { label: t('col.created'), value: open.createdAt ? formatDateTime(open.createdAt) : '—' },
                 { label: t('plan'), value: open.erpPlanId ? <span className="font-mono text-sm">{open.erpPlanId}</span> : '—' },
               ]}

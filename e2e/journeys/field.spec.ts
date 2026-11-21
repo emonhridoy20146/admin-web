@@ -658,3 +658,27 @@ test('assign one customer: give an unassigned customer to a staff member, then e
   await expect(drawer.getByText(custBn.nobodyAssigned, { exact: true })).toBeVisible();
   await expect(page.locator('tbody tr a')).toHaveCount(3);
 });
+
+// Owner request 2026-11-22 (contract 1.32.0, FR-W-049, master FR-CASH-009): an admin deletes a deposit with a reason;
+// the row stays in the history as "deleted" and the audit log records it.
+test('a manager deletes a verified deposit with a reason; it stays in the history as deleted', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, cashBn.title);
+  await page.getByRole('button', { name: cashBn.depositStatus.verified, exact: true }).click();
+  const row = page.locator('#deposits tbody tr').first();
+  await expect(row).toContainText('৳');
+  await row.locator('td').nth(1).click();
+  await expect(page).toHaveURL(/dep=/);
+  const drawer = page.getByRole('dialog').first();
+  await drawer.getByRole('button', { name: cashBn.deleteDeposit, exact: true }).click();
+  const reasonDialog = page.getByRole('dialog').filter({ has: page.locator('textarea') });
+  await reasonDialog.locator('textarea').fill('Entered twice by mistake.');
+  await reasonDialog.getByRole('button', { name: cashBn.deleteConfirm, exact: true }).click();
+  await expect(page.getByText(cashBn.deleted).first()).toBeVisible();
+  // the drawer now says deleted and offers no second delete
+  await expect(drawer.getByText(cashBn.depositStatus.deleted, { exact: true })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: cashBn.deleteDeposit, exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: cashBn.depositStatus.deleted, exact: true }).click();
+  await expect(page.locator('#deposits tbody tr').first()).toContainText(/Entered twice|মুছে ফেলা/);
+});

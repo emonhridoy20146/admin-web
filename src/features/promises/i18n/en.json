@@ -23,6 +23,7 @@
     "status": "Status",
     "date": "Promised date",
     "owner": "Staff",
+    "madeBy": "Taken by",
     "created": "Taken on"
   },
   "rel": {

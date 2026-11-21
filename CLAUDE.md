@@ -16,7 +16,7 @@ Read first: `docs/01-system-analysis.md`, `docs/02-requirements.md`, `docs/03-de
 6. **Money:** display only; amounts are poisha integers formatted by `shared/lib/format.ts`. Never sum ERP and pending field money into one number without labelling. Money actions are not optimistic.
 7. **Tokens:** use design tokens (CSS variables / Tailwind theme) only — no raw hex colours, no ad-hoc spacing. Token changes must also be applied to `staff-app/docs/03-design-guide.md §2` (shared tokens v1.x).
 8. **Security:** access token in memory only; never write tokens or customer PII to localStorage/sessionStorage/IndexedDB; no `dangerouslySetInnerHTML`; respect CSP (no inline scripts, no new external hosts without updating CSP docs).
-9. **i18n:** no user-visible string literals in components; add keys to both `bn.json` and `en.json` (`pnpm check:i18n`). Bangla is the default.
+9. **i18n:** no user-visible string literals in components; add keys to both `bn.json` and `en.json` (`pnpm check:i18n`). English is the default (owner decision 2026-11-22); Bangla is one tap away and kept in full.
 10. Microfinance: reserved — do not build.
 
 ## 3. UI rules (summary of 03-design-guide)

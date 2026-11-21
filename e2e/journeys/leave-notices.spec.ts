@@ -48,11 +48,12 @@ test('work calendar: add a branch holiday and delete it, add a shift and give it
   await login(page);
   await nav(page, attBn.calendar.title);
 
-  // a holiday on the 1st of next month for one branch
+  // a holiday on the 1st of the month after next for one branch (the mock seeds a branch holiday 9 days from
+  // today, which is the 1st of next month on some days, so next month is not always free)
   const today = await dhakaToday(page);
   const [y, m] = today.split('-').map(Number) as [number, number];
-  const date = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
-  if (m === 12) await page.getByRole('button', { name: attBn.calendar.nextYear }).click();
+  const date = m >= 11 ? `${y + 1}-${String(m - 10).padStart(2, '0')}-01` : `${y}-${String(m + 2).padStart(2, '0')}-01`;
+  if (m >= 11) await page.getByRole('button', { name: attBn.calendar.nextYear }).click();
   await page.getByRole('button', { name: attBn.calendar.addHoliday }).click();
   let dialog = page.getByRole('dialog');
   await dialog.getByLabel(attBn.calendar.date).fill(date);

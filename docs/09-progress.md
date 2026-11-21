@@ -73,6 +73,8 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - Print / PDF button on thirteen more pages done 2026-11-21 (FR-W-045).
 - Staff activity page and bell done 2026-11-21 on contract 1.28.0 (FR-W-046).
 - Customer list: paid this month / not paid this month filter done 2026-11-21 on contract 1.29.0 (FR-W-047).
+- Voided and edited collections in the drawer and list, three new activity lines (contract 1.33.0, FR-W-050) done 2026-11-22.
+- Delete a deposit (reason, "Deleted" tab, audit labels for withdrawn/edited collections) done 2026-11-22 on contract 1.32.0 (FR-W-049).
 - Deposit detail (collections one deposit covered) and the promise behind every cash line done 2026-11-21 on contract 1.30.0 (FR-W-048).
 - Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 

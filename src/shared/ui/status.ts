@@ -62,6 +62,7 @@ export const STATUS: Record<string, { tone: Tone; label: string }> = {
   pending: { tone: 'pending', label: 'status.pending' },
   verified: { tone: 'success', label: 'status.verified' },
   rejected: { tone: 'danger', label: 'status.rejected' },
+  deleted: { tone: 'neutral', label: 'status.deleted' },
   // handover
   pending_acceptance: { tone: 'pending', label: 'status.pending_acceptance' },
   accepted: { tone: 'success', label: 'status.accepted' },

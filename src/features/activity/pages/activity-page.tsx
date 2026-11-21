@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
-import { Activity, Banknote, Footprints, Handshake, MapPin } from 'lucide-react';
+import { Activity, Ban, Banknote, Footprints, Handshake, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatDate, formatMoney, formatTime, pickText } from '@/shared/lib/format';
@@ -16,9 +16,17 @@ import { FilterChip } from '@/shared/ui/primitives';
 import { useActivity, useMarkActivitySeen, type ActivityItem, type ActivityType } from '../api/activity';
 import { byDay, hrefOf, sentenceKey } from '../model/activity';
 
-const TYPES = ['collection', 'visit', 'promise', 'pin'] as const satisfies readonly ActivityType[];
-const ICON = { collection: Banknote, visit: Footprints, promise: Handshake, pin: MapPin } as const;
-const TONE = { collection: 'bg-success-bg text-success', visit: 'bg-info-bg text-info', promise: 'bg-st-promised-bg text-st-promised', pin: 'bg-warning-bg text-warning' } as const;
+const TYPES = ['collection', 'visit', 'promise', 'pin', 'collection_withdrawn', 'collection_edited', 'deposit_deleted'] as const satisfies readonly ActivityType[];
+const ICON = { collection: Banknote, visit: Footprints, promise: Handshake, pin: MapPin, collection_withdrawn: Ban, collection_edited: Pencil, deposit_deleted: Trash2 } as const;
+const TONE = {
+  collection: 'bg-success-bg text-success',
+  visit: 'bg-info-bg text-info',
+  promise: 'bg-st-promised-bg text-st-promised',
+  pin: 'bg-warning-bg text-warning',
+  collection_withdrawn: 'bg-warning-bg text-warning',
+  collection_edited: 'bg-warning-bg text-warning',
+  deposit_deleted: 'bg-danger-bg text-danger',
+} as const;
 
 /**
  * FR-W-046 (master FR-ACT-001): what staff are doing, as it happens: collections, visits, promises and map pins,
@@ -105,6 +113,8 @@ function Line({ item, onPerson }: { item: ActivityItem; onPerson: (id: string) =
   const d = item.data;
   const facts = [
     d.amountPoisha != null ? formatMoney(d.amountPoisha) : null,
+    d.previousAmountPoisha != null ? t('wasAmount', { amount: formatMoney(d.previousAmountPoisha) }) : null,
+    item.by ? t('deletedBy', { name: pickText(item.by.name, locale) || item.by.employeeCode || t('someone') }) : null,
     d.method ? tc(`method.${d.method}`) : null,
     d.outcome ? t(`outcome.${d.outcome}`, { defaultValue: d.outcome }) : null,
     d.promisedDate ? t('promisedFor', { date: formatDate(d.promisedDate) }) : null,

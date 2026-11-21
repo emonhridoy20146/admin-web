@@ -16,6 +16,12 @@ describe('activity feed lines (FR-W-046)', () => {
     expect(hrefOf({ entity: 'visit', entityId: 'v1', customer: { id: 'k1' } })).toBe('/customers/k1/');
     expect(hrefOf({ entity: 'customer', entityId: 'k2', customer: null })).toBeNull();
   });
+  it('a deleted deposit opens its drawer on the cash page; the new lines have their own sentences', () => {
+    expect(hrefOf({ entity: 'deposit', entityId: 'd1', customer: null })).toBe('/cash/?dep=d1');
+    expect(sentenceKey({ type: 'collection_withdrawn', data: {} })).toBe('line.collection_withdrawn');
+    expect(sentenceKey({ type: 'collection_edited', data: {} })).toBe('line.collection_edited');
+    expect(sentenceKey({ type: 'deposit_deleted', data: {} })).toBe('line.deposit_deleted');
+  });
   it('the sentence says whether a pin applied or waits', () => {
     expect(sentenceKey({ type: 'pin', data: { applied: true } })).toBe('line.pinSet');
     expect(sentenceKey({ type: 'pin', data: { applied: false } })).toBe('line.pinProposed');

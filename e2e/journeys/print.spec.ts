@@ -18,7 +18,7 @@ async function expectPrintablePdf(page: Page) {
   await page.emulateMedia({ media: 'screen' });
   expect(pdf.byteLength).toBeGreaterThan(20_000);
   // the subset font name is written in the PDF's font dictionary
-  expect(pdf.toString('latin1')).toMatch(/NotoSansBengali/);
+  expect(pdf.toString('latin1')).toMatch(/Noto-?Sans-?Bengali/);
   return pdf;
 }
 

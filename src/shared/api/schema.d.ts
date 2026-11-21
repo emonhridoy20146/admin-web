@@ -953,6 +953,24 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description collection.edit (1.32.0, FR-COL-016). A field staff member changes the amount, note or payer name of their OWN cash collection, until it is deposited: the collection must be cash, status `received`, never sent to the ERP yet, and not covered by any pending or verified deposit (same oldest-first rule as the cash in hand). Managers in scope may edit with the same limits. The pending ERP post is replaced with the new amount (same ERP key, it never reached the ERP). Audited (`collection.edited`, before and after). A repeat with the same values is a no-op. 409 INVALID_STATE reason: NOT_CASH, NOT_EDITABLE (status is not `received`, or the ERP already got an attempt), COVERED_BY_DEPOSIT, POSTING_IN_PROGRESS, STATUS_CHANGED. Another staff member's collection is 404. */
+        patch: operations["editCollection"];
+        trace?: never;
+    };
+    "/collections/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description collection.withdraw (1.32.0, FR-COL-016). A field staff member withdraws (deletes) their OWN cash collection until it is deposited: cash, status `received` or `posting_failed` (not posted to the ERP), not covered by a pending or verified deposit. The row is kept (ADR-018): status becomes `voided` with `voided {by, at, reason}`, the receipt number stays used, and the amount leaves cash in hand and the collected totals. Pending ERP post is cancelled. Audited (`collection.withdrawn`). A repeat by the same person answers 200 with the voided collection. Same 409 reasons as editing, plus USE_RESOLVE (status is `conflict`) and ALREADY_POSTED_OR_CLOSED. */
+        post: operations["withdrawCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -1113,6 +1131,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["verifyDeposit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cash/deposits/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description cash.deposit.delete (1.32.0, FR-CASH-009; super admin, branch manager). Deletes a deposit that is `pending` or `verified` (a verified one gives its money back to the person's cash in hand). The row is kept with status `deleted`, `deletedBy`, `deletedAt`, `deleteReason`; it no longer counts anywhere. The depositor is notified (type `cash.deposit.deleted`) and the sync entity `deposit` carries the new status. Audited (`cash.deposit.deleted`). 409 INVALID_STATE reason: NOT_DELETABLE (already rejected or deleted). */
+        post: operations["deleteDeposit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3331,6 +3366,29 @@ export interface components {
                 at?: string;
                 reason?: string;
             } | null;
+            /** @description Present when status is `voided` (documented 1.33.0, FR-COL-017). `kind` = `withdrawn` (the collector deleted their own cash collection, FR-COL-016) or `admin` (an office user voided it); rows voided before 1.33.0 are classified by who did it (the collector = withdrawn). */
+            voided?: {
+                by?: string;
+                /** @description Display name of `by` (1.33.0) */
+                byName?: string;
+                /** Format: date-time */
+                at?: string;
+                reason?: string;
+                /**
+                 * @description 1.33.0
+                 * @enum {string}
+                 */
+                kind?: "withdrawn" | "admin";
+            };
+            /** @description Present once the collector has corrected the amount, note or payer with PATCH /collections/{id} (1.33.0, FR-COL-017). `previousAmountPoisha` is the amount before the FIRST edit; `at`/`by` are the latest edit. */
+            edited?: {
+                count?: number;
+                /** Format: date-time */
+                at?: string;
+                by?: string;
+                byName?: string;
+                previousAmountPoisha?: number;
+            };
             flags?: ("far_from_pin" | "mock_location" | "clock_skew" | "late_sync" | "duplicate_txn_ref" | "not_in_scope_at_record_time" | "no_location")[];
             distanceToPinM?: number | null;
             cashOnHand?: components["schemas"]["CashPosition"];
@@ -3421,11 +3479,20 @@ export interface components {
             userId?: string;
             /** @description Depositor display name (1.3.0) */
             userName?: string;
-            /** @enum {string} */
-            status?: "pending" | "verified" | "rejected";
+            /**
+             * @description `deleted` added in 1.32.0: an admin deleted the deposit; it counts nowhere
+             * @enum {string}
+             */
+            status?: "pending" | "verified" | "rejected" | "deleted";
             verifiedBy?: string;
             verifiedAt?: string;
             rejectReason?: string;
+            /** @description 1.32.0 */
+            deletedBy?: string;
+            /** @description 1.32.0 */
+            deletedAt?: string;
+            /** @description 1.32.0 */
+            deleteReason?: string;
         };
         Area: {
             id?: string;
@@ -3507,6 +3574,8 @@ export interface components {
         Visit: components["schemas"]["VisitCreate"] & {
             id?: string;
             userId?: string;
+            /** @description Display name of userId, so any staff of the branch can say who visited (1.31.0, FR-ACT-002) */
+            userName?: string;
             checkOutAt?: string | null;
             distanceToPinM?: number | null;
             flags?: string[];
@@ -3661,6 +3730,12 @@ export interface components {
         Promise: components["schemas"]["PromiseCreate"] & {
             id?: string;
             ownerId?: string;
+            /** @description Display name of ownerId, the customer's assignee (1.31.0) */
+            ownerName?: string;
+            /** @description The staff member who made the promise (1.31.0); equals ownerId on promises older than 1.31.0 */
+            createdBy?: string;
+            /** @description Display name of createdBy (1.31.0, FR-ACT-002) */
+            createdByName?: string;
             status?: components["schemas"]["PromiseStatus"];
             paidTowardsPoisha?: number;
             createdAt?: string;
@@ -3712,6 +3787,18 @@ export interface components {
             method?: "gps" | "map";
             /** @description Applied without a manager because the customer had no pin (1.11.0) */
             autoApplied?: boolean;
+            /** @description Who proposed or set the pin (1.31.0, FR-ACT-002) */
+            proposer?: {
+                id?: string;
+                name?: string;
+            };
+            /** @description Who approved or rejected it; null while pending or when it applied at once (1.31.0) */
+            decider?: {
+                id?: string;
+                name?: string;
+            } | null;
+            /** @description Set directly by a manager (1.31.0). Since 1.31.0 the sync entity location_proposal reaches every device of the branch, not only the proposer: match proposer.id with the signed-in user to find your own */
+            direct?: boolean;
         };
         LocationProposal: {
             id?: string;
@@ -4083,10 +4170,10 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /**
-             * @description customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
+             * @description collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
              * @enum {string}
              */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -4236,8 +4323,11 @@ export interface components {
         /** @description 1.28.0 (FR-ACT-001) */
         ActivityItem: {
             id: string;
-            /** @enum {string} */
-            type: "collection" | "visit" | "promise" | "pin";
+            /**
+             * @description Since 1.33.0 also collection_withdrawn (a collector deleted their own cash collection), collection_edited (they corrected it) and deposit_deleted (an office user deleted a staff deposit; `actor` is the staff member, `by` the office user)
+             * @enum {string}
+             */
+            type: "collection" | "visit" | "promise" | "pin" | "collection_withdrawn" | "collection_edited" | "deposit_deleted";
             /** Format: date-time */
             at: string;
             branchId: string | null;
@@ -4252,15 +4342,25 @@ export interface components {
                 name?: components["schemas"]["I18nText"];
                 code?: string;
             } | null;
+            /** @description 1.33.0: the office user who did it to the actor's record (deposit_deleted); null otherwise */
+            by?: {
+                id?: string;
+                name?: components["schemas"]["I18nText"];
+                employeeCode?: string;
+            } | null;
             /**
-             * @description What a click opens (a pin opens the customer)
+             * @description What a click opens (a pin opens the customer; a deposit opens the deposit drawer)
              * @enum {string}
              */
-            entity: "collection" | "visit" | "promise" | "customer";
+            entity: "collection" | "visit" | "promise" | "customer" | "deposit";
             entityId: string;
             /** @description Small facts for the line: collection amountPoisha, method, flags; visit outcome, flags; promise promisedDate; pin applied (true = applied at once, false = waits for a manager). Field-system activity, not ERP money. */
             data: {
                 amountPoisha?: number;
+                /** @description collection_edited (1.33.0): the amount before this edit */
+                previousAmountPoisha?: number;
+                /** @description collection_edited (1.33.0): which edit this line is */
+                editCount?: number;
                 method?: string;
                 outcome?: string;
                 /** Format: date */
@@ -6448,6 +6548,69 @@ export interface operations {
             };
         };
     };
+    editCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amountPoisha?: number;
+                    note?: string | null;
+                    payerName?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    withdrawCollection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Optional; defaults to a standard text */
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Collection"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
     voidCollection: {
         parameters: {
             query?: never;
@@ -6655,7 +6818,7 @@ export interface operations {
         parameters: {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
-                status?: "pending" | "verified" | "rejected";
+                status?: "pending" | "verified" | "rejected" | "deleted";
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -6723,6 +6886,34 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    deleteDeposit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reason"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deposit"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
         };
     };
     rejectDeposit: {
@@ -8919,7 +9110,7 @@ export interface operations {
         parameters: {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
-                type?: "collection" | "visit" | "promise" | "pin";
+                type?: "collection" | "visit" | "promise" | "pin" | "collection_withdrawn" | "collection_edited" | "deposit_deleted";
                 /** @description Only what this staff member did */
                 userId?: string;
                 limit?: components["parameters"]["Limit"];

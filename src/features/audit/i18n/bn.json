@@ -34,7 +34,7 @@
     "user.create": "ব্যবহারকারী তৈরি", "user.update": "ব্যবহারকারী সম্পাদনা", "user.deactivate": "ব্যবহারকারী নিষ্ক্রিয়", "user.activate": "ব্যবহারকারী পুনরায় সক্রিয়", "user.reset_password": "পাসওয়ার্ড রিসেট",
     "rbac.override.set": "ব্যবহারকারীর অনুমতি বদল", "rbac.override.branch": "শাখার অনুমতি বদল",
     "settings.update": "সেটিংস বদল", "flag.set": "ফিচার ফ্ল্যাগ বদল",
-    "collection.void": "আদায় বাতিল", "collection.resolve": "কনফ্লিক্ট সমাধান",
+    "collection.void": "আদায় বাতিল", "collection.withdrawn": "আদায়কারী নগদ আদায় বাতিল করেছেন", "collection.edited": "আদায়কারী নগদ আদায় সংশোধন করেছেন", "cash.deposit.deleted": "জমা মুছে ফেলা", "collection.resolve": "কনফ্লিক্ট সমাধান",
     "deposit.verify": "জমা যাচাই", "deposit.reject": "জমা বাতিল",
     "tag.set": "গ্রাহক ট্যাগ", "tag.remove": "ট্যাগ সরানো",
     "handover.create": "হস্তান্তর তৈরি", "auth.login": "লগইন", "location.proposal.approve": "পিন সংশোধন অনুমোদন"

@@ -260,6 +260,32 @@
     }
   },
   {
+    "key": "collection.withdraw",
+    "module": "collections",
+    "description": "Withdraw (delete) your own cash collection until it is deposited (the row is kept as voided)",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "collection.edit",
+    "module": "collections",
+    "description": "Correct the amount, note or payer of your own cash collection until it is deposited and before the ERP was sent it",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
     "key": "collection.resolve",
     "module": "collections",
     "description": "Resolve conflicts",
@@ -303,6 +329,19 @@
     "module": "cash",
     "description": "Verify/reject deposits",
     "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "cash.deposit.delete",
+    "module": "cash",
+    "description": "Delete a pending or verified deposit (reason required; the row is kept as deleted)",
+    "added": true,
     "reserved": false,
     "defaults": {
       "super_admin": true,

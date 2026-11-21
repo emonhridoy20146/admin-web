@@ -35,7 +35,7 @@ export function writeStore(key: string, value: unknown) {
   }
 }
 
-const defaults = { locale: 'bn' as Locale, bnDigits: true, theme: 'system' as ThemePref, sidebarCollapsed: false, density: 'comfortable' as const };
+const defaults = { locale: 'en' as Locale, bnDigits: false, theme: 'system' as ThemePref, sidebarCollapsed: false, density: 'comfortable' as const };
 
 export const useUi = create<UiState>((set, get) => ({
   ...defaults,

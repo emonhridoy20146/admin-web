@@ -24,7 +24,7 @@ export const cashManifest: FeatureManifest = {
       useBadge: usePendingDepositBadge,
     },
   ],
-  permissions: ['cash.view', 'cash.deposit.verify', 'cash.limit.manage'],
+  permissions: ['cash.view', 'cash.deposit.verify', 'cash.deposit.delete', 'cash.limit.manage'],
   events: { emits: [EV.depositDecided], listens: [EV.collectionVoided, EV.collectionResolved] },
   commands: [
     { id: 'cash.open', title: 'cash:title', icon: Banknote, href: '/cash/', permission: 'cash.view' },

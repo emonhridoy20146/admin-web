@@ -1,6 +1,22 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+### Changed (owner request 2026-11-22: English by default)
+- **The panel opens in English with Western digits** for anyone who has not chosen a language yet (`ui-store` and format defaults, `<html lang>`). A language already chosen in the browser (`fos.ui`) is kept; Bangla and Bangla digits stay complete behind the language switch. The Playwright journeys assert the Bangla screens, so `playwright.config.ts` starts every test with Bangla chosen (`storageState`).
+Contract pinned: field-api `openapi.yaml` **1.33.0** (additive; types regenerated; permission catalog 59 keys).
+### Added (contract 1.33.0, owner request 2026-11-22: what happened to a collection; FR-W-050, master FR-COL-017)
+- **Collection drawer: a "Voided" block** (who, when, reason) with a badge "Withdrawn by staff" (the collector deleted their own cash collection) or "Voided by office". Test ids `voided-block`, `edited-block`.
+- **Collection drawer: an "Edited by the collector" block** ("Edited by X on date: was ৳A, now ৳B", and how many times; "was" is the first original amount). The list shows a small "Edited" badge next to the status.
+- **Staff activity: three new lines and filters**, "Withdrawn" (a collector deleted their own cash collection), "Edited" (they corrected one, with the amount it was) and "Deposits deleted" (an office user deleted a staff deposit, "deleted by <name>"; opens the deposit on the cash page).
+- Permission descriptions for `collection.withdraw`, `collection.edit` and `cash.deposit.delete` already come from the server catalog (en and bn) and show on the roles page; nothing to add.
+- Mock API: voided collections carry `voided`, three edited collections, activity lines for them. Tests: `activity-model.test.ts`, journey `collection-changes.spec.ts`.
+### Added (contract 1.32.0, owner request 2026-11-22: delete a deposit, see the collector's own deletes; FR-W-049, master FR-CASH-009)
+- **Delete deposit** on the deposit drawer (`cash.deposit.delete`, super admin and branch manager): reason code and text, confirm naming amount and collector. A pending or verified deposit becomes "Deleted", stays in the history (new "Deleted" tab, with the reason), the money is back in the collector's cash on hand and they are notified.
+- Audit page labels for `cash.deposit.deleted`, `collection.withdrawn` (the collector deleted their own unsent cash collection) and `collection.edited` (they corrected its amount, note or payer).
+- "Deleted" status badge. Mock API: `POST /cash/deposits/{id}/delete`, deleted deposits cover no collection. Test: journey (a manager deletes a verified deposit; it shows as deleted in the history).
+Contract pinned: field-api `openapi.yaml` **1.31.0** (additive; types regenerated).
+### Added (contract 1.31.0, owner request 2026-11-22: who did it)
+- **Promises: a "Taken by" column and drawer line** with the staff member who made the promise (`createdByName`). "Staff" keeps showing the customer's assignee; before 1.31.0 the two could be mixed up.
 Contract pinned: field-api `openapi.yaml` **1.30.0** (2026-11-21: 1.20.0 → 1.30.0 in nine steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection, 1.28.0 the staff activity feed, 1.29.0 the paid-this-month filter, 1.30.0 deposit detail and the promise behind a cash line; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
 ### Added (contract 1.30.0, owner request 2026-11-21: which collections a deposit covered, promise kept or not per line; FR-W-048, master FR-CASH-008)
 - **A deposit opens the collections it covered**: a row of the deposit history, or "কোন আদায়গুলো" on a pending card, opens a drawer (`?dep=`) with the deposit (amount, where, reference, time, status), the covered and unmatched totals, and each covered collection with customer, invoice, receipt, the part this deposit covered ("অংশ, মোট …" when partial) and its status. A rejected deposit says it covers nothing.

@@ -120,7 +120,12 @@ export function CollectionsPage() {
       header: t('col.status'),
       priority: 1,
       mobile: 'badges',
-      cell: (c) => <StatusBadge status={c.status!} />,
+      cell: (c) => (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <StatusBadge status={c.status!} />
+          {c.edited && <Badge tone="warning">{t('editedBadge')}</Badge>}
+        </span>
+      ),
     },
     {
       id: 'method',
@@ -418,6 +423,34 @@ function CollectionDrawer({ id, onClose }: { id: string | null; onClose: () => v
                   {c.resolution.at && (
                     <p className="mt-1 text-xs text-fg-tertiary">{formatDateTime(c.resolution.at)}</p>
                   )}
+                </div>
+              )}
+              {c.voided && (
+                <div className="rounded-md border border-line px-4 py-3 text-sm" data-testid="voided-block">
+                  <div className="flex flex-wrap items-center gap-2 font-semibold">
+                    {t('detail.voided')}
+                    <Badge tone={c.voided.kind === 'withdrawn' ? 'warning' : 'neutral'}>
+                      {t(`detail.voidKind.${c.voided.kind ?? 'admin'}`)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-fg-secondary">{c.voided.reason}</p>
+                  <p className="mt-1 text-xs text-fg-tertiary">
+                    {t('detail.voidedBy', { name: c.voided.byName || '—', date: c.voided.at ? formatDateTime(c.voided.at) : '—' })}
+                  </p>
+                </div>
+              )}
+              {c.edited && (
+                <div className="rounded-md border border-line px-4 py-3 text-sm" data-testid="edited-block">
+                  <div className="font-semibold">{t('detail.edited')}</div>
+                  <p className="mt-1 text-fg-secondary">
+                    {t('detail.editedLine', {
+                      name: c.edited.byName || '—',
+                      date: c.edited.at ? formatDateTime(c.edited.at) : '—',
+                      was: formatMoney(c.edited.previousAmountPoisha ?? 0),
+                      now: formatMoney(c.amountPoisha ?? 0),
+                    })}
+                  </p>
+                  {(c.edited.count ?? 0) > 1 && <p className="mt-1 text-xs text-fg-tertiary">{t('detail.editedTimes', { count: c.edited.count })}</p>}
                 </div>
               )}
               <DescList

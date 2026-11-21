@@ -979,7 +979,7 @@ export const handlers = [
     const deny = need(ctx, 'activity.view');
     if (deny) return deny;
     const type = url.searchParams.get('type');
-    if (type && !['collection', 'visit', 'promise', 'pin'].includes(type)) return problem(400, 'VALIDATION_FAILED', 'type');
+    if (type && !['collection', 'visit', 'promise', 'pin', 'collection_withdrawn', 'collection_edited', 'deposit_deleted'].includes(type)) return problem(400, 'VALIDATION_FAILED', 'type');
     const userId = url.searchParams.get('userId');
     const sc = scope(ctx, url);
     const mine = db.activity.filter((a) => !a.branchId || sc.includes(a.branchId));
@@ -1223,7 +1223,7 @@ export const handlers = [
     const b = (await request.json()) as { reason: string };
     const before = { status: c.status };
     c.status = 'voided';
-    c.resolution = { action: 'void', by: ctx.user.id, at: new Date().toISOString(), reason: b.reason };
+    c.voided = { by: ctx.user.id!, byName: ctx.user.name?.en ?? '', at: new Date().toISOString(), reason: b.reason, kind: 'admin' };
     db.addAudit({ actor: actor(ctx.user), action: 'collection.void', entity: 'collection', entityId: c.id, branchId: db.collectionBranch(c), before, after: { status: 'voided' }, reason: b.reason });
     return HttpResponse.json({});
   })),
@@ -1251,9 +1251,9 @@ export const handlers = [
     const u = dep ? db.userById(dep.userId!) : undefined;
     if (!dep || !u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '') || (ctx.user.role === 'field_staff' && ctx.user.id !== u.id)) return problem(404, 'NOT_FOUND', 'Deposit not found');
     const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? -1 : 1));
-    const order = db.deposits.filter((d) => d.userId === u.id && d.status !== 'rejected').sort((a, b) => (a.depositedAt! < b.depositedAt! ? -1 : 1));
+    const order = db.deposits.filter((d) => d.userId === u.id && d.status !== 'rejected' && d.status !== 'deleted').sort((a, b) => (a.depositedAt! < b.depositedAt! ? -1 : 1));
     let skip = order.slice(0, order.findIndex((d) => d.id === dep.id)).reduce((n, d) => n + (d.amountPoisha ?? 0), 0);
-    let left = dep.status === 'rejected' ? 0 : (dep.amountPoisha ?? 0);
+    let left = dep.status === 'rejected' || dep.status === 'deleted' ? 0 : (dep.amountPoisha ?? 0);
     const items: S['DepositCoverage']['items'] = [];
     for (const c of cash) {
       const skipped = Math.min(skip, c.amountPoisha ?? 0);
@@ -1296,6 +1296,29 @@ export const handlers = [
     db.inbox.filter((i) => i.entityId === d.id).forEach((i) => (i.status = 'resolved'));
     db.addAudit({ actor: actor(ctx.user), action: 'deposit.verify', entity: 'deposit', entityId: d.id, before: { status: 'pending' }, after: { status: 'verified', amountPoisha: d.amountPoisha }, reason: '' });
     return HttpResponse.json({});
+  })),
+  // FR-CASH-009 (1.32.0): an admin deletes a pending or verified deposit; the row stays as `deleted`, the money is back on hand
+  http.post(`${BASE}/cash/deposits/:id/delete`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'cash.deposit.delete');
+    if (deny) return deny;
+    const d = db.deposits.find((x) => x.id === params.id);
+    if (!d) return problem(404, 'NOT_FOUND', 'Deposit not found');
+    if (d.status !== 'pending' && d.status !== 'verified') return problem(409, 'INVALID_STATE', 'Deposit cannot be deleted', 'NOT_DELETABLE');
+    const b = (await request.json()) as { reason: string };
+    const was = d.status;
+    d.status = 'deleted';
+    d.deletedBy = ctx.user.id;
+    d.deletedAt = new Date().toISOString();
+    d.deleteReason = b.reason;
+    const pos = db.cashPositions.find((p) => p.userId === d.userId);
+    if (pos) {
+      if (was === 'pending') pos.pendingDepositsPoisha = Math.max(0, (pos.pendingDepositsPoisha ?? 0) - d.amountPoisha!);
+      else pos.onHandPoisha = (pos.onHandPoisha ?? 0) + d.amountPoisha!;
+      pos.state = pos.onHandPoisha! >= pos.limitPoisha! ? 'exceeded' : pos.onHandPoisha! >= pos.limitPoisha! * 0.8 ? 'warning' : 'ok';
+    }
+    db.inbox.filter((i) => i.entityId === d.id).forEach((i) => (i.status = 'resolved'));
+    db.addAudit({ actor: actor(ctx.user), action: 'cash.deposit.deleted', entity: 'deposit', entityId: d.id, before: { status: was, amountPoisha: d.amountPoisha }, after: { status: 'deleted' }, reason: b.reason });
+    return HttpResponse.json(d);
   })),
   http.post(`${BASE}/cash/deposits/:id/reject`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'cash.deposit.verify');

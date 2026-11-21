@@ -45,7 +45,7 @@ Extension points let a new feature add a dashboard widget, a customer-detail tab
 | `map` | `module.customers` | `customer.view`, `assignment.manage` | `/map` |
 | `tags` | `module.tags` | `tag.view`, `tag.set`, `tag.approve` | tab + inbox actions |
 | `collections` | `module.collections` | `collection.view`, `collection.void`, `collection.resolve` | `/collections`, `/collections/conflicts`, `/reconciliation` |
-| `cash` | `module.cash` | `cash.view`, `cash.deposit.verify`, `cash.limit.manage` | `/cash` |
+| `cash` | `module.cash` | `cash.view`, `cash.deposit.verify`, `cash.deposit.delete`, `cash.limit.manage` | `/cash` |
 | `promises` | `module.promises` | `promise.view` | `/promises` |
 | `visits` | `module.visits` | `visit.view` | `/visits` |
 | `notes` | `module.notes` | `note.view`, `note.create` | customer tab |

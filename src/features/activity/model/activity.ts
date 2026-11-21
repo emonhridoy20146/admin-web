@@ -17,9 +17,10 @@ export function byDay<T extends Pick<ActivityItem, 'at'>>(items: T[]): { day: st
   return out;
 }
 
-/** Where a line opens: the collection, the customer (visit, promise and pin are about the customer). */
+/** Where a line opens: the collection, the deposit, or the customer (visit, promise and pin are about the customer). */
 export function hrefOf(i: Pick<ActivityItem, 'entity' | 'entityId' | 'customer'>): string | null {
   if (i.entity === 'collection') return `/collections/?drawer=collection:${i.entityId}`;
+  if (i.entity === 'deposit') return `/cash/?dep=${i.entityId}`;
   const c = i.customer?.id;
   return c ? `/customers/${c}/` : null;
 }

@@ -64,6 +64,19 @@ export function useVerifyDeposit() {
   });
 }
 
+/** FR-CASH-009 (contract 1.32.0): delete a pending or verified deposit; the money is back in the person's cash on hand. */
+export function useDeleteDeposit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      unwrap(api.POST('/cash/deposits/{id}/delete', { params: { path: { id } }, body: { reason } })),
+    onSuccess: (_d, v) => {
+      void qc.invalidateQueries({ queryKey: ['cash'] });
+      emit(EV.depositDecided, { id: v.id, decision: 'deleted' });
+    },
+  });
+}
+
 export function useRejectDeposit() {
   const qc = useQueryClient();
   return useMutation({
