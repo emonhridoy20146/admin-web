@@ -676,6 +676,19 @@
     }
   },
   {
+    "key": "activity.view",
+    "module": "activity",
+    "description": "See the staff activity feed in scope (collections, visits, promises, pins as they happen)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
     "key": "leave.request",
     "module": "attendance",
     "description": "Request leave",

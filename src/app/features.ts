@@ -31,8 +31,9 @@ import { coworkManifest } from '@/features/cowork';
 import { targetsManifest } from '@/features/targets';
 import { noticesManifest } from '@/features/notices';
 import { tasksManifest } from '@/features/tasks';
+import { activityManifest } from '@/features/activity';
 
-export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, noticesManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, coworkManifest, tasksManifest, assignmentsManifest, locationManifest, handoversManifest, staffManifest, targetsManifest, attendanceManifest, reportsManifest, adminUsersManifest, adminDevicesManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, systemManifest, auditManifest];
+export const features: FeatureManifest[] = [authManifest, shellManifest, dashboardManifest, inboxManifest, activityManifest, noticesManifest, customersManifest, tagsManifest, collectionsManifest, cashManifest, promisesManifest, visitsManifest, coworkManifest, tasksManifest, assignmentsManifest, locationManifest, handoversManifest, staffManifest, targetsManifest, attendanceManifest, reportsManifest, adminUsersManifest, adminDevicesManifest, adminRbacManifest, adminSettingsManifest, adminFlagsManifest, systemManifest, auditManifest];
 
 registerFeatures(features);
 

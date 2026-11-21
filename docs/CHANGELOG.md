@@ -1,7 +1,13 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.27.0** (2026-11-21: 1.20.0 → 1.27.0 in six steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.28.0** (2026-11-21: 1.20.0 → 1.28.0 in seven steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection, 1.28.0 staff activity feed; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.28.0, owner request 2026-11-21: what staff are doing, with its own bell; FR-W-046, master FR-ACT-001)
+- **"কর্মীদের কাজ" page and a second bell in the header** (feature `activity`, flag `module.activity`, permission `activity.view`): collections, visits, promises and map pins as staff record them, newest first and grouped by day; each line names the person (a click shows only their work) and the customer (a link to the customer, or to the collection). Filters by type; older lines by "আরও পুরনো দেখুন"; new lines carry a dot.
+- The bell counts lines since the admin last opened the page; opening it clears the count (per admin, on the server). Polls every minute.
+- Header: every feature route can ask for a bell (`bell: { icon, label, order }`); the inbox keeps its bell, the feed has its own.
+- Mock API: the feed derived from the mock collections, visits, promises and pin proposals of the last three days; `POST /activity/seen`.
+- Tests: unit (Dhaka day grouping, links, pin sentence), journey with axe.
 ### Added (owner request 2026-11-21: print / PDF on the working pages; FR-W-045)
 - **"PDF / প্রিন্ট" on thirteen more pages**: collections, conflicts, cash on hand, customers, the customer page, pin approvals, promises, visits, co-work, handovers, leave, tasks, users and the audit log. The printed page has the masthead and no menus, like the reports; "Save as PDF" in the print dialog gives the PDF, named after the page (the customer page: code and name).
 - `PageHeader` takes `print` (true or a file name) and places the button after the page's own actions.
