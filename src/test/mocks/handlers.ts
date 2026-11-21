@@ -182,12 +182,20 @@ function recomputeCustomer(c: db.MockCustomer) {
   db.deriveCustomer(c);
 }
 const PAY_ORDER = ['bad', 'missed_many', 'missed_one', 'due_today', 'on_track', 'paid_off'] as const;
-/** 1.14.0 filters shared by the list and the map: pin colours (OR) and an open invoice of a kind */
+/** 1.14.0 filters shared by the list and the map: pin colours (OR), an open invoice of a kind; 1.28.0: paid this month */
 function payFilter(url: URL) {
   const pay = (url.searchParams.get('payState') ?? '').split(',').filter(Boolean);
   const kind = url.searchParams.get('invoiceKind');
-  return (c: db.MockCustomer) =>
-    (!pay.length || pay.includes(c.item.payState ?? '')) && (!kind || (kind === 'credit' ? (c.item.openInvoices?.credit ?? 0) > 0 : (c.item.openInvoices?.installment ?? 0) > 0));
+  const paidMonth = url.searchParams.get('paidThisMonth');
+  return (c: db.MockCustomer) => {
+    const a = mockActivity(c).activity;
+    const paidSomething = (a?.paidPoisha ?? 0) > 0 || (a?.pendingPoisha ?? 0) > 0;
+    return (
+      (!pay.length || pay.includes(c.item.payState ?? '')) &&
+      (!kind || (kind === 'credit' ? (c.item.openInvoices?.credit ?? 0) > 0 : (c.item.openInvoices?.installment ?? 0) > 0)) &&
+      (!paidMonth || (paidMonth === 'yes' ? paidSomething : !paidSomething))
+    );
+  };
 }
 
 const uploads = new Map<string, boolean>();

@@ -55,3 +55,41 @@ test('customer drawer and page: "this month" with visits, ERP money, pending mon
   await expect(block).toContainText(/মোট ইনভয়েস [০-৯]+টি · বাকি আছে [০-৯]+টি/);
   expect((await new AxeBuilder({ page }).include('[data-testid=month-activity]').analyze()).violations).toEqual([]);
 });
+
+// Owner request 2026-11-21 (contract 1.28.0, FR-W-046, master FR-CUS-019): who paid something this month and who did not.
+test('customer list: "paid this month" / "not paid this month" split the list and agree with the money mark on every row', async ({ page }) => {
+  await login(page, 'manager');
+  await nav(page, custBn.title);
+  await expect(page.locator('tbody tr a').first()).toBeVisible();
+  const group = page.getByRole('group', { name: custBn.paidMonth.label });
+  await expect(group).toBeVisible();
+
+  const marksOfRows = async () => {
+    const rows = page.locator('tbody tr');
+    const n = await rows.count();
+    const out: string[] = [];
+    for (let i = 0; i < n; i++) out.push((await rows.nth(i).locator('[data-mark=paid] .sr-only').textContent())?.trim() ?? '');
+    return out;
+  };
+
+  await group.getByRole('button', { name: custBn.paidMonth.no, exact: true }).click();
+  await expect(page).toHaveURL(/paid=no/);
+  await expect(async () => {
+    const marks = await marksOfRows();
+    expect(marks.length).toBeGreaterThan(0);
+    for (const m of marks) expect(m).toBe(custBn.marks.paidNone);
+  }).toPass({ timeout: 15_000 });
+
+  await group.getByRole('button', { name: custBn.paidMonth.yes, exact: true }).click();
+  await expect(page).toHaveURL(/paid=yes/);
+  await expect(async () => {
+    const marks = await marksOfRows();
+    expect(marks.length).toBeGreaterThan(0);
+    for (const m of marks) expect(m).not.toBe(custBn.marks.paidNone);
+  }).toPass({ timeout: 15_000 });
+
+  // the control prints and reads as words, and the page stays accessible with it
+  expect((await new AxeBuilder({ page }).include('main').analyze()).violations).toEqual([]);
+  await group.getByRole('button', { name: custBn.paidMonth.all, exact: true }).click();
+  await expect(page).not.toHaveURL(/paid=/);
+});

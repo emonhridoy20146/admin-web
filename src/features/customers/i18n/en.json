@@ -270,6 +270,12 @@
     "installment": "Installment invoices",
     "credit": "Credit invoices"
   },
+  "paidMonth": {
+    "label": "This month",
+    "all": "Everyone",
+    "yes": "Paid this month",
+    "no": "Not paid this month"
+  },
   "pay": {
     "legend": "Pin colour",
     "allColours": "All colours",

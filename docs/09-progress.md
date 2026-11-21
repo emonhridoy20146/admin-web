@@ -71,6 +71,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - Collection board (verified money, every branch, month and all time) and its scope setting done 2026-11-21 on contract 1.26.0 (FR-W-043).
 - Cash on hand: the collections behind a collector's cash (drawer) done 2026-11-21 on contract 1.27.0 (FR-W-044).
 - Print / PDF button on thirteen more pages done 2026-11-21 (FR-W-045).
+- Customer list: paid this month / not paid this month filter done 2026-11-21 on contract 1.28.0 (FR-W-046).
 - Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api

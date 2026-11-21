@@ -27,6 +27,8 @@ import { WorkMarks, WorkMarksLegend } from '../components/work-marks';
 const FILTERS = ['overdue', 'due_today', 'promised_today', 'bad_suggested', 'tagged_bad', 'no_location', 'unassigned', 'paid_up'] as const;
 const SORTS = ['-daysOverdue', '-totalOutstanding', 'nextDueDate', 'name'] as const;
 const KINDS = ['all', 'installment', 'credit'] as const;
+/** FR-W-046 (contract 1.28.0): who paid something this month and who did not. */
+const PAID_MONTH = ['all', 'yes', 'no'] as const;
 
 export function CustomersPage() {
   const { t } = useTranslation('customers');
@@ -36,6 +38,7 @@ export function CustomersPage() {
   const filters = listOf(url.getList('filter'), FILTERS);
   const pay = listOf(url.getList('pay'), PAY_STATES);
   const kind = oneOf(url.get('kind'), KINDS, 'all');
+  const paidMonth = oneOf(url.get('paid'), PAID_MONTH, 'all');
   const sort = oneOf(url.get('sort'), SORTS, '-daysOverdue');
   const qParam = url.get('q');
   const cursor = url.get('cursor');
@@ -51,6 +54,7 @@ export function CustomersPage() {
     filter: filters.length ? filters : undefined,
     payState: pay.length ? pay : undefined,
     invoiceKind: kind === 'all' ? undefined : kind,
+    paidThisMonth: paidMonth === 'all' ? undefined : paidMonth,
     sort,
     q: qParam || undefined,
     cursor: cursor || undefined,
@@ -222,6 +226,12 @@ export function CustomersPage() {
           onChange={(v) => (pager.reset(), url.set({ kind: v === 'all' ? null : v, cursor: null }))}
           options={KINDS.map((k) => ({ value: k, label: t(`invoiceKind.${k}`) }))}
         />
+        <Segmented
+          label={t('paidMonth.label')}
+          value={paidMonth}
+          onChange={(v) => (pager.reset(), url.set({ paid: v === 'all' ? null : v, cursor: null }))}
+          options={PAID_MONTH.map((k) => ({ value: k, label: t(`paidMonth.${k}`) }))}
+        />
         <div className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
           {FILTERS.map((f) => (
             <FilterChip key={f} selected={filters.includes(f)} onClick={() => toggleFilter(f)}>
@@ -279,10 +289,10 @@ export function CustomersPage() {
         }}
         empty={
           <EmptyState
-            icon={filters.length || pay.length || kind !== 'all' || qParam ? SearchX : Users}
+            icon={filters.length || pay.length || kind !== 'all' || paidMonth !== 'all' || qParam ? SearchX : Users}
             title={t('emptyTitle')}
             body={t('emptyBody')}
-            action={(filters.length > 0 || pay.length > 0 || kind !== 'all' || !!qParam) && <Button size="sm" onClick={() => (setQ(''), url.set({ filter: null, pay: null, kind: null, q: null, cursor: null }))}>{t('clearFilters')}</Button>}
+            action={(filters.length > 0 || pay.length > 0 || kind !== 'all' || paidMonth !== 'all' || !!qParam) && <Button size="sm" onClick={() => (setQ(''), url.set({ filter: null, pay: null, kind: null, paid: null, q: null, cursor: null }))}>{t('clearFilters')}</Button>}
           />
         }
       />

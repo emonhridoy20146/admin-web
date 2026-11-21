@@ -1,7 +1,10 @@
 # Changelog — admin-web
 
 ## [Unreleased]
-Contract pinned: field-api `openapi.yaml` **1.27.0** (2026-11-21: 1.20.0 → 1.27.0 in six steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+Contract pinned: field-api `openapi.yaml` **1.28.0** (2026-11-21: 1.20.0 → 1.28.0 in seven steps, all additive: 1.22.0 no screen change, 1.23.0 extra phone numbers, 1.24.0 this month on a customer and invoice counts, 1.25.0 break windows, overtime and late absences, 1.26.0 the collection board, 1.27.0 cash in hand by collection, 1.28.0 the paid-this-month filter; permission catalog 55 keys; types regenerated with `pnpm gen:api`).
+### Added (contract 1.28.0, owner request 2026-11-21: who paid this month and who did not; FR-W-046, master FR-CUS-019)
+- **Customer list: "এই মাসে — সবাই / এই মাসে দিয়েছে / এই মাসে দেয়নি"** next to the invoice-type control; in the URL as `?paid=yes|no`, combines with the status chips, pin colours and search; the invoice totals in the header follow it. The server applies the same rule the row's money mark uses (an ERP payment of this month, or field money of this month still waiting for the ERP), so a list of "not paid" never shows a paid mark.
+- Mock API applies `paidThisMonth` on the list and the map. Tests: journey (split agrees with every row's mark, axe clean).
 ### Added (owner request 2026-11-21: print / PDF on the working pages; FR-W-045)
 - **"PDF / প্রিন্ট" on thirteen more pages**: collections, conflicts, cash on hand, customers, the customer page, pin approvals, promises, visits, co-work, handovers, leave, tasks, users and the audit log. The printed page has the masthead and no menus, like the reports; "Save as PDF" in the print dialog gives the PDF, named after the page (the customer page: code and name).
 - `PageHeader` takes `print` (true or a file name) and places the button after the page's own actions.
