@@ -103,16 +103,17 @@ function HeaderBells() {
     .sort((a, b) => a.bell!.order - b.bell!.order);
   return (
     <>
-      {bells.map((r) => (
-        <BellButton key={r.path} href={r.path} useBadge={r.useBadge!} label={t(r.bell!.label)} icon={r.bell!.icon} />
+      {/* on a phone only the first bell fits next to search, ERP and the user menu; the others stay in the menu with their count */}
+      {bells.map((r, i) => (
+        <BellButton key={r.path} href={r.path} useBadge={r.useBadge!} label={t(r.bell!.label)} icon={r.bell!.icon} className={i > 0 ? 'max-sm:hidden' : undefined} />
       ))}
     </>
   );
 }
-function BellButton({ href, useBadge, label, icon: Icon }: { href: string; useBadge: () => number | undefined; label: string; icon: LucideIcon }) {
+function BellButton({ href, useBadge, label, icon: Icon, className }: { href: string; useBadge: () => number | undefined; label: string; icon: LucideIcon; className?: string }) {
   const n = useBadge();
   return (
-    <Link href={href} className="relative grid size-9 place-items-center rounded-sm text-fg-secondary hover:bg-surface-hover hover:text-fg [@media(pointer:coarse)]:size-11" aria-label={n ? `${label}: ${n}` : label}>
+    <Link href={href} className={cn(className, 'relative grid size-9 place-items-center rounded-sm text-fg-secondary hover:bg-surface-hover hover:text-fg [@media(pointer:coarse)]:size-11')} aria-label={n ? `${label}: ${n}` : label}>
       <Icon className="size-[18px]" aria-hidden />
       {!!n && <span className="tabular absolute top-1 end-0.5 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] leading-4 font-semibold text-white ring-2 ring-surface">{formatNumber(n > 99 ? 99 : n)}</span>}
     </Link>
