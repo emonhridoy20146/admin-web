@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Lock, PanelLeftClose, PanelLeftOpen, PowerOff, WifiOff } from 'lucide-react';
+import { ChevronDown, Lock, PanelLeftClose, PanelLeftOpen, PowerOff, WifiOff } from 'lucide-react';
 import * as D from '@radix-ui/react-dialog';
 import { cn } from '@/shared/lib/cn';
 import { useSession } from '@/shared/auth/session';
@@ -154,6 +154,7 @@ function SidebarContent({ collapsed, mobile }: { collapsed: boolean; mobile?: bo
   const pathname = usePathname();
   const sp = useSearchParams();
   const setUi = useUi((s) => s.set);
+  const navClosed = useUi((s) => s.navClosed);
   const wide = mobile || !collapsed;
   const branch = sp.get('branch');
   const isActive = (r: FeatureRoute) => (r.path === '/' ? pathname === '/' : pathname === r.path || pathname.startsWith(r.path.replace(/\/$/, '') + '/'));
@@ -175,13 +176,27 @@ function SidebarContent({ collapsed, mobile }: { collapsed: boolean; mobile?: bo
         {GROUPS.map((g) => {
           const items = routes.filter((r) => r.navGroup === g);
           if (!items.length) return null;
+          // A section can be folded; the one holding the open page never hides it. The rail (narrow) shows everything.
+          const holdsActive = items.some((r) => r.path === active);
+          const folded = g !== 'top' && navClosed.includes(g) && !holdsActive;
+          const toggle = () => setUi({ navClosed: navClosed.includes(g) ? navClosed.filter((x) => x !== g) : [...navClosed, g] });
           return (
-            <div key={g} className="mb-3">
+            <div key={g} className={cn(g === 'top' ? 'mb-1' : 'mt-1 border-t border-line/70 pt-1 first:border-0')}>
               {g !== 'top' && (
-                <div className={cn('px-2.5 pt-2 pb-1 text-xs font-medium text-fg-tertiary', wide ? (mobile ? '' : 'hidden lg:block') : 'hidden')}>{t(`nav.${g}`)}</div>
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={!folded}
+                  className={cn(
+                    'group/sec flex h-8 w-full items-center justify-between rounded-sm px-2.5 text-xs font-semibold tracking-wide text-fg-tertiary transition-colors duration-[var(--dur-fast)] hover:text-fg-secondary [@media(pointer:coarse)]:h-10',
+                    wide ? (mobile ? '' : 'hidden lg:flex') : 'hidden',
+                  )}
+                >
+                  {t(`nav.${g}`)}
+                  <ChevronDown className={cn('size-3.5 opacity-0 transition-[transform,opacity] duration-[var(--dur-fast)] group-hover/sec:opacity-100 group-focus-visible/sec:opacity-100', folded && '-rotate-90 opacity-100')} aria-hidden />
+                </button>
               )}
-              {g !== 'top' && !mobile && <div className={cn('mx-3 my-2 h-px bg-line', wide ? 'lg:hidden' : '')} aria-hidden />}
-              <ul className="space-y-0.5">
+              <ul className={cn('space-y-px', folded && (mobile ? 'hidden' : 'lg:hidden'))}>
                 {items.map((r) => (
                   <NavItem key={r.path} route={r} active={active === r.path} wide={wide} mobile={mobile} href={branch ? `${r.path}?branch=${branch}` : r.path} />
                 ))}
@@ -212,8 +227,8 @@ function NavItem({ route, active, wide, mobile, href }: { route: FeatureRoute; a
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex h-9 items-center gap-2.5 rounded-sm px-2.5 text-base font-medium transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11',
-        active ? 'bg-primary-subtle text-primary-subtle-fg' : 'text-fg-secondary hover:bg-surface-hover hover:text-fg',
+        'group relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-base transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11',
+        active ? 'bg-primary-subtle font-semibold text-primary-subtle-fg' : 'font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg',
         !wide && 'justify-center px-0',
         !mobile && wide && 'max-lg:justify-center max-lg:px-0',
       )}
@@ -224,7 +239,7 @@ function NavItem({ route, active, wide, mobile, href }: { route: FeatureRoute; a
       {badge ? (
         <span
           className={cn(
-            'tabular ms-auto rounded-full bg-danger px-1.5 text-xs leading-5 font-semibold text-white',
+            'tabular ms-auto rounded-full bg-danger-bg px-1.5 text-xs leading-5 font-semibold text-danger ring-1 ring-danger/15 ring-inset',
             (!wide || (!mobile && wide)) && 'absolute -top-0.5 end-0.5 ms-0 min-w-4 px-1 text-center text-[10px] leading-4',
             !mobile && wide && 'lg:static lg:ms-auto lg:px-1.5 lg:text-xs lg:leading-5',
           )}
@@ -276,8 +291,8 @@ function useOnline() {
 function ShellSkeleton() {
   return (
     <div className="min-h-dvh bg-bg" aria-busy="true">
-      <div className="fixed inset-y-0 start-0 hidden w-16 border-e border-line bg-surface md:block lg:w-[248px]" />
-      <div className="h-14 border-b border-line bg-surface md:ms-16 lg:ms-[248px]" />
+      <div className="fixed inset-y-0 start-0 hidden w-16 border-e border-line bg-surface md:block lg:w-[248px] print:hidden" />
+      <div className="h-14 border-b border-line bg-surface md:ms-16 lg:ms-[248px] print:hidden" />
     </div>
   );
 }

@@ -12,6 +12,8 @@ interface UiState {
   theme: ThemePref;
   sidebarCollapsed: boolean;
   density: 'comfortable' | 'compact';
+  /** Sidebar sections the user folded (nav group ids). */
+  navClosed: string[];
   /** '' = all branches (super admin) */
   branchId: string;
   hydrated: boolean;
@@ -35,7 +37,7 @@ export function writeStore(key: string, value: unknown) {
   }
 }
 
-const defaults = { locale: 'en' as Locale, bnDigits: false, theme: 'system' as ThemePref, sidebarCollapsed: false, density: 'comfortable' as const };
+const defaults = { locale: 'en' as Locale, bnDigits: false, theme: 'system' as ThemePref, sidebarCollapsed: false, density: 'comfortable' as const, navClosed: [] as string[] };
 
 export const useUi = create<UiState>((set, get) => ({
   ...defaults,
@@ -44,7 +46,7 @@ export const useUi = create<UiState>((set, get) => ({
   set: (p) => {
     set(p);
     const s = get();
-    writeStore('fos.ui', { locale: s.locale, bnDigits: s.bnDigits, theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, density: s.density });
+    writeStore('fos.ui', { locale: s.locale, bnDigits: s.bnDigits, theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, density: s.density, navClosed: s.navClosed });
     if ('branchId' in p) writeStore('fos.branch', { id: s.branchId });
     setFormatPrefs({ locale: s.locale, bnDigits: s.bnDigits });
   },

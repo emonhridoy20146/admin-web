@@ -210,44 +210,47 @@ export function CustomersPage() {
         <span>{t('subtitle')}</span>
       </PageHeader>
 
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="sm:w-80" aria-label={t('search')} />
-        <label className="flex shrink-0 items-center gap-2 text-sm text-fg-secondary sm:ms-auto">
-          <span className="whitespace-nowrap">{t('sort.label')}</span>
-          <Select value={sort} onChange={(e) => (pager.reset(), url.set({ sort: e.target.value === '-daysOverdue' ? null : e.target.value, cursor: null }))} className="h-9 w-56">
-            {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
-          </Select>
-        </label>
-      </div>
-      <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-center">
-        <Segmented
-          label={t('invoiceKind.label')}
-          value={kind}
-          onChange={(v) => (pager.reset(), url.set({ kind: v === 'all' ? null : v, cursor: null }))}
-          options={KINDS.map((k) => ({ value: k, label: t(`invoiceKind.${k}`) }))}
-        />
-        <Segmented
-          label={t('paidMonth.label')}
-          value={paidMonth}
-          onChange={(v) => (pager.reset(), url.set({ paid: v === 'all' ? null : v, cursor: null }))}
-          options={PAID_MONTH.map((k) => ({ value: k, label: t(`paidMonth.${k}`) }))}
-        />
-        <div className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0">
+      {/* One filter panel: find and order on the first line, narrow down on the second, the two legends last. */}
+      <div className="mb-3 rounded-lg border border-line bg-surface shadow-e1 print:rounded-none print:border-0 print:shadow-none">
+        <div className="flex flex-col gap-2.5 p-3 lg:flex-row lg:flex-wrap lg:items-center print:p-0">
+          <SearchInput value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search')} className="lg:w-72" aria-label={t('search')} />
+          <Segmented
+            className="shrink-0"
+            label={t('invoiceKind.label')}
+            value={kind}
+            onChange={(v) => (pager.reset(), url.set({ kind: v === 'all' ? null : v, cursor: null }))}
+            options={KINDS.map((k) => ({ value: k, label: t(`invoiceKind.${k}`) }))}
+          />
+          <Segmented
+            className="shrink-0"
+            label={t('paidMonth.label')}
+            value={paidMonth}
+            onChange={(v) => (pager.reset(), url.set({ paid: v === 'all' ? null : v, cursor: null }))}
+            options={PAID_MONTH.map((k) => ({ value: k, label: t(`paidMonth.${k}`) }))}
+          />
+          <label className="flex shrink-0 items-center gap-2 text-sm text-fg-secondary lg:ms-auto">
+            <span className="whitespace-nowrap">{t('sort.label')}</span>
+            <Select value={sort} onChange={(e) => (pager.reset(), url.set({ sort: e.target.value === '-daysOverdue' ? null : e.target.value, cursor: null }))} className="h-9 w-56">
+              {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
+            </Select>
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-2 border-t border-line px-3 py-2.5 print:border-0 print:p-0">
           {FILTERS.map((f) => (
             <FilterChip key={f} selected={filters.includes(f)} onClick={() => toggleFilter(f)}>
               {t(`filters.${f}`)}
             </FilterChip>
           ))}
         </div>
-      </div>
-      <PayLegend
-        selected={pay}
-        counts={null}
-        onToggle={(s) => (pager.reset(), url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s], cursor: null }))}
-        onClear={() => (pager.reset(), url.set({ pay: null, cursor: null }))}
-      />
-      <div className="mb-2">
-        <WorkMarksLegend />
+        <div className="space-y-2 border-t border-line bg-surface-subtle/60 px-3 py-2.5 [&>div]:mb-0 print:border-0 print:bg-transparent print:p-0">
+          <PayLegend
+            selected={pay}
+            counts={null}
+            onToggle={(s) => (pager.reset(), url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s], cursor: null }))}
+            onClear={() => (pager.reset(), url.set({ pay: null, cursor: null }))}
+          />
+          <WorkMarksLegend />
+        </div>
       </div>
 
       <DataTable

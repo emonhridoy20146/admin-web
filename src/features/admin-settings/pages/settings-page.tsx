@@ -275,16 +275,16 @@ function FieldRow({ f, value, onChange, changed, error, disabled }: { f: FieldDe
   }
 
   return (
-    <div className={cn('grid gap-2 px-5 py-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6', changed && 'bg-primary-subtle/40')}>
-      <div className="min-w-0">
+    <div className={cn('grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6', changed && 'bg-primary-subtle/40')}>
+      <div className="min-w-0" title={f.src ? `${f.src.key}.${f.src.prop}` : f.key}>
         <label id={`${id}-l`} htmlFor={id} className="flex items-center gap-2 text-base font-medium text-fg">
           {t(`fields.${f.key}.label`)}
           {changed && <span className="size-1.5 rounded-full bg-primary" aria-hidden />}
         </label>
-        <p id={describedBy} className={cn('mt-0.5 text-xs', error ? 'text-danger' : 'text-fg-tertiary')}>
+        <p id={describedBy} className={cn('mt-1 max-w-[68ch] text-sm leading-relaxed', error ? 'text-danger' : 'text-fg-secondary')}>
           {error ? t(error) : help}
-          {!error && <span className="ms-1 font-mono">{f.src ? `${f.src.key}.${f.src.prop}` : f.key}</span>}
         </p>
+
       </div>
       <div className="sm:justify-self-end">{control}</div>
     </div>

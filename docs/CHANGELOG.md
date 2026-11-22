@@ -1,6 +1,11 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+### Changed (owner request 2026-11-22: a calmer, more deliberate shell; first design pass)
+- **Sidebar:** sections fold (click the section name; the choice is kept in the browser, the section holding the open page never hides it), hairlines between sections, count pills are soft red instead of solid, the open page is semibold.
+- **Customers:** search, invoice type, paid-this-month and sort sit on one line in one filter panel, the filter chips on the second, the pin-colour and work-mark legends on a tinted third. The two segmented controls no longer get cut off at 1440 px.
+- **Settings:** a setting's help text is 14 px with a readable line length; its technical key is a hover title instead of a monospace line under every field.
+- The loading skeleton of the shell is hidden in print.
 ### Fixed (owner report 2026-11-22: print showed the whole page; FR-W-051)
 - **Print and "Save as PDF" now carry the data only, on every page.** Before, the sidebar and header were hidden but action buttons, search boxes, sort and filter selects, filter chips, tabs, row checkboxes and map controls were printed on most pages (only the few report pages had been cleaned by hand). One rule set in `globals.css` (`@media print`) now leaves them out everywhere; the chosen filter chip, period and open tab stay as plain text so the sheet says what it shows; form values (settings) and `link` buttons (names, references) stay; `data-print-keep` keeps an element. `Button` and `FilterChip` carry `data-ui` for this. Journey: `print.spec.ts` checks customers, collections, cash and promises print rows with no controls.
 - The print journey accepts the hyphenated font name newer Chromium writes into the PDF.
