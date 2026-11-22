@@ -250,6 +250,20 @@
 .fos-pin-glyph { color: var(--pin-edge); }
 :root[data-theme='dark'] .fos-pin-body { stroke: color-mix(in srgb, var(--pin-fill) 45%, var(--neutral-950)); }
 :root[data-theme='dark'] .fos-pin-glyph { color: var(--neutral-900); }
+.leaflet-tooltip.fos-map-label {
+  /* Map places (FR-PLC-001): the name stays next to the marker so the map reads like a labelled street map. */
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.leaflet-tooltip.fos-map-label::before { display: none; }
 .leaflet-marker-icon:focus-visible .fos-pin { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 4px; }
 .fos-map .leaflet-container,
 .fos-map.leaflet-container {

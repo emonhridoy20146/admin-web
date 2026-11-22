@@ -131,3 +131,15 @@ test('390 px: photo storage fits the phone and the confirm dialog opens (FR-W-05
   expect(box!.width).toBeLessThanOrEqual(390);
   if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/photos-390.png` });
 });
+
+// FR-PLC-005 at 390 px: the move-request queue is a stack of cards with ≥ 44 px actions.
+test('places move requests at 390 px: cards, ≥ 44 px actions, no sideways scroll', async ({ page }) => {
+  await login(page, 'manager');
+  await page.goto('/places/move-requests/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const card = page.getByRole('list').locator('> li').first();
+  await expect(card).toBeVisible();
+  // every button of the card is a finger-size target (Leaflet's zoom controls are links with role=button, sized by Leaflet)
+  for (const b of await card.locator('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});

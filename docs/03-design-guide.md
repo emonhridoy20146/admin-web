@@ -70,7 +70,7 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 
 All fg/bg pairs meet WCAG AA 4.5:1, most ≥ 6:1 (computed values in `07-test-plan.md §4`). `brand.400` (3.6:1 on white) is for dark mode and large graphics only, never body text on light surfaces.
 
-Customer map pins have the familiar map-pin shape (round head, point on the spot; `shared/map/pin-icon.tsx`) and use the **pay-state** colours of §2.3a with a glyph inside (so they work for colour-blind users); other maps (live staff, routes) keep `status.*` dots. Cluster bubbles take the **worst** state in the cluster and show the mix of states as a ring. Branch pins use the same shape in `primary` (outline `primary-hover`) with a house glyph and sit under customer pins; the admin's own position ("my location" button, 44 px, top right of the map) is an `info.fg` dot with a white ring and a translucent accuracy circle (FR-W-034). No new tokens.
+Customer map pins have the familiar map-pin shape (round head, point on the spot; `shared/map/pin-icon.tsx`) and use the **pay-state** colours of §2.3a with a glyph inside (so they work for colour-blind users); other maps (live staff, routes) keep `status.*` dots. Cluster bubbles take the **worst** state in the cluster and show the mix of states as a ring. Branch pins use the same shape in `primary` (outline `primary-hover`) with a house glyph and sit under customer pins; the admin's own position ("my location" button, 44 px, top right of the map) is an `info.fg` dot with a white ring and a translucent accuracy circle (FR-W-034). Map places (FR-PLC-001) use the same pin in `info` (`warning` while a move is requested) with the kind's symbol inside and the name as a permanent label next to the pin (`.fos-map-label`: surface, line border, 12 px semibold fg). No new tokens.
 
 ### 2.3a Colour — pay state (map pins, v1.1)
 The colour of a customer's map pin and pay-state badge (field-api `PayState`, ADR-035; admin ADR-W18). CSS variables `--ps-<state>-pin|fg|bg` (`bad`, `missed-many`, `missed-one`, `due-today`, `on-track`, `paid-off`); `--pin-shadow` `rgb(16 24 40 / 0.35)` for the pin's drop shadow.
@@ -190,6 +190,7 @@ Items hidden when the user lacks the permission or the module flag is off.
 | Settings | `/admin/settings` | Sectioned form: duty & shifts, holidays, cash, location, collections, tags, notifications, app version, tile provider | — | Save |
 | Feature flags | `/admin/flags` | Table: key, description, global toggle, per-branch toggles, owner, review-by | — | Toggle (with reason) |
 | Devices | `/admin/devices` | Devices, pending approvals, sessions, remote logout | — | Approve |
+| Places | `/places` | Map of labelled pins above a table of places (name, kind, state, added by); Places move requests `/places/move-requests` as cards with a small map (current, requested, dashed line) | newest / oldest request | New place · Approve move |
 | Audit log | `/admin/audit` | Filterable table + diff viewer drawer | at desc | Export |
 | System health | `/admin/system` | ERP status, outbox, jobs, sync health per device, app versions in field | — | Retry |
 

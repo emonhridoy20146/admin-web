@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { List, ZoomIn } from 'lucide-react';
 import { useBranches } from '@/features/shell';
+import { mapLayers } from '@/shared/feature/registry';
+import { useGate } from '@/shared/feature/useGate';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatNumber } from '@/shared/lib/format';
@@ -53,6 +55,12 @@ export function CustomerMapPage() {
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('customer:') ? drawer.slice(9) : null;
   const fmt = useCallback((n: number) => formatNumber(n), []);
+  // Layers of other features (map places, FR-PLC-001): each loads its own markers and opens its own drawer.
+  const gate = useGate();
+  const layers = mapLayers(gate);
+  const hiddenLayers = url.getList('hide');
+  const [layerMarkers, setLayerMarkers] = useState<Record<string, MapMarker[]>>({});
+  const setLayer = useCallback((id: string, m: MapMarker[]) => setLayerMarkers((s) => (s[id] === m ? s : { ...s, [id]: m })), []);
 
   // Where the map opens: the view kept in the link (reload, Back, a shared link), else the chosen branch's point,
   // else Patuakhali district. Decided once, after the branches are known, so it never jumps back later.
@@ -84,7 +92,8 @@ export function CustomerMapPage() {
     [pins, drawerId, t, fmt],
   );
   const places = useMemo(() => branchMarkers(branches.data, { selectedId: branchId, locale, title: (name) => tc('map.branch', { name }) }), [branches.data, branchId, locale, tc]);
-  const shown = useMemo(() => [...places, ...markers], [places, markers]);
+  const extra = useMemo(() => layers.filter((l) => !hiddenLayers.includes(l.id)).flatMap((l) => layerMarkers[l.id] ?? []), [layers, hiddenLayers, layerMarkers]);
+  const shown = useMemo(() => [...places, ...extra, ...markers], [places, extra, markers]);
   const rawClusters = useMemo(() => (q.data?.clusters ?? []).filter((c) => c.lat != null && c.lng != null), [q.data?.clusters]);
   const clusters: (MapCluster & { worst: PayState; mix: Partial<Record<PayState, number>> | null })[] = useMemo(
     () =>
@@ -111,7 +120,15 @@ export function CustomerMapPage() {
     setView(v);
     writeViewpoint(viewpointParam({ center: centerOf(v.bounds), zoom: v.zoom }));
   }, []);
-  const open = useCallback((id: string) => !isBranchMarker(id) && url.set({ drawer: `customer:${id}` }, { push: true }), [url]);
+  const open = useCallback(
+    (id: string) => {
+      if (isBranchMarker(id)) return;
+      // a layer marker carries its layer id (`place:6752…`); a customer pin is a bare id
+      url.set({ drawer: layers.some((l) => id.startsWith(`${l.id}:`)) ? id : `customer:${id}` }, { push: true });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [url, layers.map((l) => l.id).join()],
+  );
   const zoomTo = useCallback((c: { lat: number; lng: number }) => setFit({ minLat: c.lat - 0.012, maxLat: c.lat + 0.012, minLng: c.lng - 0.016, maxLng: c.lng + 0.016 }), []);
   const sorted = useMemo(() => [...pins].sort((a, b) => payRank(payStateOf(a)) - payRank(payStateOf(b)) || (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
   const togglePay = (s: PayState) => url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s] });
@@ -141,6 +158,11 @@ export function CustomerMapPage() {
           {MAP_FILTERS.map((f) => (
             <FilterChip key={f} selected={filters.includes(f)} onClick={() => url.set({ filter: filters.includes(f) ? filters.filter((x) => x !== f) : [...filters, f] })}>
               {t(`filters.${f}`)}
+            </FilterChip>
+          ))}
+          {layers.map((l) => (
+            <FilterChip key={`layer-${l.id}`} selected={!hiddenLayers.includes(l.id)} onClick={() => url.set({ hide: hiddenLayers.includes(l.id) ? hiddenLayers.filter((x) => x !== l.id) : [...hiddenLayers, l.id] })}>
+              {tc(l.title)}
             </FilterChip>
           ))}
         </div>
@@ -225,6 +247,18 @@ export function CustomerMapPage() {
           <footer className="border-t border-line px-4 py-2.5 text-xs text-fg-secondary">{t('pay.glyphHint')}</footer>
         </section>
       </div>
+
+      {layers
+        .filter((l) => !hiddenLayers.includes(l.id))
+        .map((l) => (
+          <l.component
+            key={l.id}
+            bounds={view?.bounds ?? null}
+            onMarkers={(m) => setLayer(l.id, m)}
+            openId={drawer.startsWith(`${l.id}:`) ? drawer.slice(l.id.length + 1) : null}
+            onClose={() => url.set({ drawer: null })}
+          />
+        ))}
 
       <CustomerDrawer
         id={drawerId}

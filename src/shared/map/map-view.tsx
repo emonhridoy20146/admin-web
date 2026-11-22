@@ -23,6 +23,8 @@ export interface MapMarker extends LatLng {
   pin?: PinLook;
   /** higher draws on top (worst state over calm ones) */
   z?: number;
+  /** text always shown next to the marker (map places, FR-PLC-001) instead of only on hover */
+  label?: string;
 }
 
 export interface MapCluster extends LatLng {
@@ -128,15 +130,15 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
       if (m.pin) {
         const [w, h] = pinSize(m.strong);
         const icon = lf.divIcon({ className: '', iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4], html: pinIconHtml(m.pin, m.strong) });
-        lf.marker([m.lat, m.lng], { icon, keyboard: false, riseOnHover: true, zIndexOffset: (m.z ?? 0) * 1000 + (m.strong ? 10_000 : 0) })
-          .bindTooltip(m.title, { direction: 'top' })
+        lf.marker([m.lat, m.lng], { icon, keyboard: false, riseOnHover: true, title: m.label ? m.title : '', zIndexOffset: (m.z ?? 0) * 1000 + (m.strong ? 10_000 : 0) })
+          .bindTooltip(m.label ?? m.title, m.label ? { permanent: true, direction: 'right', offset: [w / 2 - 2, -h / 2], className: 'fos-map-label' } : { direction: 'top' })
           .on('click', () => cb.current.onMarkerClick?.(m.id))
           .addTo(layer.current);
         continue;
       }
       const color = token(m.token);
       lf.circleMarker([m.lat, m.lng], { radius: m.strong ? 9 : 6, color: m.hollow ? color : token('--surface'), weight: m.hollow ? 2.5 : 1.5, fillColor: color, fillOpacity: m.hollow ? 0.12 : 0.95 })
-        .bindTooltip(m.title, { direction: 'top', offset: [0, -6] })
+        .bindTooltip(m.label ?? m.title, m.label ? { permanent: true, direction: 'right', offset: [8, 0], className: 'fos-map-label' } : { direction: 'top', offset: [0, -6] })
         .on('click', () => cb.current.onMarkerClick?.(m.id))
         .addTo(layer.current);
     }

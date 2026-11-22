@@ -489,7 +489,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.activity', 'Staff activity feed', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.places', 'Map places (text markers on the map)', true], ['module.activity', 'Staff activity feed', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -1472,4 +1472,48 @@ export function taskStep(t: MockTask, by: MockUser, type: 'resolve_requested' | 
   addTask(m1, b1[0]!, 'নতুন শাখার ঠিকানা কাস্টমারদের জানিয়ে দিন', 'ফোনে জানালেই হবে।', dayOff(3), 8);
   const w3 = addTask(m1, b1[1]!, 'বন্ধ হওয়া দোকানের তালিকা বানান', 'যে দোকানগুলো এখন আর খোলে না।', dayOff(0), 26);
   taskStep(w3, b1[1]!, 'resolve_requested', 'আটটি দোকানের তালিকা বানিয়েছি।', 2);
+}
+
+// ---------- map places (contract 1.38.0) ----------
+export type MockPlace = S['Place'] & { pendingClientId?: string };
+export const places: MockPlace[] = [];
+const R = 6371008.8;
+export function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(h))));
+}
+export function addPlace(by: MockUser, name: string, icon: S['PlaceIcon'], note: string | null, location: { lat: number; lng: number }, branchId: string, ago = 24): MockPlace {
+  const at = isoAt(now().minus({ hours: ago }));
+  const p: MockPlace = {
+    id: oid('6752'), clientId: null, branchId, name, icon, note, location, status: 'active', version: 1, pendingMove: null, lastMoveDecision: null,
+    createdBy: who(by), updatedBy: who(by), createdAt: at, updatedAt: at, deletedAt: null, deleteReason: null,
+    events: [{ type: 'created', by: who(by), at, note: null, from: null, to: location }],
+  };
+  places.unshift(p);
+  return p;
+}
+/** Seeds and handlers share this: one history step, version + 1. */
+export function placeStep(p: MockPlace, by: MockUser, type: S['PlaceEvent']['type'], extra: { note?: string | null; from?: { lat: number; lng: number } | null; to?: { lat: number; lng: number } | null } = {}, ago = 0) {
+  const at = isoAt(now().minus({ hours: ago }));
+  p.events.push({ type, by: who(by), at, note: extra.note ?? null, from: extra.from ?? null, to: extra.to ?? null });
+  p.version += 1;
+  p.updatedBy = who(by);
+  p.updatedAt = at;
+}
+export function requestPlaceMove(p: MockPlace, by: MockUser, to: { lat: number; lng: number }, reason: string | null, ago = 0, clientId = crypto.randomUUID()) {
+  placeStep(p, by, 'move_requested', { note: reason, from: p.location, to }, ago);
+  p.pendingMove = { location: to, requestedBy: who(by), requestedAt: p.updatedAt, reason, distanceM: distanceM(p.location, to) };
+  p.pendingClientId = clientId;
+}
+{
+  const b0 = staff.filter((u) => u.active && u.branchIds?.[0] === B[0]);
+  const b1 = staff.filter((u) => u.active && u.branchIds?.[0] === B[1]);
+  addPlace(b0[0]!, 'করিম স্টোর', 'shop', 'নীল গেট, চায়ের দোকানের পাশে', { lat: 22.7031, lng: 90.3702 }, B[0]!, 50);
+  addPlace(b0[1]!, 'বাইতুল আমান জামে মসজিদ', 'mosque', null, { lat: 22.7008, lng: 90.3684 }, B[0]!, 40);
+  const bazar = addPlace(b0[2]!, 'নতুন বাজার', 'market', 'সকালে ভিড় থাকে', { lat: 22.7045, lng: 90.3725 }, B[0]!, 30);
+  requestPlaceMove(bazar, b0[3]!, { lat: 22.7052, lng: 90.3731 }, 'বাজারের মূল গেট রাস্তার ওপারে', 2);
+  const bank = addPlace(managers[0]!, 'সোনালী ব্যাংক', 'bank', null, { lat: 22.7015, lng: 90.3668 }, B[0]!, 20);
+  requestPlaceMove(bank, b0[1]!, { lat: 22.7019, lng: 90.3675 }, null, 1);
+  addPlace(b1[0]!, 'পটুয়াখালী বাস স্ট্যান্ড', 'bus_stop', null, { lat: 22.3607, lng: 90.3312 }, B[1]!, 10);
 }

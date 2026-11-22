@@ -1939,5 +1939,112 @@ export const handlers = [
       return HttpResponse.json(db.taskView(t));
     })),
   ),
+  // ---------- map places (1.38.0) ----------
+  http.get(`${BASE}/places`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'place.view');
+    if (deny) return deny;
+    const g = (k: string) => url.searchParams.get(k);
+    const status = g('status') ?? 'active';
+    if (status === 'deleted' && need(ctx, 'place.manage')) return need(ctx, 'place.manage')!;
+    const sc = scope(ctx, url);
+    const box = g('bbox')?.split(',').map(Number);
+    const words = g('q')?.toLowerCase();
+    const all = db.places
+      .filter((p) => sc.includes(p.branchId) && p.status === status)
+      .filter((p) => !g('icon') || p.icon === g('icon'))
+      .filter((p) => g('pendingMove') !== 'true' || !!p.pendingMove)
+      .filter((p) => !words || p.name.toLowerCase().includes(words) || (p.note ?? '').toLowerCase().includes(words))
+      .filter((p) => !box || box.length !== 4 || (p.location.lng >= box[0]! && p.location.lat >= box[1]! && p.location.lng <= box[2]! && p.location.lat <= box[3]!));
+    const pg = page(all, url, 200);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  http.post(`${BASE}/places`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'place.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['PlaceCreate'];
+    const name = b.name?.trim() ?? '';
+    if (!b.clientId || !name || name.length > 60 || (b.note ?? '').length > 200 || !b.location) return problem(400, 'VALIDATION_FAILED', 'name, icon, location and clientId are required');
+    const prior = db.places.find((p) => p.createdBy.id === ctx.user.id && p.clientId === b.clientId);
+    if (prior) return HttpResponse.json(prior);
+    const { lat, lng } = b.location;
+    if (lat < 20.3 || lat > 26.8 || lng < 87.9 || lng > 92.8) return problem(422, 'BUSINESS_RULE', 'The point is outside Bangladesh', undefined, { rule: 'OUTSIDE_BANGLADESH' });
+    const sc = scope(ctx, new URL('http://x/'));
+    const branchId = b.branchId ?? ctx.user.branchIds?.[0];
+    if (!branchId || !sc.includes(branchId)) return problem(422, 'BUSINESS_RULE', 'Not one of your branches', undefined, { rule: 'PLACE_INVALID_BRANCH' });
+    const p = db.addPlace(ctx.user, name, b.icon, b.note?.trim() || null, { lat, lng }, branchId, 0);
+    p.clientId = b.clientId;
+    db.addAudit({ actor: actor(ctx.user), action: 'place.created', entity: 'place', entityId: p.id, branchId, after: { name, icon: b.icon, location: b.location }, reason: '' });
+    return HttpResponse.json(p, { status: 201 });
+  })),
+  http.get(`${BASE}/places/move-requests`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'place.manage');
+    if (deny) return deny;
+    const sc = scope(ctx, url);
+    const items = db.places.filter((p) => p.status === 'active' && p.pendingMove && sc.includes(p.branchId)).sort((a, b) => (a.pendingMove!.requestedAt < b.pendingMove!.requestedAt ? -1 : 1));
+    return HttpResponse.json({ items });
+  })),
+  http.get(`${BASE}/places/:id`, authed(({ ctx, params }) => {
+    const deny = need(ctx, 'place.view');
+    if (deny) return deny;
+    const p = db.places.find((x) => x.id === params.id);
+    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId) || (p.status === 'deleted' && need(ctx, 'place.manage'))) return problem(404, 'NOT_FOUND', 'Place not found');
+    return HttpResponse.json(p);
+  })),
+  http.patch(`${BASE}/places/:id`, authed(async ({ request, params, ctx }) => {
+    const deny = need(ctx, 'place.create');
+    if (deny) return deny;
+    const manage = !need(ctx, 'place.manage');
+    const p = db.places.find((x) => x.id === params.id);
+    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId) || (p.status === 'deleted' && !manage)) return problem(404, 'NOT_FOUND', 'Place not found');
+    const b = (await request.json()) as S['PlaceUpdate'];
+    if (!Object.keys(b).length) return problem(400, 'VALIDATION_FAILED', 'nothing to change');
+    if (!manage && (b.location || p.createdBy.id !== ctx.user.id)) return problem(403, 'FORBIDDEN', 'Only the office can do this', undefined, { permission: 'place.manage', reason: b.location ? 'MOVE_NEEDS_MANAGE' : 'NOT_OWNER' });
+    if (p.status === 'deleted') return problem(409, 'INVALID_STATE', 'The place was removed', undefined, { reason: 'PLACE_DELETED' });
+    const m = /W\/"(\d+)"/.exec(request.headers.get('if-match') ?? '');
+    if (m && Number(m[1]) !== p.version) return problem(412, 'PRECONDITION_FAILED', 'Changed meanwhile', undefined, { currentVersion: p.version });
+    if (b.name !== undefined) p.name = b.name.trim();
+    if (b.icon !== undefined) p.icon = b.icon;
+    if (b.note !== undefined) p.note = b.note?.trim() || null;
+    if (b.location) {
+      const from = p.location;
+      p.location = b.location;
+      db.placeStep(p, ctx.user, 'moved', { from, to: b.location });
+      if (p.pendingMove) {
+        p.lastMoveDecision = { decision: 'reject', by: { id: ctx.user.id!, name: ctx.user.name?.en ?? '' }, at: p.updatedAt, reason: 'Moved by the office', requestedBy: p.pendingMove.requestedBy };
+        p.pendingMove = null;
+      }
+    } else db.placeStep(p, ctx.user, 'edited');
+    db.addAudit({ actor: actor(ctx.user), action: b.location ? 'place.moved' : 'place.edited', entity: 'place', entityId: p.id, branchId: p.branchId, after: b, reason: '' });
+    return HttpResponse.json(p);
+  })),
+  http.delete(`${BASE}/places/:id`, authed(({ ctx, params, url }) => {
+    const deny = need(ctx, 'place.manage');
+    if (deny) return deny;
+    const p = db.places.find((x) => x.id === params.id);
+    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId)) return problem(404, 'NOT_FOUND', 'Place not found');
+    if (p.status === 'deleted') return HttpResponse.json(p);
+    const reason = url.searchParams.get('reason')?.trim() || null;
+    db.placeStep(p, ctx.user, 'deleted', { note: reason });
+    Object.assign(p, { status: 'deleted', deletedAt: p.updatedAt, deleteReason: reason, pendingMove: null });
+    db.addAudit({ actor: actor(ctx.user), action: 'place.deleted', entity: 'place', entityId: p.id, branchId: p.branchId, reason: reason ?? '' });
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/places/:id/move-request/decision`, authed(async ({ request, ctx, params }) => {
+    const deny = need(ctx, 'place.manage');
+    if (deny) return deny;
+    const p = db.places.find((x) => x.id === params.id);
+    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId)) return problem(404, 'NOT_FOUND', 'Place not found');
+    const b = (await request.json()) as { decision: 'approve' | 'reject'; reason?: string };
+    if (!p.pendingMove) return problem(409, 'INVALID_STATE', 'No open move request', undefined, { reason: 'NO_PENDING_MOVE' });
+    if (b.decision === 'reject' && (b.reason ?? '').trim().length < 5) return problem(422, 'BUSINESS_RULE', 'A reason is required', undefined, { rule: 'REASON_REQUIRED' });
+    const pm = p.pendingMove;
+    const from = p.location;
+    if (b.decision === 'approve') p.location = pm.location;
+    db.placeStep(p, ctx.user, b.decision === 'approve' ? 'move_approved' : 'move_rejected', { note: b.reason?.trim() || null, from, to: pm.location });
+    p.lastMoveDecision = { decision: b.decision, by: { id: ctx.user.id!, name: ctx.user.name?.en ?? '' }, at: p.updatedAt, reason: b.reason?.trim() || null, requestedBy: pm.requestedBy };
+    p.pendingMove = null;
+    db.addAudit({ actor: actor(ctx.user), action: `place.move_${b.decision === 'approve' ? 'approved' : 'rejected'}`, entity: 'place', entityId: p.id, branchId: p.branchId, reason: b.reason ?? '' });
+    return HttpResponse.json(p);
+  })),
   http.get(`${BASE}/notifications`, authed(() => HttpResponse.json({ items: [], nextCursor: null }))),
 ];

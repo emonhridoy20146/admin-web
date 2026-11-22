@@ -1,0 +1,140 @@
+{
+  "title": "Places",
+  "subtitle": "Names on the map that OpenStreetMap does not have: shops, markets, mosques and more. Staff add them from the app; a marker moves only when you approve.",
+  "new": "New place",
+  "search": "Search places by name or note",
+  "allIcons": "All kinds",
+  "show": "Show places",
+  "show_active": "On the map",
+  "show_deleted": "Removed",
+  "layer": "Places",
+  "icon": {
+    "shop": "Shop",
+    "market": "Market",
+    "mosque": "Mosque",
+    "school": "School",
+    "bank": "Bank",
+    "hospital": "Hospital",
+    "bus_stop": "Bus stop",
+    "office": "Office",
+    "landmark": "Landmark",
+    "other": "Other"
+  },
+  "col": {
+    "name": "Name",
+    "icon": "Kind",
+    "state": "State",
+    "addedBy": "Added by",
+    "branch": "Branch",
+    "updated": "Updated"
+  },
+  "status": {
+    "active": "On the map",
+    "deleted": "Removed",
+    "movePending": "Move requested"
+  },
+  "empty": {
+    "active": "No places yet. Add one, or staff can add them from the app.",
+    "deleted": "No removed places."
+  },
+  "map": {
+    "label": "Map of places",
+    "requestedPoint": "{{name}}: requested new point"
+  },
+  "moves": {
+    "link": "Move requests",
+    "title": "Place move requests",
+    "subtitle": "A staff member asked to move these markers. The marker stays where it is until you approve.",
+    "empty": "No move requests",
+    "emptyBody": "When a staff member asks to move a place, it appears here.",
+    "toPlaces": "Go to places",
+    "mapLabel": "Where {{name}} is now and where it should go",
+    "noReason": "No reason given."
+  },
+  "form": {
+    "name": "Name shown on the map",
+    "namePlaceholder": "e.g. Karim Store",
+    "icon": "Kind of place",
+    "note": "Note (optional)",
+    "notePlaceholder": "e.g. Blue gate, next to the tea stall",
+    "branch": "Branch",
+    "branchHelp": "Everyone in this branch sees the place.",
+    "branchDefault": "My first branch",
+    "error": {
+      "required": "Write a name.",
+      "tooLong": "Too long.",
+      "outside": "This point is outside Bangladesh. Move the map to the right place."
+    }
+  },
+  "dialog": {
+    "createTitle": "New place",
+    "editTitle": "Change {{name}}",
+    "moveTitle": "Move {{name}}",
+    "desc": "The name stays next to the marker for everyone in the branch.",
+    "moveDesc": "Move the map until the pin sits on the right spot. The marker moves at once for everyone.",
+    "create": "Add place",
+    "save": "Save",
+    "moveSave": "Move here",
+    "currentPoint": "Where it is now",
+    "mapLabel": "Map: move it so the pin sits on the place",
+    "pointAt": "The pin is at",
+    "moved": "{{n}} m from where it is now"
+  },
+  "toast": {
+    "created": "{{name}} is on the map",
+    "saved": "{{name}} saved",
+    "moved": "{{name}} moved",
+    "approved": "{{name}} moved; the staff member is told",
+    "rejected": "{{name}} stays; the staff member sees your reason",
+    "deleted": "{{name}} removed from the map"
+  },
+  "actions": {
+    "approve": "Approve move",
+    "reject": "Reject",
+    "edit": "Edit",
+    "move": "Move",
+    "delete": "Remove"
+  },
+  "approve": {
+    "title": "Approve this move?",
+    "desc": "{{name}} moves {{n}} m to the point {{who}} chose. Everyone sees it there from their next sync.",
+    "confirm": "Move the marker"
+  },
+  "reject": {
+    "title": "Reject this move",
+    "desc": "{{name}} stays where it is. {{who}} sees your reason.",
+    "confirm": "Reject move"
+  },
+  "delete": {
+    "title": "Remove {{name}} from the map?",
+    "desc": "Nobody sees it on the map any more. It is kept in the history and in the Removed list.",
+    "confirm": "Remove",
+    "reason": "Reason (optional)",
+    "reasonPlaceholder": "e.g. The shop closed"
+  },
+  "drawer": {
+    "addedBy": "Added by {{who}} · {{at}}",
+    "branch": "Branch",
+    "point": "Point",
+    "updated": "Last change",
+    "updatedBy": "{{who}} · {{at}}",
+    "note": "Note",
+    "noNote": "No note.",
+    "moveRequest": "Move requested",
+    "moveRequestBy": "{{who}} asked to move it {{n}} m · {{at}}",
+    "lastDecision": "Last move request",
+    "lastApproved": "{{who}} approved the move {{by}} asked for · {{at}}",
+    "lastRejected": "{{who}} rejected the move {{by}} asked for · {{at}}",
+    "deleteReason": "Why it was removed",
+    "history": "History"
+  },
+  "history": {
+    "created": "{{who}} added it",
+    "edited": "{{who}} changed it",
+    "moved": "{{who}} moved it",
+    "move_requested": "{{who}} asked to move it",
+    "move_approved": "{{who}} approved the move",
+    "move_rejected": "{{who}} rejected the move",
+    "deleted": "{{who}} removed it"
+  }
+}
