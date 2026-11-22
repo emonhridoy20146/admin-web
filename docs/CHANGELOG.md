@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+Contract pinned: field-api `openapi.yaml` **1.41.0** from field-api PR #37 (not merged yet; if field-api renumbers it 1.42.0, re-sync and re-pin) (`node scripts/sync-contract.mjs ../field-api/docs` then `pnpm gen:api`; additive; also brings 1.37.1–1.40.0 types (places, pin approval, `cloudinary` storage), not used by this change; permission catalog 64 keys, the new `place.*` keys).
+### Added (contract 1.41.0, owner request 2026-11-22: visit outcome "Runaway"; master FR-VIS-006)
+- Visit outcome **`runaway`** — en **Runaway**, bn **পলাতক** (the customer has absconded and cannot be found): label and red badge (`danger`, colour + icon + label) in the visits list, its drawer and the co-work session visits; an option in the visits outcome filter (`?outcome=runaway`) and the Record visit dialog; activity feed line ("ran away (absconded)" / "পলাতক"). The customer timeline shows field-api's own text (`Visit: runaway` / `ভিজিট: পলাতক`).
+- Unknown outcomes never break a page: the badge and the activity feed show the raw code with a neutral badge (now covered by a test); the filter ignores an unknown `?outcome=`.
+- Tests: `outcome-badge.test.tsx` (runaway in en and bn, unknown code shown as is, every filter outcome labelled in both languages); vitest now compiles `.tsx` tests with the automatic JSX runtime. Mock API: three finished visits are `runaway`, and the customer timeline's visit line uses the customer's latest visit outcome with the server's wording.
+
 ### Tests
 - Journey "a collector without an ERP employee link…" (deposits-final.spec.ts) failed at some hours of the day: which collector is unlinked in the mock data depends on the current time, and when that person was not on page 1 the paging loop stopped on the loading (skeleton) rows. It now shows 100 rows per page instead of paging; checked at five different times of day with a fixed browser clock.
 

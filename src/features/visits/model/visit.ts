@@ -17,7 +17,7 @@ export function rangeFor(r: Range, today: string): { from: string; to: string } 
   }
 }
 
-export const OUTCOMES: VisitOutcome[] = ['paid', 'partial_paid', 'promised', 'not_home', 'refused', 'shifted_address', 'customer_dead', 'product_returned_request', 'other'];
+export const OUTCOMES: VisitOutcome[] = ['paid', 'partial_paid', 'promised', 'not_home', 'refused', 'shifted_address', 'customer_dead', 'product_returned_request', 'runaway', 'other'];
 
 /** Whole minutes between check-in and check-out; null while the visit is still open. */
 export function durationMin(v: Pick<Visit, 'checkInAt' | 'checkOutAt'>): number | null {
