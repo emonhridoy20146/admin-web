@@ -710,6 +710,11 @@ export interface paths {
          *     Both must be inside Bangladesh. When the customer has no usable pin and the branch setting `customers.staffPinApproval` is
          *     `when_missing` (default) the pin is applied at once and the answer is `status: approved`; otherwise it waits for a manager
          *     (`pending`). A mock `deviceGeo` never applies at once.
+         *     1.39.0 (FR-CUS-020, ADR-052): when the caller holds `customer.location.approve` for the customer's branch (super admin, branch
+         *     manager by default, or anyone granted the key) the pin applies at once whatever the policy and whether or not the customer had a
+         *     pin: the answer is `status: approved, direct: true`, it is stored and audited like `POST /customers/{id}/location`
+         *     (`customer.location.set`, decided by the caller) and no inbox item is raised. A map pin with a mock `deviceGeo` stays a pending
+         *     proposal (flagged `deviceMock`) even then; a mock `gps` fix is refused as before. Field staff behave as before.
          */
         post: operations["proposeLocation"];
         delete?: never;
@@ -1996,10 +2001,12 @@ export interface paths {
         get: operations["storageGet"];
         /**
          * Upload target of a presigned URL when the server keeps files itself (ADR-039)
-         * @description Only exists when the server has no S3 (`STORAGE_DRIVER=db`, the default on Vercel test deployments).
+         * @description Only exists when the server keeps files itself (`STORAGE_DRIVER=db`, the default on Vercel test deployments
+         *     without Cloudinary) or sends them on to Cloudinary (`STORAGE_DRIVER=cloudinary`, 1.40.0, ADR-053).
          *     Clients never build this URL: they PUT to `uploadUrl` from `/media/upload-url` as for S3. No bearer
          *     token; the signature in the path is the permission and expires after 5 minutes. The body must match
-         *     the signed content type, size and sha256.
+         *     the signed content type, size and sha256. With `cloudinary` a photo is uploaded to Cloudinary before the
+         *     answer; if Cloudinary fails it is kept in MongoDB and still answers 200 (copied later by the outbox).
          */
         put: operations["storagePut"];
         post?: never;
@@ -3779,8 +3786,11 @@ export interface components {
                 openConflicts?: number;
             };
         };
-        /** @enum {string} */
-        VisitOutcome: "paid" | "partial_paid" | "promised" | "not_home" | "refused" | "shifted_address" | "customer_dead" | "product_returned_request" | "other";
+        /**
+         * @description runaway (1.41.0, FR-VIS-006) = the customer has absconded and cannot be found (bn পলাতক). Clients must show an unknown value as its raw code, never fail.
+         * @enum {string}
+         */
+        VisitOutcome: "paid" | "partial_paid" | "promised" | "not_home" | "refused" | "shifted_address" | "customer_dead" | "product_returned_request" | "runaway" | "other";
         VisitCreate: {
             /** Format: uuid */
             clientId: string;
@@ -4189,6 +4199,8 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "approved" | "rejected";
+            /** @description Added in 1.39.0. true = applied at once because the caller may approve pins in that branch (no manager step); the app says "Pin updated" instead of "Sent for approval" */
+            direct?: boolean;
         };
         /** @description Added in 1.23.0. One phone number of a customer and where it came from */
         PhoneDetail: {
@@ -5417,10 +5429,10 @@ export interface operations {
                         mongo?: string;
                         erp?: string;
                         /**
-                         * @description Added in 1.21.0. Where photos and exports are kept (ADR-039); memory = this instance only, phone uploads fail.
+                         * @description Added in 1.21.0. Where photos and exports are kept (ADR-039); memory = this instance only, phone uploads fail. cloudinary (1.40.0, ADR-053) = the phone's upload goes through the API straight to Cloudinary, MongoDB when Cloudinary fails; exports and voice notes in MongoDB.
                          * @enum {string}
                          */
-                        storage?: "s3" | "db" | "memory";
+                        storage?: "s3" | "db" | "memory" | "cloudinary";
                         /**
                          * @description Added in 1.37.0 (ADR-050). cloudinary = CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are set and photos are copied there.
                          * @enum {string}
@@ -6464,6 +6476,8 @@ export interface operations {
                     "application/json": components["schemas"]["PinResult"];
                 };
             };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             /** @description BUSINESS_RULE: LOW_ACCURACY, MOCK_LOCATION (gps only), OUTSIDE_BANGLADESH */
             422: {

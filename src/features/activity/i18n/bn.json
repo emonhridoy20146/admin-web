@@ -31,6 +31,7 @@
     "shifted_address": "ঠিকানা বদলেছেন",
     "customer_dead": "গ্রাহক মৃত",
     "product_returned_request": "পণ্য ফেরত দিতে চান",
+    "runaway": "পলাতক",
     "other": "অন্যান্য"
   },
   "promisedFor": "{{date}} তারিখে দেবেন",

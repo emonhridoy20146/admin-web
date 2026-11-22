@@ -10,6 +10,18 @@ import * as db from './db';
 
 type S = components['schemas'];
 const BASE = '/api/v1';
+/** Server-side timeline labels of visit outcomes (bn, en); an unknown code shows as it is, like field-api (FR-VIS-006). */
+const VISIT_OUTCOME_TEXT: Record<string, [string, string]> = {
+  paid: ['টাকা দিয়েছেন', 'paid'], partial_paid: ['আংশিক দিয়েছেন', 'paid in part'], promised: ['প্রতিশ্রুতি দিয়েছেন', 'promised'],
+  not_home: ['বাড়িতে পাওয়া যায়নি', 'not at home'], refused: ['দিতে অস্বীকার', 'refused'], shifted_address: ['ঠিকানা বদলেছেন', 'moved address'],
+  customer_dead: ['গ্রাহক মৃত', 'customer deceased'], product_returned_request: ['পণ্য ফেরত দিতে চান', 'wants to return the product'],
+  runaway: ['পলাতক', 'runaway'], other: ['অন্যান্য', 'other'],
+};
+function timelineVisit(outcome: string | undefined, at: string, actor: S['TimelineItem']['actor']): S['TimelineItem'] {
+  const code = outcome ?? 'not_home';
+  const [bn, en] = VISIT_OUTCOME_TEXT[code] ?? [code, code];
+  return { kind: 'visit', at, actor, summary: { bn: `ভিজিট: ${bn}`, en: `Visit: ${en}` }, refId: 'v1', data: { outcome: code } };
+}
 const SESSION_KEY = 'fos.mock.session'; // mock-only stand-in for the HttpOnly refresh cookie (holds a user id, never a token)
 
 declare global {
@@ -1179,7 +1191,7 @@ export const handlers = [
       ...(c.detail.pendingCollections ?? []).map((col) => ({ kind: 'collection' as const, at: col.recordedAt, actor: col.collector, summary: { bn: `মাঠে আদায় ${col.receiptNo}`, en: `Field collection ${col.receiptNo}` }, refId: col.id, data: { amountPoisha: col.amountPoisha, method: col.method, status: col.status } })),
       ...(c.detail.recentNotes ?? []).map((n) => ({ kind: 'note' as const, at: n.createdAt, actor: n.author, summary: { bn: n.text, en: n.text }, refId: n.id, data: { category: n.category } })),
       ...c.tagHistory.map((e) => ({ kind: 'tag' as const, at: e.at, actor: e.actor, summary: { bn: e.next?.state === 'tagged' ? 'খারাপ গ্রাহক হিসেবে ট্যাগ' : 'ট্যাগ সরানো হয়েছে', en: e.next?.state === 'tagged' ? 'Tagged as bad customer' : 'Tag removed' }, refId: e.id, data: { reason: e.reason } })),
-      ...(c.item.lastVisitAt ? [{ kind: 'visit' as const, at: c.item.lastVisitAt, actor: c.item.assignee, summary: { bn: 'ভিজিট — বাড়িতে পাওয়া যায়নি', en: 'Visit — not at home' }, refId: 'v1', data: { outcome: 'not_home' } }] : []),
+      ...(c.item.lastVisitAt ? [timelineVisit(db.visits.find((v) => v.row.customerId === c.item.id)?.row.outcome, c.item.lastVisitAt, c.item.assignee)] : []),
       ...(c.item.openPromise ? [{ kind: 'promise' as const, at: c.item.openPromise.createdAt, actor: c.item.assignee, summary: { bn: 'পরিশোধের প্রতিশ্রুতি', en: 'Promise to pay' }, refId: c.item.openPromise.id, data: { promisedDate: c.item.openPromise.promisedDate, amountPoisha: c.item.openPromise.promisedAmountPoisha } }] : []),
     ].sort((a, b) => ((a.at ?? '') < (b.at ?? '') ? 1 : -1));
     const p = page(items, url, 30);

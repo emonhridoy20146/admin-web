@@ -723,6 +723,8 @@ for (const d of [0, 1]) {
   const v = visits.find((x) => !x.row.coWork && DateTime.fromISO(x.row.checkInAt).setZone(ZONE).toISODate() === day);
   if (v) v.row.flags = [...(v.row.flags ?? []), 'cowork_invalid'];
 }
+// FR-VIS-006 (contract 1.41.0): a few finished visits where the customer had absconded (outcome `runaway`)
+for (const v of visits.filter((x) => x.row.checkOutAt && x.row.outcome === 'other').slice(0, 3)) v.row.outcome = 'runaway';
 
 // ---------- attendance (pure function of user + date, plus manager corrections) ----------
 export const attendanceCorrections = new Map<string, { type: string; at: string }[]>();

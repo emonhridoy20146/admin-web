@@ -31,6 +31,7 @@
     "shifted_address": "moved",
     "customer_dead": "customer died",
     "product_returned_request": "wants to return the product",
+    "runaway": "ran away (absconded)",
     "other": "other"
   },
   "promisedFor": "to pay on {{date}}",
