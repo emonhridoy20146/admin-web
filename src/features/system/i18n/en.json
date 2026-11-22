@@ -14,7 +14,8 @@
     "down": "Not responding",
     "version": "Version",
     "database": "Database",
-    "erp": "ERP link"
+    "erp": "ERP link",
+    "photos": "Photos"
   },
   "erp": {
     "title": "ERP link",
@@ -51,5 +52,44 @@
     "never": "Never",
     "empty": "No active phones",
     "unknown": "Unknown staff"
+  },
+  "photos": {
+    "title": "Photo storage",
+    "subtitle": "Where staff photos are kept, and deleting the photos of previous months to free space.",
+    "store": {
+      "title": "Where photos are kept",
+      "cloudinary": "Cloudinary",
+      "cloudinaryHelp": "New photos are copied to the company's Cloudinary account a few minutes after upload and removed from the server.",
+      "fallback": "Server storage (Cloudinary not set up)",
+      "fallbackHelp": "Photos stay on the server's own storage. Set the Cloudinary settings in field-api to move new photos to Cloudinary."
+    },
+    "alert": "{{n}} photos ({{size}}) from before {{month}} can be deleted.",
+    "old": {
+      "title": "Photos of previous months",
+      "subtitle": "Taken before {{date}}: attendance, visit and location photos.",
+      "delete": "Delete all",
+      "moneyProofs": "Also delete deposit slips and refund proofs",
+      "moneyProofsWarning": "These are proof of money handed over. Keep them unless the ERP and the deposit records are final.",
+      "month": "Month",
+      "count": "Photos",
+      "size": "Size",
+      "total": "Total",
+      "empty": "No photos of previous months",
+      "done": "Deleted {{n}} photos ({{size}})."
+    },
+    "confirm": {
+      "title": "Delete the photos of previous months?",
+      "body": "{{n}} photos ({{size}}) taken before {{date}} will be deleted. This cannot be undone.",
+      "where": "They are removed from Cloudinary and from the server's storage. Where a photo was, the panel shows that it was deleted.",
+      "withProofs": "Deposit slips and refund proofs included",
+      "button": "Delete {{n}} photos",
+      "progress": "{{n}} of {{total}} deleted…",
+      "progressLabel": "Deleting photos"
+    },
+    "widget": {
+      "open": "Open photo storage",
+      "waiting": "{{n}} photos ({{size}}) from before {{month}}. You can delete them from the 5th of the month.",
+      "none": "No photos of previous months to delete."
+    }
   }
 }

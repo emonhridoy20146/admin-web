@@ -726,6 +726,8 @@ for (const d of [0, 1]) {
 
 // ---------- attendance (pure function of user + date, plus manager corrections) ----------
 export const attendanceCorrections = new Map<string, { type: string; at: string }[]>();
+/** FR-MED-004: days whose photos an admin deleted, `${userId}:${date}` → who and when. */
+export const deletedSelfies = new Map<string, { at: string; by: string; byName: string }>();
 function hash(s: string): number {
   let h = 2166136261;
   for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
@@ -796,11 +798,28 @@ export function attendanceEvents(u: MockUser, date: string): S['AttendanceEvent'
     return {
       id: `${u.id}-${date}-${e.type}-${i}`, type: e.type, at: e.at, source: corrected ? ('correction' as const) : ('app' as const), replaced: false,
       geo: corrected ? null : { lat: (b?.lat ?? 22.7) + (((h >> (i * 3)) % 60) - 30) / 10_000, lng: (b?.lng ?? 90.36) + (((h >> (i * 2 + 1)) % 60) - 30) / 10_000, accuracyM: 6 + ((h >> i) % 30), mock: false },
-      selfieMediaId: corrected || none ? null : `selfie-${u.id}-${date}-${e.type}`,
+      selfieMediaId: corrected || none || deletedSelfies.has(`${u.id}:${date}`) ? null : `selfie-${u.id}-${date}-${e.type}`,
+      selfieDeleted: !corrected && !none ? (deletedSelfies.get(`${u.id}:${date}`) ?? null) : null,
       flags: [...(none ? ['no_selfie'] : []), ...(corrected ? ['no_location'] : [])],
     };
   });
 }
+
+// ---------- photo storage (FR-MED-003): photos of the three months before this one ----------
+export interface PhotoMonth { month: string; photos: number; proofs: number }
+let photoStock: PhotoMonth[] | null = null;
+export function photoMonths(): PhotoMonth[] {
+  if (!photoStock) {
+    const m = now().startOf('month');
+    photoStock = [
+      { month: m.minus({ months: 3 }).toFormat('yyyy-MM'), photos: 95, proofs: 4 },
+      { month: m.minus({ months: 2 }).toFormat('yyyy-MM'), photos: 388, proofs: 11 },
+      { month: m.minus({ months: 1 }).toFormat('yyyy-MM'), photos: 412, proofs: 13 },
+    ];
+  }
+  return photoStock;
+}
+export const PHOTO_BYTES = 240 * 1024;
 
 // ---------- pin proposals ----------
 export interface MockProposal { row: S['LocationProposal']; branchId: string }

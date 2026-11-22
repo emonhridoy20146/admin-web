@@ -9,10 +9,11 @@ import { Dialog } from './overlay';
 /**
  * Destructive confirmation with a type-to-confirm box (owner request 2026-11-18): the action button stays disabled
  * until the user has typed the confirm word (not case-sensitive, spaces around it ignored). `children` names what is
- * deleted (customer, coordinates). The word is a plain Latin word so it can be typed on any keyboard.
+ * deleted (customer, coordinates). The word is a plain Latin word so it can be typed on any keyboard. With `exact` the
+ * text must match character for character (the server checks it again, e.g. `DELETE 2026-11` for the photo purge).
  */
 export function ConfirmTypeDialog({
-  open, onOpenChange, title, description, word, confirmLabel, children, onConfirm,
+  open, onOpenChange, title, description, word, confirmLabel, children, onConfirm, exact,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -22,7 +23,10 @@ export function ConfirmTypeDialog({
   word: string;
   confirmLabel: string;
   children?: React.ReactNode;
-  onConfirm: () => Promise<unknown>;
+  /** receives what was typed, e.g. to send it to the server as the confirmation */
+  onConfirm: (typed: string) => Promise<unknown>;
+  /** case and spaces must match exactly */
+  exact?: boolean;
 }) {
   const { t } = useTranslation();
   const [typed, setTyped] = useState('');
@@ -36,13 +40,13 @@ export function ConfirmTypeDialog({
     }
   }, [open]);
 
-  const matches = typed.trim().toLowerCase() === word.toLowerCase();
+  const matches = exact ? typed === word : typed.trim().toLowerCase() === word.toLowerCase();
   const submit = async () => {
     if (!matches || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await onConfirm();
+      await onConfirm(typed);
       onOpenChange(false);
     } catch (e) {
       setError(e);
@@ -72,7 +76,7 @@ export function ConfirmTypeDialog({
         }}
       >
         {children}
-        <Field label={t('confirmType.label', { word })} help={t('confirmType.help')}>
+        <Field label={t('confirmType.label', { word })} help={t(exact ? 'confirmType.helpExact' : 'confirmType.help')}>
           {(id, d) => (
             <Input
               id={id}

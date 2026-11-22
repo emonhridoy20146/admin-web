@@ -49,6 +49,18 @@ export function formatNumber(n: number, opts: Partial<FormatPrefs> & { decimals?
   return digits(out, p);
 }
 
+/** File size: "850 KB", "12.4 MB", "1.2 GB" (1 KB = 1024 bytes; units stay Latin, digits follow the setting). */
+export function formatBytes(bytes: number, opts: Partial<FormatPrefs> = {}): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let v = Math.max(0, bytes);
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${formatNumber(v, { ...opts, decimals: i === 0 || v >= 100 ? 0 : 1 })} ${units[i]}`;
+}
+
 export function formatPercent(ratio: number, opts: Partial<FormatPrefs> & { decimals?: number } = {}): string {
   return formatNumber(ratio * 100, { decimals: opts.decimals ?? 0, ...opts }) + '%';
 }

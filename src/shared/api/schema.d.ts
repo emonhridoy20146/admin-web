@@ -1780,6 +1780,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Presigned PUT to the server's store (S3 or `db`). Since 1.37.0 the server copies a confirmed photo to Cloudinary in the background when Cloudinary is configured (ADR-050); the phone protocol is unchanged. 409 `INVALID_STATE` reason `MEDIA_DELETED` when the same file was uploaded before and an admin deleted it. */
         post: operations["createUploadUrl"];
         delete?: never;
         options?: never;
@@ -1810,9 +1811,62 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description A link that works for 5 minutes. Since 1.37.0 (ADR-050) a photo copied to Cloudinary is served as a signed private
+         *     Cloudinary download link (`api.cloudinary.com/v1_1/<cloud>/image/download?...&expires_at=...`); until it is copied, or
+         *     when Cloudinary is not configured, the link points at the server's own store as before. Clients just open `url`.
+         *     A photo deleted by an admin (FR-MED-003/004) answers 404 `NOT_FOUND` with `details.reason = MEDIA_DELETED`,
+         *     `details.deletedAt` and `details.deletedByName`.
+         */
         get: operations["mediaUrl"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media/purge/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description media.delete (1.37.0, FR-MED-003). Photos taken before the first day (Asia/Dhaka) of month `before`, per month, with
+         *     their count and size. Kinds: selfie, visit_photo, location_proof; deposit_slip and refund_proof (money proofs) only
+         *     with `includeMoneyProofs=true`. Voice notes are never included. `suggest` is true from the 5th of the month on when
+         *     there is something to delete (the admin panel shows an alert). Branch scope: a super admin sees all.
+         */
+        get: operations["mediaPurgePreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description media.delete (1.37.0, FR-MED-003). Deletes the photos the preview counts, at most 200 per call, oldest first, and
+         *     returns how many were deleted and how many remain; call again until `remaining` is 0. `confirmText` must be exactly
+         *     `DELETE <before>` (e.g. `DELETE 2026-11`), else 422 `BUSINESS_RULE` rule `CONFIRM_TEXT_MISMATCH` and nothing is deleted.
+         *     A deleted photo is marked `deleted` at once (its link answers 404 `MEDIA_DELETED`) and its files are removed from
+         *     Cloudinary and from the server's store (retried in the background if a store is down). One audit entry
+         *     (`media.purged`) per call with the counts. Branch scope: a super admin deletes in every branch.
+         */
+        post: operations["mediaPurge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1945,6 +1999,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attendance/photos/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description media.delete (1.37.0, FR-MED-004). Deletes the attendance photos of one staff member on one business date. Each
+         *     event that had a photo gets `selfieDeleted { at, by, byName }` and `selfieMediaId: null`; the photo files are removed
+         *     from Cloudinary and from the server's store. Branch scope: a user outside the caller's branches is 404. A day without
+         *     photos answers `deleted: 0`. Audited as `attendance.photos_deleted`.
+         */
+        post: operations["deleteAttendancePhotos"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attendance/me/today": {
         parameters: {
             query?: never;
@@ -1952,6 +2028,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 1.36.0: also returns `events`, the day's attendance events (oldest first), so a phone that lost its local data (reinstall) restores the work-in, breaks and work-out already recorded instead of asking again. */
         get: operations["myAttendanceToday"];
         put?: never;
         post?: never;
@@ -4129,13 +4206,59 @@ export interface components {
                 accuracyM?: number;
                 mock?: boolean;
             } | null;
+            /** @description null when there was no photo or an admin deleted it (see selfieDeleted) */
             selfieMediaId?: string | null;
+            /** @description 1.37.0 (FR-MED-004): set when an admin deleted the photo of this event; show "Deleted by admin <byName> · <at>" where the photo was */
+            selfieDeleted?: {
+                /** Format: date-time */
+                at: string;
+                by: string;
+                byName: string;
+            } | null;
             /** @description e.g. no_selfie, no_location, mock_location, clock_skew, late_sync */
             flags: string[];
             /** @enum {string} */
             source?: "app" | "correction" | "system";
             /** @description true when a correction replaced this event; it no longer counts in the day */
             replaced?: boolean;
+        };
+        /** @description 1.37.0 (FR-MED-003) */
+        MediaPurgePreview: {
+            /** @description YYYY-MM */
+            before: string;
+            /**
+             * Format: date-time
+             * @description First instant of month `before` in Asia/Dhaka; photos created earlier count
+             */
+            cutoff: string;
+            /**
+             * Format: date
+             * @description Dhaka business date
+             */
+            today: string;
+            kinds: string[];
+            includeMoneyProofs: boolean;
+            /** @description Oldest first */
+            months: {
+                /** @description YYYY-MM (Dhaka) */
+                month: string;
+                count: number;
+                bytes: number;
+            }[];
+            total: {
+                count: number;
+                bytes: number;
+            };
+            /** @description true from the 5th of the month on when there is something to delete */
+            suggest: boolean;
+        };
+        /** @description 1.37.0 (FR-MED-003) */
+        MediaPurgeResult: {
+            deleted: number;
+            /** @description Size of the photos deleted by this call */
+            bytes: number;
+            /** @description Photos still to delete for the same request; call again while > 0 */
+            remaining: number;
         };
         LocationPoint: {
             /** Format: date-time */
@@ -5087,6 +5210,11 @@ export interface operations {
                          * @enum {string}
                          */
                         storage?: "s3" | "db" | "memory";
+                        /**
+                         * @description Added in 1.37.0 (ADR-050). cloudinary = CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are set and photos are copied there.
+                         * @enum {string}
+                         */
+                        cloudStorage?: "cloudinary" | "none";
                     };
                 };
             };
@@ -8143,6 +8271,67 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    mediaPurgePreview: {
+        parameters: {
+            query?: {
+                /** @description YYYY-MM, default the current Dhaka month (= every earlier month). Not later than the current month. */
+                before?: string;
+                includeMoneyProofs?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaPurgePreview"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    mediaPurge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    before: string;
+                    /** @default false */
+                    includeMoneyProofs?: boolean;
+                    confirmText: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaPurgeResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     storageGet: {
@@ -8500,6 +8689,42 @@ export interface operations {
             409: components["responses"]["Problem"];
         };
     };
+    deleteAttendancePhotos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userId: string;
+                    /** Format: date */
+                    date: string;
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Number of photos deleted */
+                        deleted: number;
+                        events: components["schemas"]["AttendanceEvent"][];
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
     myAttendanceToday: {
         parameters: {
             query?: never;
@@ -8515,7 +8740,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AttendanceDay"];
+                    "application/json": components["schemas"]["AttendanceDay"] & {
+                        events?: {
+                            id: string;
+                            /** @description The id the phone gave the event; restore it under this id so a retry stays idempotent */
+                            clientId?: string | null;
+                            /** @enum {string} */
+                            type: "work_in" | "break_start" | "break_end" | "work_out";
+                            /** Format: date-time */
+                            at: string;
+                            /** @enum {string} */
+                            source: "app" | "correction" | "system";
+                        }[];
+                    };
                 };
             };
         };

@@ -107,7 +107,17 @@
       "mock_location": "Mock GPS",
       "clock_skew": "Phone clock wrong",
       "late_sync": "Sent late"
-    }
+    },
+    "deletedBy": "Deleted by admin {{name}}",
+    "deletePhotos": {
+      "button": "Delete photos of this day",
+      "title": "Delete the photos of this day?",
+      "body": "{{n}} attendance photos of {{name}} on {{date}} will be deleted. This cannot be undone.",
+      "where": "They are removed from Cloudinary and from the server's storage. Each record keeps who deleted the photo and when.",
+      "confirm": "Delete {{n}} photos"
+    },
+    "photoDeleted": "Photo deleted",
+    "summaryDeleted": "An admin deleted {{n}} photos."
   },
   "leave": {
     "title": "Leave requests",

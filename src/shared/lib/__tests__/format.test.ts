@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateTime, formatDaySpan, formatDuration, formatMoney, formatMoneyCompact, formatNumber, formatPercent, formatRelative, groupLakh, pickText, toBnDigits } from '../format';
+import { formatBytes, formatDate, formatDateTime, formatDaySpan, formatDuration, formatMoney, formatMoneyCompact, formatNumber, formatPercent, formatRelative, groupLakh, pickText, toBnDigits } from '../format';
 import { addDays, dhakaDayStartIso, startOfTodayDhakaIso, todayDhaka } from '../time';
 
 const bn = { locale: 'bn' as const, bnDigits: true };
 const en = { locale: 'en' as const, bnDigits: false };
+
+describe('formatBytes', () => {
+  it('uses binary units with one decimal below 100', () => {
+    expect(formatBytes(0, en)).toBe('0 B');
+    expect(formatBytes(850 * 1024, en)).toBe('850 KB');
+    expect(formatBytes(12.44 * 1024 * 1024, en)).toBe('12.4 MB');
+    expect(formatBytes(1.25 * 1024 ** 3, bn)).toBe('১.৩ GB');
+  });
+});
 
 describe('number & money formatting', () => {
   it('groups in lakh/crore', () => {

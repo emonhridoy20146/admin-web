@@ -87,6 +87,9 @@ export function SystemPage() {
               <Row label={t('api.version')}><span className="font-mono">{health.data?.version ?? '—'}</span></Row>
               <Row label={t('api.database')} tone={health.data && health.data.mongo !== 'ok' ? 'bad' : undefined}>{part(health.data?.mongo)}</Row>
               <Row label={t('api.erp')} tone={health.data && health.data.erp !== 'ok' ? 'warn' : undefined}>{part(health.data?.erp)}</Row>
+              <Row label={t('api.photos')} tone={health.data && health.data.cloudStorage !== 'cloudinary' ? 'warn' : undefined}>
+                {health.data?.cloudStorage === 'cloudinary' ? t('photos.store.cloudinary') : t('photos.store.fallback')}
+              </Row>
             </dl>
           )}
         </Card>

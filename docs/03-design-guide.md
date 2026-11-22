@@ -214,6 +214,7 @@ Items hidden when the user lacks the permission or the module flag is off.
 - Money input: prefix `৳`, numeric keypad on mobile, formats on blur, stores poisha.
 - Reason fields (required for tag, permission, void, resolve, settings) use a reason-code select + textarea min 10 chars, with counter.
 - Destructive/money confirmations: dialog repeats amount and customer name in bold; button label is the verb ("Void ৳5,000"), not "OK".
+- Bulk deletes (photo purge, FR-W-054): `ConfirmTypeDialog` with `exact` and a text that names the scope (`DELETE 2026-11`); long runs show a progress bar inside the dialog and the dialog cannot be closed while it runs.
 - Validation with zod schemas generated from OpenAPI where possible.
 
 ### 5.3 Buttons

@@ -4,6 +4,7 @@
  * Idempotency-Key replay on money actions, audit on every privileged change.
  */
 import { http, HttpResponse, delay } from 'msw';
+import { DateTime } from 'luxon';
 import type { components } from '@/shared/api/schema';
 import * as db from './db';
 
@@ -328,7 +329,48 @@ export const handlers = [
     return HttpResponse.json({ customers: partial ? 120 : 37, branches: 3, partial, durationMs: 250, finishedAt: new Date().toISOString() });
   })),
   http.get(`${BASE}/system/erp-employees`, authed(({ ctx }) => need(ctx, 'user.manage') ?? HttpResponse.json({ items: db.erpEmployees }))),
-  http.get(`${BASE}/system/health`, () => HttpResponse.json({ status: 'ok', version: '1.6.0', mongo: 'ok', erp: 'ok' })),
+  http.get(`${BASE}/system/health`, () => HttpResponse.json({ status: 'ok', version: '1.6.0', mongo: 'ok', erp: 'ok', storage: 'db', cloudStorage: 'cloudinary' })),
+  // FR-MED-003: photos of previous months; the mock keeps counts per month (no files)
+  http.get(`${BASE}/media/purge/preview`, authed(({ ctx, url }) => {
+    const deny = need(ctx, 'media.delete');
+    if (deny) return deny;
+    const thisMonth = db.today().slice(0, 7);
+    const before = url.searchParams.get('before') ?? thisMonth;
+    if (!/^\d{4}-\d{2}$/.test(before)) return problem(400, 'VALIDATION_FAILED', 'before must be YYYY-MM');
+    if (before > thisMonth) return problem(422, 'BUSINESS_RULE', 'Not a past month', undefined, { rule: 'NOT_A_PAST_MONTH' });
+    const proofs = url.searchParams.get('includeMoneyProofs') === 'true';
+    const months = db.photoMonths().filter((m) => m.month < before).map((m) => ({ month: m.month, count: m.photos + (proofs ? m.proofs : 0), bytes: (m.photos + (proofs ? m.proofs : 0)) * db.PHOTO_BYTES })).filter((m) => m.count > 0);
+    const total = months.reduce((a, m) => ({ count: a.count + m.count, bytes: a.bytes + m.bytes }), { count: 0, bytes: 0 });
+    const today = db.today();
+    return HttpResponse.json({
+      before, cutoff: DateTime.fromISO(`${before}-01`, { zone: 'Asia/Dhaka' }).toUTC().toISO(), today,
+      kinds: ['selfie', 'visit_photo', 'location_proof', ...(proofs ? ['deposit_slip', 'refund_proof'] : [])], includeMoneyProofs: proofs,
+      months, total, suggest: total.count > 0 && Number(today.slice(8, 10)) >= 5,
+    });
+  })),
+  http.post(`${BASE}/media/purge`, authed(async ({ ctx, request }) => {
+    const deny = need(ctx, 'media.delete');
+    if (deny) return deny;
+    const b = (await request.json()) as { before: string; includeMoneyProofs?: boolean; confirmText: string };
+    if (b.confirmText !== `DELETE ${b.before}`) return problem(422, 'BUSINESS_RULE', 'The confirmation text does not match', undefined, { rule: 'CONFIRM_TEXT_MISMATCH', expected: `DELETE ${b.before}` });
+    let left = 200;
+    let deleted = 0;
+    for (const m of db.photoMonths().filter((x) => x.month < b.before)) {
+      const p = Math.min(left, m.photos);
+      m.photos -= p;
+      left -= p;
+      deleted += p;
+      if (b.includeMoneyProofs) {
+        const q = Math.min(left, m.proofs);
+        m.proofs -= q;
+        left -= q;
+        deleted += q;
+      }
+    }
+    const remaining = db.photoMonths().filter((x) => x.month < b.before).reduce((a, m) => a + m.photos + (b.includeMoneyProofs ? m.proofs : 0), 0);
+    if (deleted) db.addAudit({ actor: actor(ctx.user), action: 'media.purged', entity: 'media', entityId: `purge:${b.before}`, after: { before: b.before, deleted }, reason: b.confirmText });
+    return HttpResponse.json({ deleted, bytes: deleted * db.PHOTO_BYTES, remaining });
+  })),
   http.get(`${BASE}/system/sync-health`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'settings.manage');
     if (deny) return deny;
@@ -659,6 +701,21 @@ export const handlers = [
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return problem(400, 'VALIDATION_FAILED', 'date is required');
     if (!u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '')) return problem(404, 'NOT_FOUND', 'User not found');
     return HttpResponse.json(db.attendanceEvents(u, date));
+  })),
+  http.post(`${BASE}/attendance/photos/delete`, authed(async ({ request, ctx, url }) => {
+    const deny = need(ctx, 'media.delete');
+    if (deny) return deny;
+    const b = (await request.json()) as { userId: string; date: string; reason?: string };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date ?? '')) return problem(400, 'VALIDATION_FAILED', 'date is required');
+    const u = db.userById(b.userId);
+    if (!u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '')) return problem(404, 'NOT_FOUND', 'User not found');
+    const key = `${u.id}:${b.date}`;
+    const had = db.attendanceEvents(u, b.date).filter((e) => !!e.selfieMediaId).length;
+    if (had) {
+      db.deletedSelfies.set(key, { at: new Date().toISOString(), by: ctx.user.id!, byName: ctx.user.name?.en ?? '' });
+      db.addAudit({ actor: actor(ctx.user), action: 'attendance.photos_deleted', entity: 'attendance_day', entityId: key, branchId: u.branchIds?.[0], after: { deleted: had }, reason: b.reason });
+    }
+    return HttpResponse.json({ deleted: had, events: db.attendanceEvents(u, b.date) });
   })),
   http.post(`${BASE}/attendance/corrections`, authed(async ({ request, ctx }) => {
     const deny = need(ctx, 'attendance.manage');
