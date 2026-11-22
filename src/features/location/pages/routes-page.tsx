@@ -10,8 +10,9 @@ import { useGate } from '@/shared/feature/useGate';
 import { formatDuration, formatNumber, formatTime, pickText } from '@/shared/lib/format';
 import { addDays, todayDhaka } from '@/shared/lib/time';
 import { useUrlState } from '@/shared/lib/url-state';
-import { branchPoint, boundsOf, decodePolyline, DEFAULT_AREA, DEFAULT_POINT, type Bounds } from '@/shared/map/geo';
-import { MapView, type MapMarker, type MapPath } from '@/shared/map/map-view';
+import { branchPoint, boundsOf, decodePolyline, DEFAULT_VIEW, type Bounds } from '@/shared/map/geo';
+import { useMapLayers } from '@/shared/feature/map-layers';
+import { MapView, type MapMarker, type MapPath, type MapViewState } from '@/shared/map/map-view';
 import { PageHeader } from '@/shared/ui/page';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
@@ -42,7 +43,10 @@ export function RoutesPage() {
   const [stopAt, setStopAt] = useState<number | null>(null);
 
   const home = branchPoint(branches.data, branchId);
-  const center = useMemo(() => home ?? DEFAULT_POINT, [home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const center = useMemo(() => home ?? DEFAULT_VIEW.center, [home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  // FR-PLC-001: places (and any other feature's layer) on the route map too
+  const [view, setView] = useState<MapViewState | null>(null);
+  const layers = useMapLayers({ view });
   const track = useMemo(() => decodePolyline(q.data?.polyline), [q.data?.polyline]);
   const stops = useMemo(() => sortStops(q.data?.stops), [q.data?.stops]);
   const lost = useMemo(() => gaps(q.data?.segments), [q.data?.segments]);
@@ -68,6 +72,8 @@ export function RoutesPage() {
     ],
     [stops, stopAt, events, t],
   );
+  // place markers under the route's own (which stay on top and clickable)
+  const withLayers = useMemo(() => [...layers.markers, ...markers], [layers.markers, markers]);
   const showStop = (i: number) => {
     const s = stops[i];
     setStopAt(i);
@@ -129,7 +135,7 @@ export function RoutesPage() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="h-[46vh] min-h-72 lg:h-[calc(100vh-22rem)] lg:min-h-96">
-              <MapView label={t('routes.map', { name })} center={center} zoom={13} initialBounds={home ? null : DEFAULT_AREA} paths={paths} markers={markers} fit={fit} onMarkerClick={(id) => !id.startsWith('c') && showStop(Number(id))} />
+              <MapView label={t('routes.map', { name })} center={center} zoom={home ? 13 : DEFAULT_VIEW.zoom} paths={paths} markers={withLayers} fit={fit} onView={setView} onMarkerClick={(id) => !layers.open(id) && !id.startsWith('c') && showStop(Number(id))} />
             </div>
 
             <div className="flex min-h-0 flex-col gap-4 lg:h-[calc(100vh-22rem)] lg:min-h-96 lg:overflow-y-auto">
@@ -225,6 +231,7 @@ export function RoutesPage() {
           </div>
         </>
       ) : null}
+      {layers.element}
     </>
   );
 }

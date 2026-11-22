@@ -5,6 +5,8 @@ import type * as Leaflet from 'leaflet';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import type { LatLng } from './geo';
+import { drawMarker } from './draw';
+import type { MapMarker, MapViewState } from './map-view';
 import { useTileProvider } from './use-tiles';
 
 /** Below ~1e-7° (≈ 1 cm) two points are the same: stops value → map → value loops. */
@@ -16,13 +18,17 @@ const same = (a: LatLng, b: LatLng) => Math.abs(a.lat - b.lat) < 1e-7 && Math.ab
  * point under the pin while the map moves. When `value` changes from outside (pasted coordinates) the map jumps there.
  * The map is a visual aid only: the dialog that uses it also shows the coordinates as text and accepts typed ones.
  */
-export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabel, label, className }: {
+export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabel, markers, onView, label, className }: {
   value: LatLng;
   onChange: (p: LatLng) => void;
   zoom?: number;
   /** the pin as it is now, drawn hollow for comparison */
   reference?: LatLng | null;
   referenceLabel?: string;
+  /** context drawn under the pin, never clickable (e.g. map places, FR-PLC-001): a click still brings that spot to the pin */
+  markers?: MapMarker[];
+  /** the visible box and zoom after each move (layers load what is in view) */
+  onView?: (v: MapViewState) => void;
   label: string;
   className?: string;
 }) {
@@ -34,6 +40,9 @@ export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabe
   const last = useRef<LatLng>(value);
   const cb = useRef(onChange);
   cb.current = onChange;
+  const viewCb = useRef(onView);
+  viewCb.current = onView;
+  const context = useRef<Leaflet.LayerGroup | null>(null);
   const [moving, setMoving] = useState(false);
   const provider = useTileProvider().data;
 
@@ -45,7 +54,7 @@ export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabe
       if (dead || !el.current || map.current) return;
       const lf = (mod as unknown as { default?: typeof Leaflet }).default ?? mod;
       L.current = lf;
-      const m = lf.map(el.current, { center: [value.lat, value.lng], zoom, zoomControl: true, attributionControl: true, keyboardPanDelta: 40 });
+      const m = lf.map(el.current, { center: [value.lat, value.lng], zoom, zoomControl: true, attributionControl: true, keyboardPanDelta: 40, fadeAnimation: false }); // see MapView: no ghost labels
       m.attributionControl.setPrefix(false);
       map.current = m;
       const emit = () => {
@@ -57,15 +66,23 @@ export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabe
       };
       m.on('movestart', () => setMoving(true));
       m.on('move', emit);
-      m.on('moveend', () => (setMoving(false), emit()));
+      const emitView = () => {
+        const b = m.getBounds();
+        viewCb.current?.({ bounds: { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() }, zoom: m.getZoom() });
+      };
+      m.on('moveend', () => (setMoving(false), emit(), emitView()));
       m.on('click', (e: Leaflet.LeafletMouseEvent) => m.panTo(e.latlng));
+      context.current = lf.layerGroup().addTo(m);
       setTiles();
       drawReference();
+      drawContext();
+      emitView();
     });
     return () => {
       dead = true;
       map.current?.remove();
       map.current = null;
+      context.current = null;
     };
     // created once; later value changes go through the effect below
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,7 +106,15 @@ export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabe
     refMarker.current.addTo(map.current);
   }
 
+  function drawContext() {
+    const lf = L.current;
+    if (!lf || !context.current) return;
+    context.current.clearLayers();
+    for (const mk of markers ?? []) drawMarker(lf, context.current, { ...mk, passive: true }, token);
+  }
+
   useEffect(setTiles, [provider]);
+  useEffect(drawContext, [markers]);
   useEffect(drawReference, [reference?.lat, reference?.lng, referenceLabel]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!map.current || same(value, last.current)) return;

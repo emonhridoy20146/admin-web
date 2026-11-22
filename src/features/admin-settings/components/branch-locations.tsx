@@ -8,6 +8,8 @@ import { formatNumber, pickText } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
 import { DEFAULT_POINT, formatCoords, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
 import { MapPicker } from '@/shared/map/map-picker';
+import type { MapViewState } from '@/shared/map/map-view';
+import { useMapLayers } from '@/shared/feature/map-layers';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -18,8 +20,7 @@ import type { components } from '@/shared/api/schema';
 import { useSetBranchLocation } from '../api/settings';
 
 type Branch = components['schemas']['Branch'];
-/** Map centre when a branch has no point yet (Barishal). */
-/** No branch point yet (the ERP has none): start in Patuakhali town (ADR-W18). */
+/** No branch point yet (the ERP has none): start at the default view's centre, Galachipa (owner decision 2026-11-22). */
 const FALLBACK: LatLng = DEFAULT_POINT;
 
 /**
@@ -87,6 +88,9 @@ function BranchPointDialog({ branch, onClose }: { branch: Branch | null; onClose
   const current = branch && branch.lat != null && branch.lng != null ? { lat: branch.lat, lng: branch.lng } : null;
   const [point, setPoint] = useState<LatLng>(FALLBACK);
   const [typed, setTyped] = useState('');
+  // FR-PLC-001: map places under the pin (shown only; a click still moves the pin there)
+  const [view, setView] = useState<MapViewState | null>(null);
+  const layers = useMapLayers({ view, passive: true });
   const [typedError, setTypedError] = useState(false);
 
   useEffect(() => {
@@ -133,11 +137,14 @@ function BranchPointDialog({ branch, onClose }: { branch: Branch | null; onClose
       }
     >
       <div className="space-y-3 py-1">
+        {layers.element}
         <MapPicker
           value={point}
           onChange={setPoint}
           zoom={current ? 17 : 13}
           reference={current}
+          markers={layers.markers}
+          onView={setView}
           referenceLabel={t('branchPoint.current')}
           label={t('branchPoint.mapLabel', { name })}
           className="h-[44dvh] min-h-56 sm:h-[340px]"

@@ -9,7 +9,7 @@ test('places: reject and approve move requests, add, rename and remove a place (
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(placesBn.title);
   const rows = page.locator('tbody tr');
   await expect(rows.filter({ hasText: 'করিম স্টোর' })).toHaveCount(1);
-  await expect(rows.filter({ hasText: 'পটুয়াখালী বাস স্ট্যান্ড' })).toHaveCount(0); // another branch
+  await expect(rows.filter({ hasText: 'পটুয়াখালী বাস স্ট্যান্ড' })).toHaveCount(1); // another branch: places are shared by the whole area
   await expect(rows.filter({ hasText: 'নতুন বাজার' })).toContainText(placesBn.status.movePending);
   const dialog = () => page.getByRole('dialog').last();
 
@@ -35,9 +35,10 @@ test('places: reject and approve move requests, add, rename and remove a place (
   await dialog().getByRole('button', { name: placesBn.approve.confirm }).click();
   await expect(page.getByText(placesBn.moves.empty)).toBeVisible();
 
-  // add a place: name, kind, note; it opens in the drawer
+  // add a place: name, kind, note (no branch to choose); it opens in the drawer
   await page.goto('/places/');
   await page.getByRole('button', { name: placesBn.new }).click();
+  await expect(dialog().getByRole('combobox')).toHaveCount(0);
   await dialog().getByLabel(placesBn.form.name).fill('আলিফ মডেল স্কুল');
   await dialog().getByRole('radio', { name: placesBn.icon.school }).click();
   await dialog().getByLabel(placesBn.form.note).fill('মসজিদের পেছনের গলি');
@@ -66,6 +67,21 @@ test('places on the customer map: names next to the markers, the layer can be sw
   await page.goto('/map/?at=22.70300,90.37000,16');
   const label = page.locator('.fos-map-label', { hasText: 'বাইতুল আমান জামে মসজিদ' });
   await expect(label).toBeVisible();
+  await expect(page.locator('.fos-tile').first()).toBeVisible();
   await page.getByRole('button', { name: placesBn.layer, exact: true }).click();
   await expect(label).toHaveCount(0);
+  await expect(page.locator('.fos-tile')).toHaveCount(0);
+});
+
+test('place markers follow the zoom like a street map: none zoomed out, icon only in the middle, icon and name close in', async ({ page }) => {
+  await login(page, 'manager');
+  await page.goto('/map/?at=22.70300,90.37000,14');
+  await expect(page.locator('.fos-tile').first()).toBeVisible();
+  await expect(page.locator('.fos-map-label', { hasText: 'বাইতুল আমান জামে মসজিদ' })).toHaveCount(0);
+  const box = await page.locator('.fos-tile').first().boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(20);
+  expect(box!.width).toBeLessThanOrEqual(24);
+  await page.goto('/map/?at=22.70300,90.37000,12');
+  await expect(page.locator('.leaflet-tile-pane')).toBeAttached();
+  await expect(page.locator('.fos-tile')).toHaveCount(0);
 });

@@ -1,6 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
-import { useBranchId } from '@/shared/lib/ui-store';
 import { useCan, useSession } from '@/shared/auth/session';
 import { emit, EV } from '@/shared/feature/events';
 import type { components, operations } from '@/shared/api/schema';
@@ -12,10 +11,9 @@ export type PlaceCreate = components['schemas']['PlaceCreate'];
 export type PlaceUpdate = components['schemas']['PlaceUpdate'];
 export type PlaceQuery = NonNullable<operations['listPlaces']['parameters']['query']>;
 
-/** FR-PLC-001: places in scope (the chosen branch), newest first. */
+/** FR-PLC-001: every place (shared by the whole area, not by branch: owner decision 2026-11-22, contract 1.42.0), newest first. */
 export function usePlaces(params: Omit<PlaceQuery, 'branchId'>, enabled = true) {
-  const branchId = useBranchId();
-  const query: PlaceQuery = { ...params, branchId };
+  const query: PlaceQuery = { ...params };
   return useQuery({
     queryKey: ['places', 'list', query],
     queryFn: async () => {
@@ -38,12 +36,11 @@ export function usePlace(id: string | null, enabled: boolean) {
   });
 }
 
-/** FR-PLC-005: the office queue, oldest request first. */
+/** FR-PLC-005: the office queue of every branch (contract 1.42.0: places are shared by the whole area), oldest request first. */
 export function useMoveRequests() {
-  const branchId = useBranchId();
   return useQuery({
-    queryKey: ['places', 'moves', branchId],
-    queryFn: async () => (await unwrap(api.GET('/places/move-requests', { params: { query: { branchId } } }))).items ?? [],
+    queryKey: ['places', 'moves'],
+    queryFn: async () => (await unwrap(api.GET('/places/move-requests'))).items ?? [],
     staleTime: 15_000,
     refetchInterval: 60_000,
   });
@@ -51,12 +48,11 @@ export function useMoveRequests() {
 
 /** Nav badge: open move requests. Polls every minute while the tab is visible. */
 export function useMoveRequestBadge(): number | undefined {
-  const branchId = useBranchId();
   const allowed = useCan('place.manage');
   const authed = useSession((s) => s.status === 'authenticated');
   const q = useQuery({
-    queryKey: ['places', 'moves', branchId],
-    queryFn: async () => (await unwrap(api.GET('/places/move-requests', { params: { query: { branchId } } }))).items ?? [],
+    queryKey: ['places', 'moves'],
+    queryFn: async () => (await unwrap(api.GET('/places/move-requests'))).items ?? [],
     enabled: allowed && authed,
     staleTime: 15_000,
     refetchInterval: 60_000,
