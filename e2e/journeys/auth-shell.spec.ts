@@ -4,6 +4,7 @@ import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' 
 import commonEn from '../../src/shared/i18n/common.en.json' with { type: 'json' };
 import shellBn from '../../src/features/shell/i18n/bn.json' with { type: 'json' };
 import dashEn from '../../src/features/dashboard/i18n/en.json' with { type: 'json' };
+import authEn from '../../src/features/auth/i18n/en.json' with { type: 'json' };
 import { expectNoTokenInStorage, login, PASSWORD } from '../fixtures';
 
 test('W-E1 super admin signs in and sees the overview with a branch switcher', async ({ page }) => {
@@ -35,6 +36,23 @@ test('wrong password shows an error and stays on login', async ({ page }) => {
   await page.getByRole('button', { name: authBn.submit }).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page).toHaveURL(/login/);
+});
+
+test.describe('a new browser', () => {
+  // No saved language: the panel opens in English and stays English after signing in, although the user's
+  // server profile says 'bn' (that is the staff app's language).
+  test.use({ storageState: { cookies: [], origins: [] }, locale: 'en-US' });
+
+  test('W-E15 opens in English and signing in does not switch it to Bangla', async ({ page }) => {
+    await page.goto('/login/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await page.getByLabel(authEn.username).fill('admin');
+    await page.locator('input[autocomplete=current-password]').fill(PASSWORD);
+    await page.getByRole('button', { name: authEn.submit }).click();
+    await page.waitForURL((u) => u.pathname === '/');
+    await expect(page.locator('nav').first()).toContainText(dashEn.title);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
 });
 
 test('W-E14 language, digits and theme persist across reload', async ({ page }) => {
