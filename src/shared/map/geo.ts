@@ -102,18 +102,18 @@ export function formatCoords(p: LatLng): string {
   return `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
 }
 
-/**
- * Where a map opens when nothing better is known (no saved view, no branch point): Patuakhali district, the owner's
- * home area (Kuakata to Bauphal). The ERP has no branch coordinates, so maps used to open on Barishal city (ADR-W18).
- */
-export const DEFAULT_AREA: Bounds = { minLat: 21.78, maxLat: 22.62, minLng: 90.02, maxLng: 90.72 };
-/** Patuakhali town: the starting point of a pin picker with nothing better to start from. */
-export const DEFAULT_POINT: LatLng = { lat: 22.3596, lng: 90.3299 };
-
 export interface MapViewpoint {
   center: LatLng;
   zoom: number;
 }
+
+/**
+ * Where every map opens when nothing better is known (no saved view, no branch point, nothing to fit): Galachipa
+ * upazila, Patuakhali, at zoom 12 (owner decision 2026-11-22). Earlier: Patuakhali district (ADR-W18).
+ */
+export const DEFAULT_VIEW: MapViewpoint = { center: { lat: 22.164, lng: 90.426 }, zoom: 12 };
+/** The starting point of a pin picker with nothing better to start from (the default view's centre). */
+export const DEFAULT_POINT: LatLng = DEFAULT_VIEW.center;
 
 /** `22.35960,90.32990,12` → view; null for anything outside Bangladesh or an unusable zoom (the param is user-editable). */
 export function parseViewpoint(v: string | null | undefined): MapViewpoint | null {
@@ -141,7 +141,7 @@ export function boxAround(p: LatLng, km = 3): Bounds {
 
 /**
  * The map point of the branch being looked at: the chosen branch when it has one, or the only branch of someone who
- * works in one branch. Null otherwise (all branches, or a branch without a point) — then maps open on DEFAULT_AREA.
+ * works in one branch. Null otherwise (all branches, or a branch without a point) — then maps open on DEFAULT_VIEW.
  */
 export function branchPoint(list: { id?: string; lat?: number | null; lng?: number | null }[] | undefined, branchId: string | undefined): LatLng | null {
   const pick = branchId ? list?.find((b) => b.id === branchId) : list?.length === 1 ? list[0] : undefined;

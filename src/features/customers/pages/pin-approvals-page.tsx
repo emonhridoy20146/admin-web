@@ -10,7 +10,8 @@ import { useCan } from '@/shared/auth/session';
 import { formatNumber, formatRelative, pickText } from '@/shared/lib/format';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { boundsOf } from '@/shared/map/geo';
-import { MapView, type MapMarker } from '@/shared/map/map-view';
+import { MapView, type MapMarker, type MapViewState } from '@/shared/map/map-view';
+import { useMapLayers } from '@/shared/feature/map-layers';
 import { PageHeader } from '@/shared/ui/page';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
@@ -110,6 +111,10 @@ function ProposalCard({ p, canDecide, onApprove, onReject }: { p: LocationPropos
     ],
     [vm, t],
   );
+  // FR-PLC-001: places near the pin help to judge it (a shop, a mosque next door)
+  const [view, setView] = useState<MapViewState | null>(null);
+  const layers = useMapLayers({ view });
+  const shown = useMemo(() => [...layers.markers, ...markers], [layers.markers, markers]);
   const fit = useMemo(() => boundsOf([vm.current, vm.proposed].filter((x): x is NonNullable<typeof x> => !!x), 0.0015), [vm]);
   const lines = useMemo(() => (vm.current && vm.proposed ? [[vm.current, vm.proposed] as [typeof vm.current, typeof vm.proposed]] : []), [vm]);
   const name = pickText(p.customer?.name, locale);
@@ -127,8 +132,9 @@ function ProposalCard({ p, canDecide, onApprove, onReject }: { p: LocationPropos
           {vm.risky && (p.status === 'pending' || p.autoApplied) ? <Badge tone="warning" icon={TriangleAlert}>{t('pins.check')}</Badge> : null}
         </div>
       </div>
+      {layers.element}
       <div className="h-52 overflow-hidden border-y border-line">
-        {vm.proposed ? <MapView label={t('pins.mapOf', { name })} center={vm.proposed} zoom={16} markers={markers} lines={lines} fit={fit} className="min-h-0 rounded-none border-0" /> : null}
+        {vm.proposed ? <MapView label={t('pins.mapOf', { name })} center={vm.proposed} zoom={16} markers={shown} lines={lines} fit={fit} onView={setView} onMarkerClick={layers.open} className="min-h-0 rounded-none border-0" /> : null}
       </div>
       <dl className="grid grid-cols-3 gap-px bg-line [&>*]:bg-surface">
         <Fact label={t('pins.moved')} value={vm.movedM == null ? t('pins.noPin') : t('pins.metres', { n: formatNumber(vm.movedM) })} warn={(vm.movedM ?? 0) > 500} />

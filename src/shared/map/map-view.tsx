@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { LocateFixed } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { formatNumber } from '@/shared/lib/format';
-import type { Bounds, LatLng } from './geo';
-import { pinIconHtml, pinSize, type PinLook } from './pin-icon';
+import type { Bounds, LatLng, MapViewpoint } from './geo';
+import { drawMarker } from './draw';
+import type { PinLook, TileLook } from './pin-icon';
 import { useTileProvider } from './use-tiles';
 
 export interface MapMarker extends LatLng {
@@ -25,6 +26,10 @@ export interface MapMarker extends LatLng {
   z?: number;
   /** text always shown next to the marker (map places, FR-PLC-001) instead of only on hover */
   label?: string;
+  /** drawn as a small rounded square with a symbol (map places) instead of a dot or pin; `token` is then unused */
+  tile?: TileLook;
+  /** not clickable (clicks go to the map underneath, e.g. in a point picker) */
+  passive?: boolean;
 }
 
 export interface MapCluster extends LatLng {
@@ -83,8 +88,8 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
   lines?: [LatLng, LatLng][];
   /** solid tracks (route history) drawn under the markers */
   paths?: MapPath[];
-  /** when it changes, the map fits these bounds */
-  fit?: Bounds | null;
+  /** when it changes, the map fits these bounds (or goes to this centre and zoom) */
+  fit?: Bounds | MapViewpoint | null;
   onView?: (v: MapViewState) => void;
   onMarkerClick?: (id: string) => void;
   onClusterClick?: (c: MapCluster) => void;
@@ -126,22 +131,7 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
       const icon = lf.divIcon({ className: '', iconSize: ring ? [size + 6, size + 6] : [size, size], html });
       lf.marker([c.lat, c.lng], { icon, keyboard: false, title: c.title ?? c.label, zIndexOffset: 5000 }).on('click', () => cb.current.onClusterClick?.(c)).addTo(layer.current);
     }
-    for (const m of markers ?? []) {
-      if (m.pin) {
-        const [w, h] = pinSize(m.strong);
-        const icon = lf.divIcon({ className: '', iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4], html: pinIconHtml(m.pin, m.strong) });
-        lf.marker([m.lat, m.lng], { icon, keyboard: false, riseOnHover: true, title: m.label ? m.title : '', zIndexOffset: (m.z ?? 0) * 1000 + (m.strong ? 10_000 : 0) })
-          .bindTooltip(m.label ?? m.title, m.label ? { permanent: true, direction: 'right', offset: [w / 2 - 2, -h / 2], className: 'fos-map-label' } : { direction: 'top' })
-          .on('click', () => cb.current.onMarkerClick?.(m.id))
-          .addTo(layer.current);
-        continue;
-      }
-      const color = token(m.token);
-      lf.circleMarker([m.lat, m.lng], { radius: m.strong ? 9 : 6, color: m.hollow ? color : token('--surface'), weight: m.hollow ? 2.5 : 1.5, fillColor: color, fillOpacity: m.hollow ? 0.12 : 0.95 })
-        .bindTooltip(m.label ?? m.title, m.label ? { permanent: true, direction: 'right', offset: [8, 0], className: 'fos-map-label' } : { direction: 'top', offset: [0, -6] })
-        .on('click', () => cb.current.onMarkerClick?.(m.id))
-        .addTo(layer.current);
-    }
+    for (const m of markers ?? []) drawMarker(lf, layer.current, m, token, (id) => cb.current.onMarkerClick?.(id));
   };
 
   useEffect(() => {
@@ -194,10 +184,13 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
     if (ready.current) redraw.current();
   }, [markers, clusters, lines, paths]);
 
-  const fitKey = fit ? `${fit.minLat},${fit.minLng},${fit.maxLat},${fit.maxLng}` : '';
+  const fitKey = !fit ? '' : 'center' in fit ? `${fit.center.lat},${fit.center.lng}@${fit.zoom}` : `${fit.minLat},${fit.minLng},${fit.maxLat},${fit.maxLng}`;
   useEffect(() => {
     if (!fit) return;
-    const go = () => map.current?.fitBounds([[fit.minLat, fit.minLng], [fit.maxLat, fit.maxLng]], { maxZoom: 17, animate: false });
+    const go = () =>
+      'center' in fit
+        ? map.current?.setView([fit.center.lat, fit.center.lng], fit.zoom, { animate: false })
+        : map.current?.fitBounds([[fit.minLat, fit.minLng], [fit.maxLat, fit.maxLng]], { maxZoom: 17, animate: false });
     if (map.current) go();
     else {
       const t = setInterval(() => map.current && (clearInterval(t), go()), 60);

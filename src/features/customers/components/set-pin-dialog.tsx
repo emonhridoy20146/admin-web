@@ -8,6 +8,8 @@ import { formatNumber, pickText } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
 import { DEFAULT_POINT, formatCoords, haversineM, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
 import { MapPicker } from '@/shared/map/map-picker';
+import type { MapViewState } from '@/shared/map/map-view';
+import { useMapLayers } from '@/shared/feature/map-layers';
 import { Button } from '@/shared/ui/button';
 import { ErrorBanner } from '@/shared/ui/feedback';
 import { Field, Input, Textarea } from '@/shared/ui/form';
@@ -15,7 +17,7 @@ import { Dialog } from '@/shared/ui/overlay';
 import { useSetLocation, type CustomerDetail } from '../api/customers';
 import { currentPin } from '../model/pin';
 
-/** No branch point yet (the ERP has none): start in Patuakhali town (ADR-W18). */
+/** No branch point yet (the ERP has none): start at the default view's centre, Galachipa (owner decision 2026-11-22). */
 const FALLBACK: LatLng = DEFAULT_POINT;
 
 /**
@@ -34,6 +36,9 @@ export function SetPinDialog({ open, customer, onClose }: { open: boolean; custo
   const save = useSetLocation(customer.id ?? '');
   const [point, setPoint] = useState<LatLng>(start);
   const [typed, setTyped] = useState('');
+  // FR-PLC-001: map places under the pin (shown only; a click still moves the pin there)
+  const [view, setView] = useState<MapViewState | null>(null);
+  const layers = useMapLayers({ view, passive: true });
   const [typedError, setTypedError] = useState(false);
   const [note, setNote] = useState('');
   const [clientId, setClientId] = useState('');
@@ -87,11 +92,14 @@ export function SetPinDialog({ open, customer, onClose }: { open: boolean; custo
       }
     >
       <div className="space-y-3 py-1">
+        {layers.element}
         <MapPicker
           value={point}
           onChange={setPoint}
           zoom={current ? 17 : 15}
           reference={current}
+          markers={layers.markers}
+          onView={setView}
           referenceLabel={t('setPin.currentPin')}
           label={t('setPin.mapLabel', { name })}
           className="h-[44dvh] min-h-56 sm:h-[360px]"

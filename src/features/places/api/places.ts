@@ -12,10 +12,9 @@ export type PlaceCreate = components['schemas']['PlaceCreate'];
 export type PlaceUpdate = components['schemas']['PlaceUpdate'];
 export type PlaceQuery = NonNullable<operations['listPlaces']['parameters']['query']>;
 
-/** FR-PLC-001: places in scope (the chosen branch), newest first. */
+/** FR-PLC-001: every place (shared by the whole area, not by branch: owner decision 2026-11-22, contract 1.42.0), newest first. */
 export function usePlaces(params: Omit<PlaceQuery, 'branchId'>, enabled = true) {
-  const branchId = useBranchId();
-  const query: PlaceQuery = { ...params, branchId };
+  const query: PlaceQuery = { ...params };
   return useQuery({
     queryKey: ['places', 'list', query],
     queryFn: async () => {

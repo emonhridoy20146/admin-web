@@ -89,3 +89,31 @@ export function PinIcon({ look, size = 16, className }: { look: PinLook; size?: 
     </svg>
   );
 }
+
+/**
+ * Small square icon marker (map places, FR-PLC-001, 03-design-guide §2.3): a rounded square of `TILE_SIZE` px in the
+ * kind's tone with its 24×24 symbol, centred on the spot. Deliberately not a pin, so it never reads as a customer.
+ */
+export interface TileLook {
+  /** token for the square, e.g. `--info-fg` */
+  fill: string;
+  /** stroked 24×24 symbol path */
+  path: string;
+}
+
+export const TILE_SIZE = 22;
+export const TILE_SIZE_SELECTED = 24;
+
+export function tileSize(large?: boolean): number {
+  return large ? TILE_SIZE_SELECTED : TILE_SIZE;
+}
+
+/** HTML for a Leaflet `divIcon` (colours from tokens through `--tile-fill`). */
+export function tileIconHtml(look: TileLook, large?: boolean): string {
+  const s = tileSize(large);
+  return (
+    `<span class="fos-tile${large ? ' is-selected' : ''}" style="--tile-fill:${cssVar(look.fill)};width:${s}px;height:${s}px">` +
+    `<svg width="${s - 8}" height="${s - 8}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">` +
+    `<path d="${esc(look.path)}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`
+  );
+}

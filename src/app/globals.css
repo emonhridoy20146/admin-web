@@ -250,6 +250,20 @@
 .fos-pin-glyph { color: var(--pin-edge); }
 :root[data-theme='dark'] .fos-pin-body { stroke: color-mix(in srgb, var(--pin-fill) 45%, var(--neutral-950)); }
 :root[data-theme='dark'] .fos-pin-glyph { color: var(--neutral-900); }
+/* Map places (pin-icon.tsx `tileIconHtml`): a small rounded square with the kind's symbol, never a pin. */
+.fos-tile {
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--neutral-0);
+  border-radius: var(--radius-sm);
+  background: var(--tile-fill);
+  color: var(--neutral-0);
+  cursor: pointer;
+  box-shadow: 0 1px 1.5px var(--pin-shadow);
+}
+.fos-tile.is-selected { box-shadow: 0 0 0 2px var(--focus-ring), 0 2px 4px var(--pin-shadow); }
+.leaflet-marker-icon:not(.leaflet-interactive) .fos-tile { cursor: inherit; }
+.leaflet-marker-icon:focus-visible .fos-tile { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .leaflet-tooltip.fos-map-label {
   /* Map places (FR-PLC-001): the name stays next to the marker so the map reads like a labelled street map. */
   padding: 1px 6px;
