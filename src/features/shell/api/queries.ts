@@ -69,10 +69,10 @@ export function useSearch(q: string) {
  * 40 s with `partial: true`; this calls again until it is done (at most 30 rounds), reporting how many customers came.
  * Everything on screen is refetched afterwards. Never optimistic: it only reads from the ERP.
  */
-const ERP_AUTO_SYNC_INTERVAL = 60_000;
+const ERP_AUTO_SYNC_INTERVAL = 2 * 60_000;
 const ERP_SYNC_KEY = ['shell', 'erp-sync'];
 
-/** Runs the ERP sync every minute. A tick is skipped while a sync (automatic or from the button) is still running. */
+/** Runs the ERP sync every 2 minutes (owner decision: 1 minute was too much load on the live ERP). A tick is skipped while a sync (automatic or from the button) is still running. */
 export function useAutoErpSync() {
   const allowed = useCan('erp.sync');
   const qc = useQueryClient();
