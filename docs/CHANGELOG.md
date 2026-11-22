@@ -15,9 +15,9 @@ Contract: field-api **1.42.0** (field-api PR #38, merged: `branchId` optional an
 - Mock data: an edited collection's edit time is never in the future (today's `receivedAt` can be up to 40 min after now), so the activity feed always has its edit lines; the journey `collection-changes.spec.ts` failed at some times of day, also on `main`.
 - Tests: `places.test.ts` (zoom rules, square look from tokens, create body without branch), `place-dialog.test.tsx` (form without a branch field, body without `branchId`), `viewpoint.test.ts` (Galachipa default); journeys `places.spec.ts` (another branch's place listed, no branch field, squares at 14 without names, none at 12, names at 16).
 
-### Changed (owner request 2026-11-22: ERP data every minute; FR-ERP-007)
-- **Auto ERP sync** now runs every **1 minute** (was every 10 minutes) for users with `erp.sync`. No contract change (`POST /system/erp-sync`).
-- Fixed with it: the automatic sync could start a second run while one was still going (its "already running" check read an old value). A tick is now skipped while any sync, automatic or from the header button, is still running, so a long sync never overlaps with the next minute's.
+### Changed (owner request 2026-11-22: ERP data every 2 minutes; FR-ERP-007)
+- **Auto ERP sync** now runs every **2 minutes** (was every 10 minutes; 1 minute was tried and judged too much load on the live ERP) for users with `erp.sync`. No contract change (`POST /system/erp-sync`).
+- Fixed with it: the automatic sync could start a second run while one was still going (its "already running" check read an old value). A tick is now skipped while any sync, automatic or from the header button, is still running, so a long sync never overlaps with the next tick.
 
 Contract pinned: field-api `openapi.yaml` **1.41.0** from field-api PR #37 (not merged yet; if field-api renumbers it 1.42.0, re-sync and re-pin) (`node scripts/sync-contract.mjs ../field-api/docs` then `pnpm gen:api`; additive; also brings 1.37.1–1.40.0 types (places, pin approval, `cloudinary` storage), not used by this change; permission catalog 64 keys, the new `place.*` keys).
 ### Added (contract 1.41.0, owner request 2026-11-22: visit outcome "Runaway"; master FR-VIS-006)
