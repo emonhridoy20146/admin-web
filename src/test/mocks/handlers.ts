@@ -1981,8 +1981,9 @@ export const handlers = [
   http.get(`${BASE}/places/move-requests`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'place.manage');
     if (deny) return deny;
-    const sc = scope(ctx, url);
-    const items = db.places.filter((p) => p.status === 'active' && p.pendingMove && sc.includes(p.branchId)).sort((a, b) => (a.pendingMove!.requestedAt < b.pendingMove!.requestedAt ? -1 : 1));
+    // contract 1.42.0: every branch's requests; an optional branchId only narrows
+    const only = url.searchParams.get('branchId');
+    const items = db.places.filter((p) => p.status === 'active' && p.pendingMove && (!only || p.branchId === only)).sort((a, b) => (a.pendingMove!.requestedAt < b.pendingMove!.requestedAt ? -1 : 1));
     return HttpResponse.json({ items });
   })),
   http.get(`${BASE}/places/:id`, authed(({ ctx, params }) => {
