@@ -140,9 +140,12 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
       if (dead || !el.current || map.current) return;
       const lf = (mod as unknown as { default?: typeof Leaflet }).default ?? mod;
       L.current = lf;
+      // fadeAnimation off: markers are redrawn on every view change, and with it on Leaflet keeps each removed label
+      // in the page for 200 ms (opacity 0), so every place name showed twice while the map moved.
+      const opts = { zoomControl: true, attributionControl: true, fadeAnimation: false };
       const m = initialBounds
-        ? lf.map(el.current, { zoomControl: true, attributionControl: true }).fitBounds([[initialBounds.minLat, initialBounds.minLng], [initialBounds.maxLat, initialBounds.maxLng]], { animate: false })
-        : lf.map(el.current, { center: [center.lat, center.lng], zoom, zoomControl: true, attributionControl: true });
+        ? lf.map(el.current, opts).fitBounds([[initialBounds.minLat, initialBounds.minLng], [initialBounds.maxLat, initialBounds.maxLng]], { animate: false })
+        : lf.map(el.current, { ...opts, center: [center.lat, center.lng], zoom });
       m.attributionControl.setPrefix(false);
       map.current = m;
       layer.current = lf.layerGroup().addTo(m);

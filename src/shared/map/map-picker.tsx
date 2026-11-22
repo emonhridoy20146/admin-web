@@ -54,7 +54,7 @@ export function MapPicker({ value, onChange, zoom = 17, reference, referenceLabe
       if (dead || !el.current || map.current) return;
       const lf = (mod as unknown as { default?: typeof Leaflet }).default ?? mod;
       L.current = lf;
-      const m = lf.map(el.current, { center: [value.lat, value.lng], zoom, zoomControl: true, attributionControl: true, keyboardPanDelta: 40 });
+      const m = lf.map(el.current, { center: [value.lat, value.lng], zoom, zoomControl: true, attributionControl: true, keyboardPanDelta: 40, fadeAnimation: false }); // see MapView: no ghost labels
       m.attributionControl.setPrefix(false);
       map.current = m;
       const emit = () => {
