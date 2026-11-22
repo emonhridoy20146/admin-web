@@ -87,15 +87,9 @@ test('a collector without an ERP employee link carries a warning on the users li
   await login(page);
   await nav(page, usersBn.title);
   const badge = page.getByTestId('erp-link-missing');
-  // the one unlinked collector may be on a later page
-  for (let i = 0; i < 8 && !(await badge.first().isVisible()); i++) {
-    await expect(page.locator('tbody tr').first()).toBeVisible();
-    if (await badge.first().isVisible()) break;
-    const next = page.getByRole('button', { name: commonBn.table.next });
-    if (await next.isDisabled()) break;
-    await next.click();
-    await page.waitForTimeout(400);
-  }
+  // Which collector is unlinked depends on the time of day in the mock data, so it may not be on page 1. Show 100 rows
+  // (every user fits) instead of paging: the paging loop stopped early on the loading rows and failed at some hours.
+  await page.getByRole('combobox', { name: commonBn.table.perPage }).selectOption('100');
   await expect(badge.first()).toContainText(usersBn.erpLinkMissingShort);
   await badge.first().locator('xpath=ancestor::tr').locator('td').first().click();
   await expect(page.getByRole('dialog').getByTestId('erp-link-missing')).toHaveText(usersBn.erpLinkMissing);

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Tests
+- Journey "a collector without an ERP employee link…" (deposits-final.spec.ts) failed at some hours of the day: which collector is unlinked in the mock data depends on the current time, and when that person was not on page 1 the paging loop stopped on the loading (skeleton) rows. It now shows 100 rows per page instead of paging; checked at five different times of day with a fixed browser clock.
+
 ### Fixed (owner report 2026-11-22: the panel turned Bangla after sign-in)
 - Signing in no longer switches the panel to the user's server-profile `locale`. That value is the staff app's and notifications' language and is `bn` for everyone (the header language menu never writes it), so every sign-in turned the panel Bangla although English is the default. The panel now keeps this browser's choice (English unless the user picked Bangla in the header). New journey W-E15 (fresh browser, user profile `bn`: still English after sign-in).
 Contract pinned: field-api `openapi.yaml` **1.37.0** (`node scripts/sync-contract.mjs ../field-api/docs` then `pnpm gen:api`; additive, includes 1.36.0 (`events` on `/attendance/me/today`, not used here): `GET /media/purge/preview`, `POST /media/purge`, `POST /attendance/photos/delete`, `AttendanceEvent.selfieDeleted`, `MediaPurgePreview`, `MediaPurgeResult`, `cloudStorage` on `/system/health`; permission catalog 61 keys with the new `media.delete`).
