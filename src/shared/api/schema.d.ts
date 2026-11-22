@@ -1562,16 +1562,18 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Map places in scope (1.38.0, FR-PLC-001/004): text markers staff and the office put on the map (shop, market, mosque…), newest first.
-         *     Permission place.view. Scope: the caller's branches; super admin all. `status=deleted` needs place.manage (403 otherwise).
+         * @description Map places (1.38.0, FR-PLC-001/004): text markers staff and the office put on the map (shop, market, mosque…), newest first.
+         *     Permission place.view. 1.42.0 (ADR-054): places are shared landmarks for the whole area, so every caller sees the places of
+         *     every branch (no branch scope); `branchId` only narrows to places added from that branch. `status=deleted` needs place.manage (403 otherwise).
          *     Use `bbox` for the visible map area; `pendingMove=true` lists only places with an open move request.
          */
         get: operations["listPlaces"];
         put?: never;
         /**
-         * @description Put a place on the map (1.38.0, FR-PLC-002). Visible to everyone in the branch at once, no approval. Idempotent by clientId per caller
-         *     (a repeat answers 200). Permission place.create. `branchId` defaults to the caller's first branch and must be one the caller can see.
-         *     Offline phones use the sync mutation `place` with the same body. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH, PLACE_INVALID_BRANCH.
+         * @description Put a place on the map (1.38.0, FR-PLC-002). Visible to everyone in every branch at once, no approval. Idempotent by clientId per caller
+         *     (a repeat answers 200). Permission place.create. 1.42.0 (ADR-054): no branch is needed; a `branchId` in the body is accepted and
+         *     ignored, and PLACE_INVALID_BRANCH is no longer returned. The place records the caller's first branch for information only.
+         *     Offline phones use the sync mutation `place` with the same body. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH.
          */
         post: operations["createPlace"];
         delete?: never;
@@ -1587,7 +1589,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Open move requests in scope, oldest first (1.38.0, FR-PLC-005): the office queue. Permission place.manage. */
+        /** @description Open move requests, oldest first (1.38.0, FR-PLC-005): the office queue. Permission place.manage. 1.42.0 (ADR-054): requests on places of every branch; `branchId` only narrows to places added from that branch. */
         get: operations["listPlaceMoveRequests"];
         put?: never;
         post?: never;
@@ -1604,7 +1606,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description One place with its history (1.38.0). Permission place.view; out of scope is 404; a deleted place is 404 unless the caller has place.manage. */
+        /** @description One place with its history (1.38.0). Permission place.view; any branch's place (1.42.0, ADR-054); a deleted place is 404 unless the caller has place.manage. */
         get: operations["getPlace"];
         put?: never;
         post?: never;
@@ -1614,7 +1616,7 @@ export interface paths {
         head?: never;
         /**
          * @description Change name, icon or note (1.38.0, FR-PLC-003). Permission place.create: a field staff member edits only the places they created; other places
-         *     and `location` (a direct move) need place.manage (403 otherwise). A direct move closes an open move request as rejected ("moved by the office").
+         *     and `location` (a direct move) need place.manage (403 otherwise). 1.42.0 (ADR-054): place.manage works on the places of every branch. A direct move closes an open move request as rejected ("moved by the office").
          *     `If-Match: W/"<version>"` is optional; a stale version is 412. Offline phones use the sync mutation `place_edit`.
          *     409 INVALID_STATE: PLACE_DELETED. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH.
          */
@@ -1631,8 +1633,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Ask the office to move a place's marker (1.38.0, FR-PLC-004). Any place in scope, not only own ones. The marker stays where it is until an
-         *     office user with place.manage approves; they get an inbox item and a notification. One open request per place. Idempotent by clientId
+         * @description Ask the office to move a place's marker (1.38.0, FR-PLC-004). Any place of any branch (1.42.0), not only own ones. The marker stays where it is until an
+         *     office user with place.manage approves; every place.manage holder, in any branch (1.42.0, ADR-054), gets an inbox item and a notification. One open request per place. Idempotent by clientId
          *     (a repeat answers 200). Permission place.create. Offline phones use the sync mutation `place_move_request`.
          *     409 INVALID_STATE: MOVE_PENDING (someone else's request is open), PLACE_DELETED. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH, MOVE_TOO_SHORT (under 5 m).
          */
@@ -3899,7 +3901,10 @@ export interface components {
             icon: components["schemas"]["PlaceIcon"];
             note?: string;
             location: components["schemas"]["PlaceLocation"];
-            /** @description Default: the caller's first branch */
+            /**
+             * @deprecated
+             * @description 1.42.0 (ADR-054): ignored; a place belongs to no branch. Kept so older clients stay valid.
+             */
             branchId?: string;
         };
         PlaceUpdate: {
@@ -3944,11 +3949,12 @@ export interface components {
             from?: components["schemas"]["PlaceLocation"] | null;
             to?: components["schemas"]["PlaceLocation"] | null;
         };
-        /** @description A text marker on the map (1.38.0, FR-PLC-001). Sync entity `place`, sent to every device of its branch. Not linked to a customer and not a tracking point. */
+        /** @description A text marker on the map (1.38.0, FR-PLC-001). Sync entity `place`, sent to every device of every branch (1.42.0, ADR-054). Not linked to a customer and not a tracking point. */
         Place: {
             id: string;
             /** @description The creator's clientId, so the creating device can match its offline row */
             clientId: string | null;
+            /** @description Informational (1.42.0, ADR-054): the first branch of the person who added it, empty when they have none. Not a scope: every branch sees every place. */
             branchId: string;
             name: string;
             icon: components["schemas"]["PlaceIcon"];
@@ -4632,7 +4638,7 @@ export interface components {
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
              *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
              *     task → Task (1.20.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
-             *     place → Place (1.38.0; sent to every device of the place's branch on every change; a deleted place arrives as op=delete reason=deleted; the bootstrap snapshot holds the active places of the user's branches)
+             *     place → Place (1.38.0; since 1.42.0 (ADR-054) sent to every device of every branch on every change; a deleted place arrives as op=delete reason=deleted; the bootstrap snapshot holds the active places of all branches. Devices whose cursor predates 1.42.0 get CURSOR_EXPIRED once and take a fresh snapshot)
              */
             data?: {
                 [key: string]: unknown;
@@ -4780,6 +4786,7 @@ export interface components {
             type?: string;
             /** @enum {string} */
             severity?: "low" | "medium" | "high" | "critical";
+            /** @description 1.42.0: a `place.move_request` item is shown to every place.manage holder in any branch (ADR-054), whatever this branch is */
             branchId?: string;
             entity?: string;
             entityId?: string;

@@ -10,8 +10,9 @@ import { useGate } from '@/shared/feature/useGate';
 import { formatNumber, formatRelative, formatTime } from '@/shared/lib/format';
 import { todayDhaka } from '@/shared/lib/time';
 import { listOf, useUrlState } from '@/shared/lib/url-state';
-import { branchPoint, boundsOf, DEFAULT_AREA, DEFAULT_POINT, type Bounds } from '@/shared/map/geo';
-import { MapView, type MapMarker } from '@/shared/map/map-view';
+import { branchPoint, boundsOf, DEFAULT_VIEW, type Bounds } from '@/shared/map/geo';
+import { useMapLayers } from '@/shared/feature/map-layers';
+import { MapView, type MapMarker, type MapViewState } from '@/shared/map/map-view';
 import { branchMarkers } from '@/shared/map/branch-markers';
 import { PageHeader } from '@/shared/ui/page';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
@@ -48,7 +49,10 @@ export function LivePage() {
   const rows = useMemo(() => sortLatest(all.filter((r) => !show.length || show.includes(freshnessOf(r)) || (r.mock && show.includes('mock')))), [all, show]);
   const selected = rows.find((r) => r.userId === selectedId) ?? null;
   const home = branchPoint(branches.data, branchId);
-  const center = useMemo(() => home ?? DEFAULT_POINT, [home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const center = useMemo(() => home ?? DEFAULT_VIEW.center, [home?.lat, home?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  // FR-PLC-001: places (and any other feature's layer) on this map too
+  const [view, setView] = useState<MapViewState | null>(null);
+  const layers = useMapLayers({ view });
 
   // first answer: frame everyone (or the person in the link); later refreshes keep the manager's own view
   useEffect(() => {
@@ -64,12 +68,13 @@ export function LivePage() {
     [rows, selectedId],
   );
   const places = useMemo(() => branchMarkers(branches.data, { selectedId: branchId, locale, title: (name) => tc('map.branch', { name }) }), [branches.data, branchId, locale, tc]);
-  const shown = useMemo(() => [...places, ...markers], [places, markers]);
+  const shown = useMemo(() => [...places, ...layers.markers, ...markers], [places, layers.markers, markers]);
   const select = (r: Latest) => {
     url.set({ staff: r.userId === selectedId ? null : (r.userId ?? null) });
     if (r.userId !== selectedId && hasPosition(r)) setFit(around(r));
   };
   const onMarker = (id: string) => {
+    if (layers.open(id)) return;
     const r = rows.find((x) => x.userId === id);
     if (r) select(r);
   };
@@ -102,7 +107,7 @@ export function LivePage() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="h-[46vh] min-h-72 lg:h-[calc(100vh-15rem)]">
-          <MapView label={t('live.title')} center={center} zoom={13} initialBounds={home ? null : DEFAULT_AREA} markers={shown} fit={fit} onMarkerClick={onMarker} locate />
+          <MapView label={t('live.title')} center={center} zoom={home ? 13 : DEFAULT_VIEW.zoom} markers={shown} fit={fit} onView={setView} onMarkerClick={onMarker} locate />
         </div>
 
         <section aria-label={t('live.list')} className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-e1 lg:h-[calc(100vh-15rem)]">
@@ -199,6 +204,7 @@ export function LivePage() {
         </section>
       </div>
       {selected ? <span className="sr-only" aria-live="polite">{selected.name}</span> : null}
+      {layers.element}
     </>
   );
 }

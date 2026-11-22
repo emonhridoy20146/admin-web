@@ -50,12 +50,14 @@ export interface CustomerTabDef {
 }
 
 /**
- * A layer another feature draws on the customer map (e.g. map places, FR-PLC-001). The layer is a component rendered
- * by the map page: it loads its own data for the view, hands its markers up (ids prefixed `<layer id>:`) and shows
- * its own drawer when one of its markers is open (`openId`, without the prefix).
+ * A layer another feature draws on every map of the panel (e.g. map places, FR-PLC-001), through `useMapLayers`. The
+ * layer is a component rendered by the map's page: it loads its own data for the view, hands its markers up (ids
+ * prefixed `<layer id>:`) and shows its own drawer when one of its markers is open (`openId`, without the prefix).
  */
 export interface MapLayerProps {
   bounds: Bounds | null;
+  /** the map's zoom (null until the map has drawn); a layer decides what it shows at each zoom */
+  zoom: number | null;
   onMarkers: (markers: MapMarker[]) => void;
   openId: string | null;
   onClose: () => void;

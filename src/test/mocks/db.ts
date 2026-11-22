@@ -369,7 +369,10 @@ collections.filter((c) => c.status === 'posted' && c.recordedAt! < isoAt(now().m
 [...collections].filter((c) => c.status === 'posted' && c.method === 'cash').sort((a, b) => (a.recordedAt! < b.recordedAt! ? 1 : -1)).slice(0, 3).forEach((c, i) => {
   c.status = 'received'; // an edit is only possible before the ERP has the collection
   c.erpReceiptNo = null;
-  c.edited = { count: i + 1, at: c.receivedAt, by: c.collector!.id, byName: c.collector!.name ?? '', previousAmountPoisha: c.amountPoisha! + 50_000 };
+  // receivedAt of today's collections can be up to ~40 min after now: an edit is never in the future (else the
+  // activity feed, which only takes events up to now, had no edit line at some times of day)
+  const at = c.receivedAt! < isoAt(now()) ? c.receivedAt : c.recordedAt;
+  c.edited = { count: i + 1, at, by: c.collector!.id, byName: c.collector!.name ?? '', previousAmountPoisha: c.amountPoisha! + 50_000 };
 });
 // pending field money on customers
 for (const col of collections) {

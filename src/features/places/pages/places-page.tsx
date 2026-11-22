@@ -6,9 +6,9 @@ import { Inbox, Plus } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { useCan } from '@/shared/auth/session';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatRelative, pickText } from '@/shared/lib/format';
+import { formatRelative } from '@/shared/lib/format';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
-import { boundsOf, branchPoint, DEFAULT_POINT } from '@/shared/map/geo';
+import { boundsOf, branchPoint, DEFAULT_VIEW } from '@/shared/map/geo';
 import { MapView } from '@/shared/map/map-view';
 import { PageHeader } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
@@ -24,7 +24,7 @@ import { PlaceDrawer } from '../components/place-drawer';
 
 const SHOW = ['active', 'deleted'] as const;
 
-/** FR-PLC-001..006: every place of the branch as a list and on a map; add, change, move, delete. */
+/** FR-PLC-001..006: every place (shared by the whole area, any branch) as a list and on a map; add, change, move, delete. */
 export function PlacesPage() {
   const { t } = useTranslation('places');
   const locale = useUi((s) => s.locale);
@@ -58,10 +58,11 @@ export function PlacesPage() {
   const one = usePlace(openId, !inList && !q.isLoading);
   const open = inList ?? one.data ?? null;
   const show = (x: Place) => url.set({ drawer: x.id }, { push: true });
-  const branchName = (id: string) => pickText(branches.data?.find((b) => b.id === id)?.name, locale) || id;
-  const map = useMemo(() => placeMarkers(items, { selectedId: openId, movedTitle: (p) => t('map.requestedPoint', { name: p.name }) }), [items, openId, t]);
+  const [zoom, setZoom] = useState<number | null>(null);
+  const map = useMemo(() => placeMarkers(items, { zoom, selectedId: openId, movedTitle: (p) => t('map.requestedPoint', { name: p.name }) }), [items, zoom, openId, t]);
   const fit = useMemo(() => boundsOf(items.filter((p) => p.status === 'active').map((p) => p.location)), [items]);
-  const center = branchPoint(branches.data, branchId || undefined) ?? DEFAULT_POINT;
+  const home = branchPoint(branches.data, branchId || undefined);
+  const center = home ?? DEFAULT_VIEW.center;
 
   const columns: Column<Place>[] = [
     {
@@ -85,7 +86,6 @@ export function PlacesPage() {
       cell: (x) => (x.status === 'deleted' ? <Badge tone="danger">{t('status.deleted')}</Badge> : x.pendingMove ? <Badge tone="warning">{t('status.movePending')}</Badge> : <Badge tone="info">{t('status.active')}</Badge>),
     },
     { id: 'by', header: t('col.addedBy'), priority: 3, cell: (x) => <span lang={locale}>{x.createdBy.name}</span> },
-    { id: 'branch', header: t('col.branch'), priority: 4, cell: (x) => <span className="whitespace-nowrap text-fg-secondary" lang={locale}>{branchName(x.branchId)}</span> },
     { id: 'updated', header: t('col.updated'), priority: 4, cell: (x) => <span className="whitespace-nowrap text-fg-secondary">{formatRelative(x.updatedAt)}</span> },
   ];
 
@@ -131,7 +131,7 @@ export function PlacesPage() {
       <div className="flex flex-col gap-4">
         {status === 'active' && (
           <div className="h-[40vh] min-h-72">
-            <MapView label={t('map.label')} center={center} zoom={14} markers={map.markers} lines={map.lines} fit={fit} onMarkerClick={(id) => url.set({ drawer: id }, { push: true })} locate />
+            <MapView label={t('map.label')} center={center} zoom={home ? 14 : DEFAULT_VIEW.zoom} markers={map.markers} lines={map.lines} fit={fit} onView={(v) => setZoom(v.zoom)} onMarkerClick={(id) => url.set({ drawer: id }, { push: true })} locate />
           </div>
         )}
         <DataTable

@@ -4,13 +4,12 @@ import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { List, ZoomIn } from 'lucide-react';
 import { useBranches } from '@/features/shell';
-import { mapLayers } from '@/shared/feature/registry';
-import { useGate } from '@/shared/feature/useGate';
+import { useMapLayers } from '@/shared/feature/map-layers';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatNumber } from '@/shared/lib/format';
 import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
-import { bboxParam, boxAround, branchPoint, centerOf, DEFAULT_AREA, parseViewpoint, viewpointParam, type Bounds, type MapViewpoint } from '@/shared/map/geo';
+import { bboxParam, boxAround, branchPoint, centerOf, DEFAULT_VIEW, parseViewpoint, viewpointParam, type Bounds, type MapViewpoint } from '@/shared/map/geo';
 import { MapView, type MapCluster, type MapMarker, type MapViewState } from '@/shared/map/map-view';
 import { branchMarkers, isBranchMarker } from '@/shared/map/branch-markers';
 import { PinIcon } from '@/shared/map/pin-icon';
@@ -26,7 +25,7 @@ import { payLabel, PayLegend, PayStateBadge } from '../components/pay-state';
 
 const LIST_MAX = 60;
 const KINDS = ['all', 'installment', 'credit'] as const;
-type Start = { bounds: Bounds } | MapViewpoint;
+type Start = MapViewpoint;
 
 /** Keeps the map's place in the address bar without a router round trip (it changes on every pan). */
 function writeViewpoint(at: string) {
@@ -50,34 +49,34 @@ export function CustomerMapPage() {
   const pay = listOf(url.getList('pay'), PAY_STATES);
   const kind = oneOf(url.get('kind'), KINDS, 'all');
   const [view, setView] = useState<MapViewState | null>(null);
-  const [fit, setFit] = useState<Bounds | null>(null);
+  const [fit, setFit] = useState<Bounds | MapViewpoint | null>(null);
   const q = useCustomerMap(view ? bboxParam(view.bounds) : null, view?.zoom ?? PIN_ZOOM, { filter: filters, payState: pay, invoiceKind: kind === 'all' ? undefined : kind });
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('customer:') ? drawer.slice(9) : null;
   const fmt = useCallback((n: number) => formatNumber(n), []);
-  // Layers of other features (map places, FR-PLC-001): each loads its own markers and opens its own drawer.
-  const gate = useGate();
-  const layers = mapLayers(gate);
+  // Layers of other features (map places, FR-PLC-001): each loads its own markers and opens its own drawer, kept in the link.
   const hiddenLayers = url.getList('hide');
-  const [layerMarkers, setLayerMarkers] = useState<Record<string, MapMarker[]>>({});
-  const setLayer = useCallback((id: string, m: MapMarker[]) => setLayerMarkers((s) => (s[id] === m ? s : { ...s, [id]: m })), []);
+  const onLayerOpen = useCallback((id: string | null) => url.set({ drawer: id }, id ? { push: true } : undefined), [url]);
+  const host = useMapLayers({ view, hidden: hiddenLayers, open: drawer, onOpen: onLayerOpen });
+  const layers = host.layers;
+  const openLayer = host.open;
 
   // Where the map opens: the view kept in the link (reload, Back, a shared link), else the chosen branch's point,
-  // else Patuakhali district. Decided once, after the branches are known, so it never jumps back later.
+  // else the default view (Galachipa, zoom 12). Decided once, after the branches are known, so it never jumps back later.
   const [start, setStart] = useState<Start | null>(null);
   const lastBranch = useRef(branchId);
   useEffect(() => {
     if (start || !hydrated || branches.isPending) return;
     const home = branchPoint(branches.data, branchId);
     lastBranch.current = branchId;
-    setStart(parseViewpoint(url.get('at')) ?? (home ? { center: home, zoom: PIN_ZOOM } : { bounds: DEFAULT_AREA }));
+    setStart(parseViewpoint(url.get('at')) ?? (home ? { center: home, zoom: PIN_ZOOM } : DEFAULT_VIEW));
   }, [start, hydrated, branches.isPending, branches.data, branchId, url]);
   // The user moves the map wherever they like; it only moves by itself when they pick another branch.
   useEffect(() => {
     if (!start || lastBranch.current === branchId) return;
     lastBranch.current = branchId;
     const home = branchPoint(branches.data, branchId);
-    setFit(home ? boxAround(home, 3) : DEFAULT_AREA);
+    setFit(home ? boxAround(home, 3) : DEFAULT_VIEW);
   }, [start, branchId, branches.data]);
 
   const pins = useMemo(() => q.data?.pins ?? [], [q.data?.pins]);
@@ -92,8 +91,7 @@ export function CustomerMapPage() {
     [pins, drawerId, t, fmt],
   );
   const places = useMemo(() => branchMarkers(branches.data, { selectedId: branchId, locale, title: (name) => tc('map.branch', { name }) }), [branches.data, branchId, locale, tc]);
-  const extra = useMemo(() => layers.filter((l) => !hiddenLayers.includes(l.id)).flatMap((l) => layerMarkers[l.id] ?? []), [layers, hiddenLayers, layerMarkers]);
-  const shown = useMemo(() => [...places, ...extra, ...markers], [places, extra, markers]);
+  const shown = useMemo(() => [...places, ...host.markers, ...markers], [places, host.markers, markers]);
   const rawClusters = useMemo(() => (q.data?.clusters ?? []).filter((c) => c.lat != null && c.lng != null), [q.data?.clusters]);
   const clusters: (MapCluster & { worst: PayState; mix: Partial<Record<PayState, number>> | null })[] = useMemo(
     () =>
@@ -124,10 +122,9 @@ export function CustomerMapPage() {
     (id: string) => {
       if (isBranchMarker(id)) return;
       // a layer marker carries its layer id (`place:6752…`); a customer pin is a bare id
-      url.set({ drawer: layers.some((l) => id.startsWith(`${l.id}:`)) ? id : `customer:${id}` }, { push: true });
+      if (!openLayer(id)) url.set({ drawer: `customer:${id}` }, { push: true });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [url, layers.map((l) => l.id).join()],
+    [url, openLayer],
   );
   const zoomTo = useCallback((c: { lat: number; lng: number }) => setFit({ minLat: c.lat - 0.012, maxLat: c.lat + 0.012, minLng: c.lng - 0.016, maxLng: c.lng + 0.016 }), []);
   const sorted = useMemo(() => [...pins].sort((a, b) => payRank(payStateOf(a)) - payRank(payStateOf(b)) || (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
@@ -176,9 +173,8 @@ export function CustomerMapPage() {
           {start ? (
             <MapView
               label={t('map.title')}
-              center={'center' in start ? start.center : centerOf(start.bounds)}
-              zoom={'zoom' in start ? start.zoom : PIN_ZOOM}
-              initialBounds={'bounds' in start ? start.bounds : null}
+              center={start.center}
+              zoom={start.zoom}
               markers={shown}
               clusters={clusters}
               fit={fit}
@@ -248,17 +244,7 @@ export function CustomerMapPage() {
         </section>
       </div>
 
-      {layers
-        .filter((l) => !hiddenLayers.includes(l.id))
-        .map((l) => (
-          <l.component
-            key={l.id}
-            bounds={view?.bounds ?? null}
-            onMarkers={(m) => setLayer(l.id, m)}
-            openId={drawer.startsWith(`${l.id}:`) ? drawer.slice(l.id.length + 1) : null}
-            onClose={() => url.set({ drawer: null })}
-          />
-        ))}
+      {host.element}
 
       <CustomerDrawer
         id={drawerId}

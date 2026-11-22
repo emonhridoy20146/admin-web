@@ -756,7 +756,7 @@
   {
     "key": "place.view",
     "module": "places",
-    "description": "See map places (text markers) of own branches; super admin all (1.38.0)",
+    "description": "See map places (text markers) of all branches (1.38.0; all branches since 1.42.0, ADR-054)",
     "added": false,
     "reserved": false,
     "defaults": {

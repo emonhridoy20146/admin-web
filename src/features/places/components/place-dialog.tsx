@@ -5,13 +5,15 @@ import { toast } from 'sonner';
 import { Crosshair } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
-import { formatNumber, pickText } from '@/shared/lib/format';
+import { formatNumber } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
 import { DEFAULT_POINT, formatCoords, haversineM, inBangladesh, type LatLng } from '@/shared/map/geo';
 import { MapPicker } from '@/shared/map/map-picker';
+import type { MapViewState } from '@/shared/map/map-view';
+import { useMapLayers } from '@/shared/feature/map-layers';
 import { Button } from '@/shared/ui/button';
 import { ErrorBanner } from '@/shared/ui/feedback';
-import { Field, Input, Select, Textarea } from '@/shared/ui/form';
+import { Field, Input, Textarea } from '@/shared/ui/form';
 import { Dialog } from '@/shared/ui/overlay';
 import { useCreatePlace, useEditPlace, type Place } from '../api/places';
 import { formOf, NAME_MAX, NOTE_MAX, PLACE_ICONS, toCreate, toEdit, validatePlace, type PlaceForm } from '../model/places';
@@ -44,14 +46,15 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
     return b?.lat != null && b.lng != null ? { lat: b.lat, lng: b.lng } : DEFAULT_POINT;
   }, [place, branches.data, branchId]);
   const [form, setForm] = useState<PlaceForm>({ name: '', icon: 'shop', note: '', point: start });
-  const [branch, setBranch] = useState('');
   const [clientId, setClientId] = useState('');
   const [touched, setTouched] = useState(false);
+  // FR-PLC-001: the places already there, so nobody adds the same one twice (shown only, under the pin)
+  const [view, setView] = useState<MapViewState | null>(null);
+  const layers = useMapLayers({ view, passive: true });
 
   useEffect(() => {
     if (!open) return;
     setForm(place ? formOf(place) : { name: '', icon: 'shop', note: '', point: start });
-    setBranch(branchId || '');
     setClientId(crypto.randomUUID());
     setTouched(false);
     create.reset();
@@ -71,7 +74,7 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
     if (Object.keys(errors).length) return;
     try {
       let saved: Place;
-      if (!place) saved = await create.mutateAsync(toCreate(form, clientId, branch || undefined));
+      if (!place) saved = await create.mutateAsync(toCreate(form, clientId));
       else {
         const body = toEdit(place, form, canMove);
         if (!Object.keys(body).length) return onOpenChange(false);
@@ -129,18 +132,6 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
             <Field label={t('form.note')} counter={`${formatNumber(form.note.trim().length)}/${formatNumber(NOTE_MAX)}`} error={touched && errors.note ? t(`form.error.${errors.note}`) : undefined}>
               {(id, d) => <Textarea id={id} aria-describedby={d} rows={2} value={form.note} onChange={(e) => set('note', e.target.value)} placeholder={t('form.notePlaceholder')} />}
             </Field>
-            {!place && (branches.data?.length ?? 0) > 1 && (
-              <Field label={t('form.branch')} help={t('form.branchHelp')}>
-                {(id, d) => (
-                  <Select id={id} aria-describedby={d} value={branch} onChange={(e) => setBranch(e.target.value)}>
-                    <option value="">{t('form.branchDefault')}</option>
-                    {(branches.data ?? []).map((b) => (
-                      <option key={b.id} value={b.id}>{pickText(b.name, locale)}</option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-            )}
           </>
         )}
         {showMap && (
@@ -151,6 +142,8 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
               zoom={17}
               reference={place?.location ?? null}
               referenceLabel={t('dialog.currentPoint')}
+              markers={layers.markers}
+              onView={setView}
               label={t('dialog.mapLabel')}
               className={mode === 'move' ? 'h-[50dvh] min-h-56 sm:h-[400px]' : 'h-[34dvh] min-h-48 sm:h-[280px]'}
             />
@@ -167,6 +160,7 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
         )}
         {create.error || edit.error ? <ErrorBanner error={create.error ?? edit.error} /> : null}
       </div>
+      {showMap && open ? layers.element : null}
     </Dialog>
   );
 }

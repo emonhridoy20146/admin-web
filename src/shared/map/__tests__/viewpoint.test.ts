@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { boxAround, branchPoint, centerOf, DEFAULT_AREA, DEFAULT_POINT, inBangladesh, parseViewpoint, viewpointParam } from '../geo';
+import { boxAround, branchPoint, DEFAULT_POINT, DEFAULT_VIEW, inBangladesh, parseViewpoint, viewpointParam } from '../geo';
 import { ringGradient } from '../map-view';
 import { pinIconHtml } from '../pin-icon';
 import { BRANCH_PIN, branchMarkers, isBranchMarker } from '../branch-markers';
 
-describe('where a map opens (ADR-W18)', () => {
-  it('defaults to Patuakhali district, not Barishal city', () => {
-    const c = centerOf(DEFAULT_AREA);
-    expect(c.lat).toBeGreaterThan(21.9);
-    expect(c.lat).toBeLessThan(22.5);
-    expect(DEFAULT_AREA.maxLat).toBeLessThan(22.7); // Barishal city (22.70) is outside the default box
+describe('where a map opens (ADR-W18, owner decision 2026-11-22)', () => {
+  it('defaults to Galachipa upazila, Patuakhali, at zoom 12', () => {
+    expect(DEFAULT_VIEW).toEqual({ center: { lat: 22.164, lng: 90.426 }, zoom: 12 });
+    expect(DEFAULT_POINT).toEqual(DEFAULT_VIEW.center);
     expect(inBangladesh(DEFAULT_POINT)).toBe(true);
+    expect(parseViewpoint(viewpointParam(DEFAULT_VIEW))).toEqual(DEFAULT_VIEW);
   });
   it('round-trips the view kept in the link and refuses junk', () => {
     const v = { center: { lat: 22.3596, lng: 90.32993 }, zoom: 14 };

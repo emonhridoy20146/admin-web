@@ -1946,11 +1946,12 @@ export const handlers = [
     const g = (k: string) => url.searchParams.get(k);
     const status = g('status') ?? 'active';
     if (status === 'deleted' && need(ctx, 'place.manage')) return need(ctx, 'place.manage')!;
-    const sc = scope(ctx, url);
+    // contract 1.42.0: places are shared by the whole area, a list returns every place (an optional branchId still narrows)
+    const only = g('branchId');
     const box = g('bbox')?.split(',').map(Number);
     const words = g('q')?.toLowerCase();
     const all = db.places
-      .filter((p) => sc.includes(p.branchId) && p.status === status)
+      .filter((p) => (!only || p.branchId === only) && p.status === status)
       .filter((p) => !g('icon') || p.icon === g('icon'))
       .filter((p) => g('pendingMove') !== 'true' || !!p.pendingMove)
       .filter((p) => !words || p.name.toLowerCase().includes(words) || (p.note ?? '').toLowerCase().includes(words))
@@ -1968,9 +1969,10 @@ export const handlers = [
     if (prior) return HttpResponse.json(prior);
     const { lat, lng } = b.location;
     if (lat < 20.3 || lat > 26.8 || lng < 87.9 || lng > 92.8) return problem(422, 'BUSINESS_RULE', 'The point is outside Bangladesh', undefined, { rule: 'OUTSIDE_BANGLADESH' });
+    // contract 1.42.0: branchId is optional (the admin never sends it); a given one must still be the caller's
     const sc = scope(ctx, new URL('http://x/'));
-    const branchId = b.branchId ?? ctx.user.branchIds?.[0];
-    if (!branchId || !sc.includes(branchId)) return problem(422, 'BUSINESS_RULE', 'Not one of your branches', undefined, { rule: 'PLACE_INVALID_BRANCH' });
+    if (b.branchId && !sc.includes(b.branchId)) return problem(422, 'BUSINESS_RULE', 'Not one of your branches', undefined, { rule: 'PLACE_INVALID_BRANCH' });
+    const branchId = b.branchId ?? ctx.user.branchIds?.[0] ?? sc[0] ?? '';
     const p = db.addPlace(ctx.user, name, b.icon, b.note?.trim() || null, { lat, lng }, branchId, 0);
     p.clientId = b.clientId;
     db.addAudit({ actor: actor(ctx.user), action: 'place.created', entity: 'place', entityId: p.id, branchId, after: { name, icon: b.icon, location: b.location }, reason: '' });
@@ -1979,15 +1981,16 @@ export const handlers = [
   http.get(`${BASE}/places/move-requests`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'place.manage');
     if (deny) return deny;
-    const sc = scope(ctx, url);
-    const items = db.places.filter((p) => p.status === 'active' && p.pendingMove && sc.includes(p.branchId)).sort((a, b) => (a.pendingMove!.requestedAt < b.pendingMove!.requestedAt ? -1 : 1));
+    // contract 1.42.0: every branch's requests; an optional branchId only narrows
+    const only = url.searchParams.get('branchId');
+    const items = db.places.filter((p) => p.status === 'active' && p.pendingMove && (!only || p.branchId === only)).sort((a, b) => (a.pendingMove!.requestedAt < b.pendingMove!.requestedAt ? -1 : 1));
     return HttpResponse.json({ items });
   })),
   http.get(`${BASE}/places/:id`, authed(({ ctx, params }) => {
     const deny = need(ctx, 'place.view');
     if (deny) return deny;
     const p = db.places.find((x) => x.id === params.id);
-    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId) || (p.status === 'deleted' && need(ctx, 'place.manage'))) return problem(404, 'NOT_FOUND', 'Place not found');
+    if (!p || (p.status === 'deleted' && need(ctx, 'place.manage'))) return problem(404, 'NOT_FOUND', 'Place not found');
     return HttpResponse.json(p);
   })),
   http.patch(`${BASE}/places/:id`, authed(async ({ request, params, ctx }) => {
@@ -1995,7 +1998,7 @@ export const handlers = [
     if (deny) return deny;
     const manage = !need(ctx, 'place.manage');
     const p = db.places.find((x) => x.id === params.id);
-    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId) || (p.status === 'deleted' && !manage)) return problem(404, 'NOT_FOUND', 'Place not found');
+    if (!p || (p.status === 'deleted' && !manage)) return problem(404, 'NOT_FOUND', 'Place not found');
     const b = (await request.json()) as S['PlaceUpdate'];
     if (!Object.keys(b).length) return problem(400, 'VALIDATION_FAILED', 'nothing to change');
     if (!manage && (b.location || p.createdBy.id !== ctx.user.id)) return problem(403, 'FORBIDDEN', 'Only the office can do this', undefined, { permission: 'place.manage', reason: b.location ? 'MOVE_NEEDS_MANAGE' : 'NOT_OWNER' });
@@ -2021,7 +2024,7 @@ export const handlers = [
     const deny = need(ctx, 'place.manage');
     if (deny) return deny;
     const p = db.places.find((x) => x.id === params.id);
-    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId)) return problem(404, 'NOT_FOUND', 'Place not found');
+    if (!p) return problem(404, 'NOT_FOUND', 'Place not found');
     if (p.status === 'deleted') return HttpResponse.json(p);
     const reason = url.searchParams.get('reason')?.trim() || null;
     db.placeStep(p, ctx.user, 'deleted', { note: reason });
@@ -2033,7 +2036,7 @@ export const handlers = [
     const deny = need(ctx, 'place.manage');
     if (deny) return deny;
     const p = db.places.find((x) => x.id === params.id);
-    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId)) return problem(404, 'NOT_FOUND', 'Place not found');
+    if (!p) return problem(404, 'NOT_FOUND', 'Place not found');
     const b = (await request.json()) as { decision: 'approve' | 'reject'; reason?: string };
     if (!p.pendingMove) return problem(409, 'INVALID_STATE', 'No open move request', undefined, { reason: 'NO_PENDING_MOVE' });
     if (b.decision === 'reject' && (b.reason ?? '').trim().length < 5) return problem(422, 'BUSINESS_RULE', 'A reason is required', undefined, { rule: 'REASON_REQUIRED' });
