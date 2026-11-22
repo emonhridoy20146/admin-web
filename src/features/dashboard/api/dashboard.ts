@@ -7,7 +7,7 @@ import { todayDhaka } from '@/shared/lib/time';
 export function useOverview() {
   const branchId = useBranchId();
   const date = todayDhaka();
-  useInvalidateOn([EV.collectionResolved, EV.depositDecided, EV.customerTagged], [['dashboard']]);
+  useInvalidateOn([EV.collectionResolved, EV.customerTagged], [['dashboard']]);
   return useQuery({
     queryKey: ['dashboard', 'overview', { branchId, date }],
     queryFn: () => unwrap(api.GET('/dashboard/overview', { params: { query: { branchId, date } } })),

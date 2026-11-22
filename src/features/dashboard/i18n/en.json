@@ -11,7 +11,7 @@
   "receipts": "{{n}} receipts",
   "cashOnHand": "Cash with staff",
   "overLimit": "{{n}} over limit",
-  "pendingDeposits": "{{n}} deposits to verify",
+  "cashOnHandSub": "Not deposited yet",
   "overdue": "Overdue customers",
   "overdueAmount": "{{amount}} outstanding",
   "conflicts": "Conflicts & failures",

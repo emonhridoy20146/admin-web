@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { KeyRound, Pencil, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { KeyRound, Pencil, ShieldCheck, TriangleAlert, UserCheck, UserX } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { useShifts } from '@/features/attendance';
 import { useUi } from '@/shared/lib/ui-store';
@@ -16,7 +16,7 @@ import { Button } from '@/shared/ui/button';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useErpEmployees, useResetPassword, useSetActive, useUser } from '../api/users';
-import { erpEmployeeLabel } from '../model/user-form';
+import { erpEmployeeLabel, needsErpLink } from '../model/user-form';
 import { UserFormDialog } from './user-form-dialog';
 import { TempPasswordDialog } from './temp-password-dialog';
 
@@ -116,6 +116,12 @@ export function UserDrawer({ id, onClose }: { id: string | null; onClose: () => 
                 )}
                 {u.mustChangePassword && <Badge tone="warning">{t('mustChange')}</Badge>}
               </div>
+              {needsErpLink(u) && (
+                <p className="flex items-start gap-2 rounded-md bg-warning-bg px-3 py-2 text-sm text-warning" role="note" data-testid="erp-link-missing">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {t('erpLinkMissing')}
+                </p>
+              )}
               <section>
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-fg-tertiary">
                   {t('drawer.profile')}

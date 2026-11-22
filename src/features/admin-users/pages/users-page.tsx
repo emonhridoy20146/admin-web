@@ -15,7 +15,7 @@ import { Avatar, Segmented, Tooltip } from '@/shared/ui/primitives';
 import { SearchInput, Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { useUsers, type User } from '../api/users';
-import { ROLES } from '../model/user-form';
+import { needsErpLink, ROLES } from '../model/user-form';
 import { UserDrawer } from '../components/user-drawer';
 import { UserFormDialog } from '../components/user-form-dialog';
 import { TempPasswordDialog } from '../components/temp-password-dialog';
@@ -140,6 +140,13 @@ export function UsersPage() {
             <Badge tone="success">{t('status.active')}</Badge>
           ) : (
             <Badge tone="danger">{t('status.inactive')}</Badge>
+          )}
+          {needsErpLink(u) && (
+            <Tooltip content={t('erpLinkMissing')}>
+              <span tabIndex={0} data-testid="erp-link-missing">
+                <Badge tone="warning">{t('erpLinkMissingShort')}</Badge>
+              </span>
+            </Tooltip>
           )}
           {u.active && u.mustChangePassword && (
             <Badge tone="warning" icon={false}>

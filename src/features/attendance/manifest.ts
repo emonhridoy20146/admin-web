@@ -13,7 +13,7 @@ export const attendanceManifest: FeatureManifest = {
     { path: '/attendance/leave', title: 'attendance:leave.title', permission: 'attendance.manage', navGroup: 'people', icon: Umbrella, order: 21, useBadge: usePendingLeaveBadge },
     { path: '/attendance/calendar', title: 'attendance:calendar.title', permission: 'attendance.view', navGroup: 'admin', icon: CalendarDays, order: 32 },
   ],
-  permissions: ['attendance.view', 'attendance.manage', 'settings.manage'],
+  permissions: ['attendance.view', 'attendance.manage', 'settings.manage', 'media.delete'],
   commands: [
     { id: 'attendance.open', title: 'attendance:title', icon: CalendarCheck, href: '/attendance/', permission: 'attendance.view' },
     { id: 'attendance.leave', title: 'attendance:leave.title', icon: Umbrella, href: '/attendance/leave/', permission: 'attendance.manage', keywords: ['leave', 'ছুটি'] },

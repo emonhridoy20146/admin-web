@@ -57,6 +57,10 @@ describe('vercelRoutes', () => {
       expect(directive(csp, 'img-src')).toContain('https://*.tile.openstreetmap.org');
       // photos served by the API itself when it keeps files in its database (field-api ADR-039)
       expect(directive(csp, 'img-src')).toContain('https://howlader-apps-api.vercel.app');
+      // staff photos in Cloudinary (field-api 1.37.0, ADR-050): images only
+      expect(directive(csp, 'img-src')).toContain('https://api.cloudinary.com');
+      expect(directive(csp, 'img-src')).toContain('https://res.cloudinary.com');
+      expect(directive(csp, 'connect-src')).not.toContain('cloudinary');
       expect(directive(csp, 'script-src')).toMatch(/^script-src 'self' 'sha256-[^']+'$/);
     }
   });

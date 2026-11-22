@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countDay, dhakaIso, index, lastDay, monthDays, monthOf, offDayWorked, shiftMonth, sortDay, validateCorrection } from '../model/attendance';
+import { countDay, deletablePhotos, dhakaIso, summariseEvents, index, lastDay, monthDays, monthOf, offDayWorked, shiftMonth, sortDay, validateCorrection } from '../model/attendance';
 
 describe('attendance model', () => {
   it('a day off that was worked is marked only when it earned overtime (contract 1.25.0)', () => {
@@ -45,5 +45,17 @@ describe('attendance model', () => {
     expect(validateCorrection({ type: 'work_in', time: '09:10', reason: 'Phone was dead in the morning' }, '2026-11-15', now)).toEqual({});
     expect(validateCorrection({ type: 'work_in', time: '13:00', reason: 'Phone was dead in the morning' }, '2026-11-15', now).time).toBe('errors.future');
     expect(validateCorrection({ type: 'work_in', time: '9:10', reason: 'short' }, '2026-11-15', now)).toEqual({ time: 'errors.time', reason: 'errors.reason' });
+  });
+
+  it('counts photos an admin deleted, and the photos still to delete (FR-MED-004)', () => {
+    const ev = (id: string, extra: Record<string, unknown>) => ({ id, type: 'work_in' as const, at: '2026-11-21T03:00:00Z', flags: [], ...extra });
+    const events = [
+      ev('a', { selfieMediaId: null, selfieDeleted: { at: '2026-11-22T06:00:00Z', by: 'u1', byName: 'Owner' } }),
+      ev('b', { selfieMediaId: 'm2' }),
+      ev('c', { selfieMediaId: null, flags: ['no_selfie'] }),
+    ];
+    expect(summariseEvents(events)).toEqual({ total: 3, withPhoto: 1, noPhoto: 1, deleted: 1 });
+    expect(deletablePhotos(events)).toBe(1);
+    expect(deletablePhotos(undefined)).toBe(0);
   });
 });

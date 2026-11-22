@@ -24,16 +24,12 @@ export function InHandDrawer({ userId, userName, onClose }: { userId: string | n
         <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-md" />)}</div>
       ) : d ? (
         <>
-          <dl className="mb-4 grid grid-cols-2 gap-3">
+          {/* 1.35.0: nobody verifies a deposit, so there is no "deposit pending" money to show next to it */}
+          <dl className="mb-4">
             <div className="rounded-md border border-line bg-surface-subtle px-3 py-2.5">
               <dt className="text-xs text-fg-tertiary">{t('col.onHand')}</dt>
               <dd><MoneyText poisha={d.onHandPoisha} className="text-md font-semibold text-fg" /></dd>
-              <dd className="text-xs text-fg-tertiary">{t('inHand.count', { count: d.count, n: formatNumber(d.count) })}</dd>
-            </div>
-            <div className="rounded-md border border-line bg-surface-subtle px-3 py-2.5">
-              <dt className="text-xs text-fg-tertiary">{t('col.pendingDeposits')}</dt>
-              <dd><MoneyText poisha={d.pendingDepositsPoisha} className="text-md font-semibold text-fg" /></dd>
-              <dd className="text-xs text-fg-tertiary">{t('inHand.pendingNote')}</dd>
+              <dd className="text-xs text-fg-tertiary">{t('inHand.count', { count: d.count, n: formatNumber(d.count) })} · {t('inHand.notDeposited')}</dd>
             </div>
           </dl>
           {d.items.length === 0 ? (

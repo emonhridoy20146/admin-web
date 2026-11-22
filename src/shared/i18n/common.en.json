@@ -57,6 +57,7 @@
     "verified": "Verified",
     "rejected": "Rejected",
     "deleted": "Deleted",
+    "submitted": "Deposited",
     "cash_ok": "Within limit",
     "cash_warning": "Near limit",
     "cash_exceeded": "Over limit",
@@ -129,7 +130,8 @@
   },
   "confirmType": {
     "label": "Type {{word}} to confirm",
-    "help": "The button turns on when the word matches."
+    "help": "The button turns on when the word matches.",
+    "helpExact": "Type it exactly as shown, capital letters and the space included."
   },
   "errors": {
     "GENERIC": "Something went wrong. Please try again.",

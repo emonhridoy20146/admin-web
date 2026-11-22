@@ -125,25 +125,6 @@ test('W-E5b a refund needs a photo of the proof before it can be confirmed', asy
   await expect(cards).toHaveCount(before - 1);
 });
 
-test('W-E6 verify and reject deposits; the pending queue updates', async ({ page }) => {
-  await login(page);
-  await nav(page, cashBn.title);
-  const queue = page.locator('#deposits ul > li');
-  await expect(queue.first()).toBeVisible();
-  const before = await queue.count();
-
-  await queue.first().getByRole('button', { name: cashBn.verify, exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: /যাচাই করুন/ }).click();
-  await expect(page.getByText(cashBn.verified).first()).toBeVisible();
-  await expect(queue).toHaveCount(before - 1);
-
-  await queue.first().getByRole('button', { name: cashBn.reject, exact: true }).click();
-  await confirmWithReason(page, 'Slip amount does not match the cash counted.', cashBn.rejectConfirm);
-  await expect(queue).toHaveCount(before - 2);
-  await page.getByRole('button', { name: cashBn.depositStatus.rejected, exact: true }).click();
-  await expect(page.locator('#deposits tbody tr').first()).toContainText(/Slip amount|কারণ/);
-});
-
 test('cash on hand: a row opens the collections the cash came from, with customer, invoice and receipt', async ({ page }) => {
   await login(page);
   await nav(page, cashBn.title);
@@ -165,54 +146,6 @@ test('cash on hand: a row opens the collections the cash came from, with custome
   await page.keyboard.press('Escape');
   await expect(drawer).toHaveCount(0);
   await expect(page).not.toHaveURL(/hand=/);
-});
-
-// Owner request 2026-11-21 (contract 1.30.0, FR-W-048, master FR-CASH-008): which collections one deposit covered;
-// the promise behind every cash line.
-test('a deposit opens the collections it covered; every cash line says which promise it was collected against', async ({ page }) => {
-  await login(page, 'manager');
-  await nav(page, cashBn.title);
-  // a verified deposit from the history table
-  await page.getByRole('button', { name: cashBn.depositStatus.verified, exact: true }).click();
-  const row = page.locator('#deposits tbody tr').first();
-  await expect(row).toContainText('৳');
-  await row.locator('td').nth(1).click();
-  await expect(page).toHaveURL(/dep=/);
-  const drawer = page.getByRole('dialog');
-  await expect(drawer.getByText(cashBn.depositDetail.subtitle)).toBeVisible();
-  await expect(drawer.getByTestId('deposit-head')).toContainText('৳');
-  await expect(drawer.getByText(cashBn.depositDetail.covered, { exact: true })).toBeVisible();
-  await expect(drawer.getByText(cashBn.depositDetail.unmatched, { exact: true })).toBeVisible();
-  const lines = drawer.getByTestId('cash-line');
-  const n = await lines.count();
-  if (n > 0) {
-    await expect(lines.first().getByRole('link')).toHaveAttribute('href', /\/customers\/.+\//);
-    // every line says in words whether a promise stood behind the money
-    for (let i = 0; i < n; i++) await expect(lines.nth(i).getByTestId('cash-line-promise')).not.toBeEmpty();
-  } else {
-    await expect(drawer.getByText(new RegExp(`${cashBn.depositDetail.empty}|${cashBn.depositDetail.rejectedEmpty}`))).toBeVisible();
-  }
-  await expect(drawer.getByText(cashBn.depositDetail.how)).toBeVisible();
-  const r = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
-  expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
-  await page.keyboard.press('Escape');
-  await expect(drawer).toHaveCount(0);
-  await expect(page).not.toHaveURL(/dep=/);
-
-  // the pending cards open the same drawer; the cash-on-hand lines carry the promise too
-  await page.getByRole('group', { name: cashBn.deposits }).getByRole('button', { name: cashBn.depositStatus.pending }).click();
-  const open = page.getByRole('button', { name: cashBn.depositDetail.openShort, exact: true }).first();
-  if (await open.isVisible()) {
-    await open.click();
-    await expect(page.getByRole('dialog').getByText(cashBn.depositDetail.subtitle)).toBeVisible();
-    await page.keyboard.press('Escape');
-  }
-  const pos = page.locator('#positions tbody tr').first();
-  await expect(pos).toContainText('৳');
-  await pos.locator('td').nth(1).click();
-  const hand = page.getByRole('dialog');
-  await expect(hand.getByTestId('cash-line').first()).toBeVisible();
-  await expect(hand.getByTestId('cash-line-promise').first()).not.toBeEmpty();
 });
 
 test('W-E7 create a temporary handover, see it pending, then cancel it', async ({ page }) => {
@@ -657,28 +590,4 @@ test('assign one customer: give an unassigned customer to a staff member, then e
   await expect(again).toBeHidden();
   await expect(drawer.getByText(custBn.nobodyAssigned, { exact: true })).toBeVisible();
   await expect(page.locator('tbody tr a')).toHaveCount(3);
-});
-
-// Owner request 2026-11-22 (contract 1.32.0, FR-W-049, master FR-CASH-009): an admin deletes a deposit with a reason;
-// the row stays in the history as "deleted" and the audit log records it.
-test('a manager deletes a verified deposit with a reason; it stays in the history as deleted', async ({ page }) => {
-  await login(page, 'manager');
-  await nav(page, cashBn.title);
-  await page.getByRole('button', { name: cashBn.depositStatus.verified, exact: true }).click();
-  const row = page.locator('#deposits tbody tr').first();
-  await expect(row).toContainText('৳');
-  await row.locator('td').nth(1).click();
-  await expect(page).toHaveURL(/dep=/);
-  const drawer = page.getByRole('dialog').first();
-  await drawer.getByRole('button', { name: cashBn.deleteDeposit, exact: true }).click();
-  const reasonDialog = page.getByRole('dialog').filter({ has: page.locator('textarea') });
-  await reasonDialog.locator('textarea').fill('Entered twice by mistake.');
-  await reasonDialog.getByRole('button', { name: cashBn.deleteConfirm, exact: true }).click();
-  await expect(page.getByText(cashBn.deleted).first()).toBeVisible();
-  // the drawer now says deleted and offers no second delete
-  await expect(drawer.getByText(cashBn.depositStatus.deleted, { exact: true })).toBeVisible();
-  await expect(drawer.getByRole('button', { name: cashBn.deleteDeposit, exact: true })).toHaveCount(0);
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: cashBn.depositStatus.deleted, exact: true }).click();
-  await expect(page.locator('#deposits tbody tr').first()).toContainText(/Entered twice|মুছে ফেলা/);
 });

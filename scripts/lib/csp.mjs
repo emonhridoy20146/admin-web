@@ -11,6 +11,9 @@ export function inlineHashes(html) {
   return [...new Set(hashes)].join(' ');
 }
 
+/** Photos copied to Cloudinary (field-api 1.37.0, ADR-050) come as signed download links on these hosts. */
+export const CLOUDINARY_IMG = 'https://api.cloudinary.com https://res.cloudinary.com';
+
 export function csp(hashes, env = process.env) {
   const extra = (k) => (env[k] ? ` ${env[k]}` : '');
   return [
@@ -18,7 +21,8 @@ export function csp(hashes, env = process.env) {
     `script-src 'self' ${hashes}`.trim(),
     "style-src 'self' 'unsafe-inline'",
     // API origin: photo links point at the API itself when it keeps files in its database (field-api ADR-039).
-    `img-src 'self' data: blob:${extra('API_ORIGIN')}${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
+    // Cloudinary: staff photos since field-api 1.37.0 (images only; never connect-src or scripts).
+    `img-src 'self' data: blob:${extra('API_ORIGIN')}${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')} ${CLOUDINARY_IMG}`,
     `connect-src 'self'${extra('API_ORIGIN')}${extra('TILE_ORIGIN')}${extra('STORAGE_ORIGIN')}`,
     "font-src 'self'",
     "worker-src 'self'",

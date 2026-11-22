@@ -29,7 +29,6 @@ export function useInvalidateOn(events: string[], keys: QueryKey[]) {
 export const EV = {
   collectionResolved: 'collection.resolved',
   collectionVoided: 'collection.voided',
-  depositDecided: 'deposit.decided',
   customerTagged: 'customer.tagged',
   inboxChanged: 'inbox.changed',
   permissionsChanged: 'rbac.changed',

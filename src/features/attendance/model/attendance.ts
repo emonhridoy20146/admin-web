@@ -112,10 +112,17 @@ export interface EventSummary {
   total: number;
   withPhoto: number;
   noPhoto: number;
+  /** photos an admin deleted (FR-MED-004) */
+  deleted: number;
 }
 
 /** Counts over the events that still count in the day (replaced ones are history). */
 export function summariseEvents(events: AttendanceEvent[] | undefined): EventSummary {
   const live = (events ?? []).filter((e) => !e.replaced);
-  return { total: live.length, withPhoto: live.filter((e) => !!e.selfieMediaId).length, noPhoto: live.filter((e) => e.flags?.includes('no_selfie')).length };
+  return { total: live.length, withPhoto: live.filter((e) => !!e.selfieMediaId).length, noPhoto: live.filter((e) => e.flags?.includes('no_selfie')).length, deleted: live.filter((e) => !!e.selfieDeleted).length };
+}
+
+/** Photos of the day that can still be deleted (replaced events included: their photo is stored too). */
+export function deletablePhotos(events: AttendanceEvent[] | undefined): number {
+  return (events ?? []).filter((e) => !!e.selfieMediaId).length;
 }

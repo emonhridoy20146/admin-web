@@ -3,6 +3,7 @@ import {
   changedKeys,
   emptyForm,
   fromUser,
+  needsErpLink,
   makeHome,
   normalizePhone,
   orderErpEmployees,
@@ -115,5 +116,15 @@ describe('user form model', () => {
     expect(mine.map((e) => e.erpEmployeeId)).toEqual(['4', '1', '3']);
     expect(others.map((e) => e.erpEmployeeId)).toEqual(['2']);
     expect(orderErpEmployees(list, []).mine).toEqual([]);
+  });
+
+  // contract 1.35.0 (ADR-049): an unlinked collector is posted to the ERP by name only, so the panel warns
+  it('warns about active collectors without an ERP employee only', () => {
+    expect(needsErpLink({ role: 'field_staff', erpEmployeeId: null, active: true })).toBe(true);
+    expect(needsErpLink({ role: 'branch_manager', erpEmployeeId: undefined })).toBe(true);
+    expect(needsErpLink({ role: 'field_staff', erpEmployeeId: '7', active: true })).toBe(false);
+    expect(needsErpLink({ role: 'field_staff', erpEmployeeId: null, active: false })).toBe(false);
+    expect(needsErpLink({ role: 'super_admin', erpEmployeeId: null, active: true })).toBe(false);
+    expect(needsErpLink({ role: 'viewer', erpEmployeeId: null, active: true })).toBe(false);
   });
 });

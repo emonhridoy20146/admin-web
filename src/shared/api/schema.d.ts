@@ -1114,6 +1114,7 @@ export interface paths {
         };
         get: operations["listDeposits"];
         put?: never;
+        /** @description cash.deposit.record. 1.35.0 (FR-CASH-010, ADR-049): hands in everything the caller holds at once: all the cash in hand (amountPoisha must equal it) and every mobile banking, bank or card collection not handed in yet. The deposit is `submitted` and final: each collection it took gets `depositId`, is posted to the ERP (now, or when ERP posting is switched on) and can no longer be edited or withdrawn. No office step. Before 1.35.0 a collection was posted when it was recorded; now it waits for its deposit. */
         post: operations["createDeposit"];
         delete?: never;
         options?: never;
@@ -1130,6 +1131,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Retired in 1.35.0 (ADR-049): a deposit is final. Answers 409 INVALID_STATE reason DEPOSIT_FINAL for every deposit (404 out of scope). Kept because /api/v1 is additive-only. */
         post: operations["verifyDeposit"];
         delete?: never;
         options?: never;
@@ -1146,7 +1148,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description cash.deposit.delete (1.32.0, FR-CASH-009; super admin, branch manager). Deletes a deposit that is `pending` or `verified` (a verified one gives its money back to the person's cash in hand). The row is kept with status `deleted`, `deletedBy`, `deletedAt`, `deleteReason`; it no longer counts anywhere. The depositor is notified (type `cash.deposit.deleted`) and the sync entity `deposit` carries the new status. Audited (`cash.deposit.deleted`). 409 INVALID_STATE reason: NOT_DELETABLE (already rejected or deleted). */
+        /** @description Retired in 1.35.0 (ADR-049): a deposit is final; answers 409 INVALID_STATE reason DEPOSIT_FINAL (404 out of scope). Before 1.35.0: cash.deposit.delete (1.32.0, FR-CASH-009; super admin, branch manager). Deleted a deposit that is `pending` or `verified` (a verified one gives its money back to the person's cash in hand). The row is kept with status `deleted`, `deletedBy`, `deletedAt`, `deleteReason`; it no longer counts anywhere. The depositor is notified (type `cash.deposit.deleted`) and the sync entity `deposit` carries the new status. Audited (`cash.deposit.deleted`). 409 INVALID_STATE reason: NOT_DELETABLE (already rejected or deleted). */
         post: operations["deleteDeposit"];
         delete?: never;
         options?: never;
@@ -1163,6 +1165,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Retired in 1.35.0 (ADR-049): a deposit is final. Answers 409 INVALID_STATE reason DEPOSIT_FINAL for every deposit (404 out of scope). Kept because /api/v1 is additive-only. */
         post: operations["rejectDeposit"];
         delete?: never;
         options?: never;
@@ -1777,6 +1780,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Presigned PUT to the server's store (S3 or `db`). Since 1.37.0 the server copies a confirmed photo to Cloudinary in the background when Cloudinary is configured (ADR-050); the phone protocol is unchanged. 409 `INVALID_STATE` reason `MEDIA_DELETED` when the same file was uploaded before and an admin deleted it. */
         post: operations["createUploadUrl"];
         delete?: never;
         options?: never;
@@ -1807,9 +1811,62 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description A link that works for 5 minutes. Since 1.37.0 (ADR-050) a photo copied to Cloudinary is served as a signed private
+         *     Cloudinary download link (`api.cloudinary.com/v1_1/<cloud>/image/download?...&expires_at=...`); until it is copied, or
+         *     when Cloudinary is not configured, the link points at the server's own store as before. Clients just open `url`.
+         *     A photo deleted by an admin (FR-MED-003/004) answers 404 `NOT_FOUND` with `details.reason = MEDIA_DELETED`,
+         *     `details.deletedAt` and `details.deletedByName`.
+         */
         get: operations["mediaUrl"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media/purge/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description media.delete (1.37.0, FR-MED-003). Photos taken before the first day (Asia/Dhaka) of month `before`, per month, with
+         *     their count and size. Kinds: selfie, visit_photo, location_proof; deposit_slip and refund_proof (money proofs) only
+         *     with `includeMoneyProofs=true`. Voice notes are never included. `suggest` is true from the 5th of the month on when
+         *     there is something to delete (the admin panel shows an alert). Branch scope: a super admin sees all.
+         */
+        get: operations["mediaPurgePreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description media.delete (1.37.0, FR-MED-003). Deletes the photos the preview counts, at most 200 per call, oldest first, and
+         *     returns how many were deleted and how many remain; call again until `remaining` is 0. `confirmText` must be exactly
+         *     `DELETE <before>` (e.g. `DELETE 2026-11`), else 422 `BUSINESS_RULE` rule `CONFIRM_TEXT_MISMATCH` and nothing is deleted.
+         *     A deleted photo is marked `deleted` at once (its link answers 404 `MEDIA_DELETED`) and its files are removed from
+         *     Cloudinary and from the server's store (retried in the background if a store is down). One audit entry
+         *     (`media.purged`) per call with the counts. Branch scope: a super admin deletes in every branch.
+         */
+        post: operations["mediaPurge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1942,6 +1999,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attendance/photos/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description media.delete (1.37.0, FR-MED-004). Deletes the attendance photos of one staff member on one business date. Each
+         *     event that had a photo gets `selfieDeleted { at, by, byName }` and `selfieMediaId: null`; the photo files are removed
+         *     from Cloudinary and from the server's store. Branch scope: a user outside the caller's branches is 404. A day without
+         *     photos answers `deleted: 0`. Audited as `attendance.photos_deleted`.
+         */
+        post: operations["deleteAttendancePhotos"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attendance/me/today": {
         parameters: {
             query?: never;
@@ -1949,6 +2028,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 1.36.0: also returns `events`, the day's attendance events (oldest first), so a phone that lost its local data (reinstall) restores the work-in, breaks and work-out already recorded instead of asking again. */
         get: operations["myAttendanceToday"];
         put?: never;
         post?: never;
@@ -3413,6 +3493,13 @@ export interface components {
             };
             flags?: ("far_from_pin" | "mock_location" | "clock_skew" | "late_sync" | "duplicate_txn_ref" | "not_in_scope_at_record_time" | "no_location")[];
             distanceToPinM?: number | null;
+            /** @description 1.35.0 (FR-CASH-010): the deposit that handed it in. Until then the collection is in the collector's hand, is not in the ERP and may be edited or withdrawn; from then on it goes to the ERP and cannot be changed. */
+            depositId?: string | null;
+            /**
+             * Format: date-time
+             * @description 1.35.0
+             */
+            depositedAt?: string | null;
             cashOnHand?: components["schemas"]["CashPosition"];
         };
         CashPosition: {
@@ -3472,7 +3559,7 @@ export interface components {
             status: "open" | "kept" | "partially_kept" | "broken";
             onTime: boolean;
         };
-        /** @description 1.30.0 (FR-CASH-008). Which cash collections a deposit covered, oldest first; the first and the last may be covered only in part (`coveredPoisha` < `amountPoisha`). `unmatchedPoisha` is deposit money with no collection behind it (a collection voided after the deposit). Field-system cash, not an ERP balance. */
+        /** @description 1.30.0 (FR-CASH-008). 1.35.0: a `submitted` deposit lists every collection it handed in (cash and the rest, each whole, with `method`, `status` and `erpReceiptNo`). A deposit from before 1.35.0: which cash collections it covered, oldest first; the first and the last may be covered only in part (`coveredPoisha` < `amountPoisha`). `unmatchedPoisha` is deposit money with no collection behind it (a collection voided after the deposit). Field-system cash, not an ERP balance. */
         DepositCoverage: {
             deposit: components["schemas"]["Deposit"];
             coveredPoisha: number;
@@ -3480,6 +3567,9 @@ export interface components {
             items: (components["schemas"]["CashInHandItem"] & {
                 /** @description The part of this collection this deposit covered */
                 coveredPoisha: number;
+                method?: components["schemas"]["PaymentMethod"];
+                /** @description 1.35.0: the ERP payment number once posted */
+                erpReceiptNo?: string | null;
             })[];
             /** Format: date-time */
             generatedAt: string;
@@ -3487,6 +3577,7 @@ export interface components {
         DepositCreate: {
             /** Format: uuid */
             clientId: string;
+            /** @description 1.35.0 (FR-CASH-010): must equal all the cash in hand (422 BUSINESS_RULE DEPOSIT_MUST_BE_ALL / DEPOSIT_EXCEEDS_ON_HAND, details.onHandPoisha); 0 when only mobile banking, bank or card collections are handed in (nothing at all: NOTHING_TO_DEPOSIT). Before 1.35.0 minimum 1 and any part of it. */
             amountPoisha: number;
             /** @enum {string} */
             destination: "branch_cashier" | "bank" | "manager";
@@ -3502,10 +3593,16 @@ export interface components {
             /** @description Depositor display name (1.3.0) */
             userName?: string;
             /**
-             * @description `deleted` added in 1.32.0: an admin deleted the deposit; it counts nowhere
+             * @description `submitted` (1.35.0, FR-CASH-010): every deposit made from 1.35.0 on; final, the collections it took go to the ERP, nobody verifies, rejects or deletes it. `pending`, `verified`, `rejected`, `deleted` (1.32.0) are deposits from before 1.35.0.
              * @enum {string}
              */
-            status?: "pending" | "verified" | "rejected" | "deleted";
+            status?: "pending" | "verified" | "rejected" | "deleted" | "submitted";
+            /** @description 1.35.0: collections it handed in (cash and the rest); absent on deposits from before 1.35.0 */
+            collectionCount?: number;
+            /** @description 1.35.0: mobile banking, bank and card money it handed in (not part of amountPoisha) */
+            nonCashPoisha?: number;
+            /** @description 1.35.0 */
+            nonCashCount?: number;
             verifiedBy?: string;
             verifiedAt?: string;
             rejectReason?: string;
@@ -4109,13 +4206,59 @@ export interface components {
                 accuracyM?: number;
                 mock?: boolean;
             } | null;
+            /** @description null when there was no photo or an admin deleted it (see selfieDeleted) */
             selfieMediaId?: string | null;
+            /** @description 1.37.0 (FR-MED-004): set when an admin deleted the photo of this event; show "Deleted by admin <byName> · <at>" where the photo was */
+            selfieDeleted?: {
+                /** Format: date-time */
+                at: string;
+                by: string;
+                byName: string;
+            } | null;
             /** @description e.g. no_selfie, no_location, mock_location, clock_skew, late_sync */
             flags: string[];
             /** @enum {string} */
             source?: "app" | "correction" | "system";
             /** @description true when a correction replaced this event; it no longer counts in the day */
             replaced?: boolean;
+        };
+        /** @description 1.37.0 (FR-MED-003) */
+        MediaPurgePreview: {
+            /** @description YYYY-MM */
+            before: string;
+            /**
+             * Format: date-time
+             * @description First instant of month `before` in Asia/Dhaka; photos created earlier count
+             */
+            cutoff: string;
+            /**
+             * Format: date
+             * @description Dhaka business date
+             */
+            today: string;
+            kinds: string[];
+            includeMoneyProofs: boolean;
+            /** @description Oldest first */
+            months: {
+                /** @description YYYY-MM (Dhaka) */
+                month: string;
+                count: number;
+                bytes: number;
+            }[];
+            total: {
+                count: number;
+                bytes: number;
+            };
+            /** @description true from the 5th of the month on when there is something to delete */
+            suggest: boolean;
+        };
+        /** @description 1.37.0 (FR-MED-003) */
+        MediaPurgeResult: {
+            deleted: number;
+            /** @description Size of the photos deleted by this call */
+            bytes: number;
+            /** @description Photos still to delete for the same request; call again while > 0 */
+            remaining: number;
         };
         LocationPoint: {
             /** Format: date-time */
@@ -5067,6 +5210,11 @@ export interface operations {
                          * @enum {string}
                          */
                         storage?: "s3" | "db" | "memory";
+                        /**
+                         * @description Added in 1.37.0 (ADR-050). cloudinary = CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are set and photos are copied there.
+                         * @enum {string}
+                         */
+                        cloudStorage?: "cloudinary" | "none";
                     };
                 };
             };
@@ -6847,7 +6995,7 @@ export interface operations {
         parameters: {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
-                status?: "pending" | "verified" | "rejected" | "deleted";
+                status?: "pending" | "verified" | "rejected" | "deleted" | "submitted";
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -8123,6 +8271,67 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    mediaPurgePreview: {
+        parameters: {
+            query?: {
+                /** @description YYYY-MM, default the current Dhaka month (= every earlier month). Not later than the current month. */
+                before?: string;
+                includeMoneyProofs?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaPurgePreview"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    mediaPurge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    before: string;
+                    /** @default false */
+                    includeMoneyProofs?: boolean;
+                    confirmText: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaPurgeResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     storageGet: {
@@ -8480,6 +8689,42 @@ export interface operations {
             409: components["responses"]["Problem"];
         };
     };
+    deleteAttendancePhotos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    userId: string;
+                    /** Format: date */
+                    date: string;
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Number of photos deleted */
+                        deleted: number;
+                        events: components["schemas"]["AttendanceEvent"][];
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
     myAttendanceToday: {
         parameters: {
             query?: never;
@@ -8495,7 +8740,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AttendanceDay"];
+                    "application/json": components["schemas"]["AttendanceDay"] & {
+                        events?: {
+                            id: string;
+                            /** @description The id the phone gave the event; restore it under this id so a retry stays idempotent */
+                            clientId?: string | null;
+                            /** @enum {string} */
+                            type: "work_in" | "break_start" | "break_end" | "work_out";
+                            /** Format: date-time */
+                            at: string;
+                            /** @enum {string} */
+                            source: "app" | "correction" | "system";
+                        }[];
+                    };
                 };
             };
         };

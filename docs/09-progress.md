@@ -73,6 +73,8 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - Print / PDF button on thirteen more pages done 2026-11-21 (FR-W-045).
 - Staff activity page and bell done 2026-11-21 on contract 1.28.0 (FR-W-046).
 - Customer list: paid this month / not paid this month filter done 2026-11-21 on contract 1.29.0 (FR-W-047).
+- Photo storage page (Cloudinary or server storage, previous months per month, typed `DELETE <YYYY-MM>` purge with progress, alert from the 5th on the page, dashboard and nav) and "Delete photos of this day" in the attendance drawer with the "Deleted by admin" log, done 2026-11-22 on contract 1.37.0 (FR-W-054, FR-W-055, ADR-W23).
+- Deposits are read-only and show what they contained (collections with method, ERP state and receipt; cash / non-cash / count; posted vs on its way), verify / reject / delete removed, warning badge for users without an ERP employee link, done 2026-11-22 on contract 1.35.0 (FR-W-053, ADR-W22).
 - Voided and edited collections in the drawer and list, three new activity lines (contract 1.33.0, FR-W-050) done 2026-11-22.
 - Delete a deposit (reason, "Deleted" tab, audit labels for withdrawn/edited collections) done 2026-11-22 on contract 1.32.0 (FR-W-049).
 - Deposit detail (collections one deposit covered) and the promise behind every cash line done 2026-11-21 on contract 1.30.0 (FR-W-048).

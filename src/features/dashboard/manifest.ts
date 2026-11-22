@@ -9,6 +9,6 @@ export const dashboardManifest: FeatureManifest = {
   flag: 'module.dashboard',
   routes: [{ path: '/', title: 'dashboard:title', permission: 'report.view', navGroup: 'top', icon: LayoutDashboard, order: 1 }],
   permissions: ['report.view'],
-  events: { listens: [EV.collectionResolved, EV.depositDecided, EV.customerTagged] },
+  events: { listens: [EV.collectionResolved, EV.customerTagged] },
   messages: { bn, en },
 };

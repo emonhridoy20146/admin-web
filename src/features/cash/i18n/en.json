@@ -1,13 +1,13 @@
 {
   "title": "Cash on hand",
-  "subtitle": "Cash each collector is holding until it is deposited and verified.",
+  "subtitle": "Cash each collector is holding until they deposit it. A deposit sends everything they collected to the ERP.",
   "kpi": {
     "onHand": "Cash with staff",
     "holders": "{{n}} staff holding cash",
     "overLimit": "Over the limit",
     "nearLimit": "{{n}} near the limit",
-    "pending": "Deposits to verify",
-    "pendingSub": "{{amount}} awaiting verification",
+    "depositedToday": "Deposited today",
+    "depositedTodaySub": "Cash {{cash}} · non-cash {{nonCash}}",
     "oldest": "Oldest cash held",
     "oldestSub": "Since {{at}}",
     "none": "None"
@@ -20,62 +20,33 @@
     "limit": "Use of limit",
     "state": "State",
     "oldest": "Held since",
-    "pendingDeposits": "Deposit pending",
     "today": "Collected today",
     "depositor": "Deposited by",
-    "amount": "Amount",
+    "cash": "Cash",
+    "nonCash": "Non-cash",
+    "collections": "Collections",
     "destination": "Deposited to",
     "reference": "Reference",
     "depositedAt": "Deposited",
     "status": "Status",
-    "decidedAt": "Decided"
+    "decidedAt": "Decided (older deposits)"
   },
   "todaySplit": "Cash {{cash}} · mobile {{mobile}}",
   "carriedOver": "From a previous day",
   "ofLimit": "Limit {{limit}}",
   "deposits": "Deposits",
-  "depositsHint": "Verify only after you have counted the cash or seen the bank slip.",
-  "depositStatus": {
-    "pending": "To verify",
-    "verified": "Verified",
-    "rejected": "Rejected",
-    "deleted": "Deleted"
+  "depositsHint": "A deposit is final: everything the collector held went with it to the ERP, nobody verifies it and it cannot be changed. Click a row to see what it contained.",
+  "depositTab": {
+    "submitted": "Deposited",
+    "all": "All, with older ones"
   },
+  "finalNote": "Final, no check needed",
   "destination": {
     "branch_cashier": "Branch cashier",
     "bank": "Bank",
     "manager": "Manager"
   },
-  "verify": "Verify",
-  "reject": "Reject",
-  "verifyTitle": "Verify {{amount}} from {{name}}?",
-  "verifyDesc": "Confirm that you received exactly this amount. The collector's cash on hand goes down by {{amount}}. This is recorded in the audit log.",
-  "verifyConfirm": "Yes, verify {{amount}}",
-  "verified": "Deposit verified",
-  "rejectTitle": "Reject {{amount}} from {{name}}?",
-  "rejectDesc": "The money stays on the collector's cash on hand. Tell them what is wrong so they can deposit again.",
-  "rejectConfirm": "Reject deposit",
-  "rejected": "Deposit rejected",
-  "rejectCodes": {
-    "amount_mismatch": "Amount does not match",
-    "slip_missing": "Slip missing or unreadable",
-    "not_received": "Money not received",
-    "other": "Other"
-  },
   "rejectReason": "Reason: {{reason}}",
-  "deleteDeposit": "Delete deposit",
-  "deleteTitle": "Delete {{name}}'s {{amount}} deposit?",
-  "deleteDesc": "The deposit stays in the history as deleted. The money goes back to the collector's cash on hand, and they are told. This is recorded in the audit log.",
-  "deleteConfirm": "Delete deposit",
-  "deleted": "Deposit deleted",
-  "deleteCodes": {
-    "duplicate": "Entered twice",
-    "wrong_amount": "Wrong amount",
-    "not_received": "Money was not received",
-    "other": "Other"
-  },
-  "emptyPending": "Nothing to verify",
-  "emptyPendingBody": "New deposits from collectors will appear here.",
   "emptyDeposits": "No deposits",
   "emptyPositions": "No collectors hold cash",
   "inHand": {
@@ -83,18 +54,18 @@
     "subtitle": "The cash collections not yet covered by a deposit",
     "count_one": "{{n}} collection",
     "count_other": "{{n}} collections",
-    "pendingNote": "Handed in, not verified yet",
     "empty": "No cash on hand.",
     "list": "Collections behind the cash on hand",
     "invoice": "Invoice {{no}}",
     "partOf": "left of",
     "more": "{{n}} older collections are not listed; the total above includes them.",
-    "how": "Deposits pay off the oldest collections first, so the cash on hand is the newest collections. Field-system cash, not an ERP balance."
+    "how": "Older deposits paid off the oldest collections first, so the cash on hand is the newest collections. Since contract 1.35.0 a collection goes to the ERP only when it is deposited; each line shows where it stands. Field-system cash, not an ERP balance.",
+    "notDeposited": "not deposited yet"
   },
   "depositDetail": {
     "title": "{{name}}'s deposit",
     "loading": "Deposit",
-    "subtitle": "The cash collections this deposit covered",
+    "subtitle": "The cash collections this older deposit covered",
     "covered": "Covered",
     "unmatched": "Not matched",
     "unmatchedNote": "deposit money with no collection behind it",
@@ -104,8 +75,19 @@
     "rejectedEmpty": "A rejected or deleted deposit covers nothing; the cash is back on hand.",
     "deletedBy": "Deleted: {{reason}}",
     "how": "A deposit pays off the oldest collections first, so this list and the cash on hand never overlap. Field-system cash, not an ERP balance.",
-    "open": "Which collections {{name}} deposited",
-    "openShort": "Which collections"
+    "subtitleFinal": "Every collection this deposit handed in",
+    "finalNote": "Final: sent to the ERP with the deposit; nobody verifies it and it cannot be changed or deleted.",
+    "totals": "What the deposit contained",
+    "erpTotals": "Where the money stands with the ERP",
+    "amount": "Amount",
+    "cash": "Cash",
+    "nonCash": "Mobile banking, bank, card",
+    "count": "Collections",
+    "inErp": "Posted in the ERP",
+    "onTheWay": "On its way to the ERP (field money)",
+    "problem": "Needs the office (conflict or failed)",
+    "voided": "Voided, does not count",
+    "howFinal": "Each collection is one whole ERP payment. The ERP decides the balances; these figures are field-system money until each line says it is posted."
   },
   "promise": {
     "none": "No promise behind this money",
@@ -118,5 +100,9 @@
       "partially_kept": "partly kept",
       "broken": "broken"
     }
+  },
+  "erpLine": {
+    "receipt": "ERP receipt",
+    "notYet": "Not in the ERP yet"
   }
 }

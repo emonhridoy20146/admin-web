@@ -69,3 +69,18 @@ export function useSelfieUrl(id: string | null | undefined) {
     gcTime: 5 * 60_000,
   });
 }
+
+/**
+ * FR-W-055 (master FR-MED-004): an admin deletes one staff member's attendance photos of a day. The events come back
+ * with `selfieDeleted` (who and when) in place of the photo; the files leave Cloudinary and the server.
+ */
+export function useDeleteDayPhotos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { userId: string; date: string; reason?: string }) => unwrap(api.POST('/attendance/photos/delete', { body })),
+    onSuccess: (r, v) => {
+      qc.setQueryData(['attendance', 'events', v.userId, v.date], r.events);
+      void qc.invalidateQueries({ queryKey: ['attendance', 'events', v.userId, v.date] });
+    },
+  });
+}

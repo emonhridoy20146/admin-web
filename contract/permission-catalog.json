@@ -611,6 +611,19 @@
     }
   },
   {
+    "key": "media.delete",
+    "module": "media",
+    "description": "Delete photos: all photos of previous months (typed confirmation), or one staff member's attendance photos of a day (1.37.0; the media row stays as a log)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
     "key": "cowork.use",
     "module": "cowork",
     "description": "Ask colleagues to work together, accept, leave",
