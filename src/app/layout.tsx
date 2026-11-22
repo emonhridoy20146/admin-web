@@ -3,7 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: { default: 'Howlader Electronics APPS Control', template: '%s · Howlader Electronics' },
+  title: { default: 'Howlader Electronics APPS', template: '%s · Howlader Electronics' },
   description: 'Howlader Electronics Field operations control room',
   robots: { index: false, follow: false },
   icons: { icon: '/icons/favicon.svg' },

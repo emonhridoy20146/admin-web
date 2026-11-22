@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed (owner request 2026-11-22: ERP data every minute; FR-ERP-007)
+- **Auto ERP sync** now runs every **1 minute** (was every 10 minutes) for users with `erp.sync`. No contract change (`POST /system/erp-sync`).
+- Fixed with it: the automatic sync could start a second run while one was still going (its "already running" check read an old value). A tick is now skipped while any sync, automatic or from the header button, is still running, so a long sync never overlaps with the next minute's.
+
 Contract pinned: field-api `openapi.yaml` **1.41.0** from field-api PR #37 (not merged yet; if field-api renumbers it 1.42.0, re-sync and re-pin) (`node scripts/sync-contract.mjs ../field-api/docs` then `pnpm gen:api`; additive; also brings 1.37.1–1.40.0 types (places, pin approval, `cloudinary` storage), not used by this change; permission catalog 64 keys, the new `place.*` keys).
 ### Added (contract 1.41.0, owner request 2026-11-22: visit outcome "Runaway"; master FR-VIS-006)
 - Visit outcome **`runaway`** — en **Runaway**, bn **পলাতক** (the customer has absconded and cannot be found): label and red badge (`danger`, colour + icon + label) in the visits list, its drawer and the co-work session visits; an option in the visits outcome filter (`?outcome=runaway`) and the Record visit dialog; activity feed line ("ran away (absconded)" / "পলাতক"). The customer timeline shows field-api's own text (`Visit: runaway` / `ভিজিট: পলাতক`).

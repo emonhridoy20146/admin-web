@@ -1,6 +1,6 @@
 # admin-web
 
-Admin panel for the Howlader Electronics **Field Operations System** — overview dashboard, exceptions inbox, customers and map, collections and conflicts (+ admin cash collection), cash and deposits, promises (+ admin promise creation), visits (+ admin visit recording), staff, attendance, live location and route history, assignments and handovers, reports, tasks, users, permissions, settings, feature flags, audit, and automatic ERP sync every 10 minutes.
+Admin panel for the Howlader Electronics **Field Operations System** — overview dashboard, exceptions inbox, customers and map, collections and conflicts (+ admin cash collection), cash and deposits, promises (+ admin promise creation), visits (+ admin visit recording), staff, attendance, live location and route history, assignments and handovers, reports, tasks, users, permissions, settings, feature flags, audit, and automatic ERP sync every minute.
 
 - Next.js 15 (static export, client-side rendering only), TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query/Table, Leaflet, Recharts, i18next (English default, Bangla one tap away).
 - Backend: field-api `/api/v1` (contract: `field-api/docs/openapi.yaml`).

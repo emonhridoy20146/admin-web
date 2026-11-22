@@ -69,15 +69,18 @@ export function useSearch(q: string) {
  * 40 s with `partial: true`; this calls again until it is done (at most 30 rounds), reporting how many customers came.
  * Everything on screen is refetched afterwards. Never optimistic: it only reads from the ERP.
  */
-const ERP_AUTO_SYNC_INTERVAL = 10 * 60_000;
+const ERP_AUTO_SYNC_INTERVAL = 60_000;
+const ERP_SYNC_KEY = ['shell', 'erp-sync'];
 
+/** Runs the ERP sync every minute. A tick is skipped while a sync (automatic or from the button) is still running. */
 export function useAutoErpSync() {
   const allowed = useCan('erp.sync');
+  const qc = useQueryClient();
   const sync = useErpSync();
   useEffect(() => {
     if (!allowed) return;
     const id = setInterval(() => {
-      if (!sync.isPending) sync.mutate(undefined);
+      if (qc.isMutating({ mutationKey: ERP_SYNC_KEY }) === 0) sync.mutate(undefined);
     }, ERP_AUTO_SYNC_INTERVAL);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,6 +90,7 @@ export function useAutoErpSync() {
 export function useErpSync() {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: ERP_SYNC_KEY,
     mutationFn: async (onProgress?: (customers: number) => void) => {
       let customers = 0;
       let rounds = 0;
