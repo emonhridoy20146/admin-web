@@ -1,4 +1,4 @@
-import type { FeatureManifest, FeatureRoute, CustomerTabDef, WidgetDef, CommandDef } from './types';
+import type { FeatureManifest, FeatureRoute, CustomerTabDef, WidgetDef, CommandDef, MapLayerDef } from './types';
 
 let manifests: FeatureManifest[] = [];
 
@@ -44,6 +44,14 @@ export function customerTabs(g: Gate): CustomerTabDef[] {
     .filter((m) => enabled(m, g))
     .flatMap((m) => m.widgets?.customerDetailTabs ?? [])
     .filter((t) => g.can(t.permission))
+    .sort((a, b) => a.order - b.order);
+}
+
+export function mapLayers(g: Gate): MapLayerDef[] {
+  return manifests
+    .filter((m) => enabled(m, g))
+    .flatMap((m) => m.widgets?.mapLayers ?? [])
+    .filter((l) => g.can(l.permission))
     .sort((a, b) => a.order - b.order);
 }
 

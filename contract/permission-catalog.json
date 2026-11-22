@@ -754,6 +754,45 @@
     }
   },
   {
+    "key": "place.view",
+    "module": "places",
+    "description": "See map places (text markers) of own branches; super admin all (1.38.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": true
+    }
+  },
+  {
+    "key": "place.create",
+    "module": "places",
+    "description": "Put a place on the map, change the name, icon and note of own places, ask for a place to be moved (1.38.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "place.manage",
+    "module": "places",
+    "description": "Change, move or delete any place in scope; approve or reject move requests (1.38.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
     "key": "leave.request",
     "module": "attendance",
     "description": "Request leave",

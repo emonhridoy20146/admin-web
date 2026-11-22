@@ -1370,7 +1370,7 @@ export interface paths {
         /**
          * @description cowork.manage (1.34.0, FR-CW-006). An office user ends an open session with a reason: status `ended`, `endedAt` now,
          *     `endedBy` and `endReason` set. Branch scope; out of scope is 404. Idempotent: a session that is already over is returned
-         *     as it is. Everyone who was accepted or still invited gets notification `cowork.ended` and the session on their next pull.
+         *     as it is. Everyone who was accepted or still invited gets notification `cowork.ended` and the session on their next pull. (Cancelling a request is different: when the asker leaves and invitees have not answered, they get `cowork.cancelled`, 1.37.1.)
          *     Joint visits already recorded keep their credit. Audited as `cowork.ended_by_office`.
          */
         post: operations["endCoworkSession"];
@@ -1543,6 +1543,115 @@ export interface paths {
         put?: never;
         /** @description The admin withdraws a task that is open or waiting for verification (1.20.0). Idempotent; the assignee is notified. Permission task.manage. 409 INVALID_STATE: TASK_RESOLVED, TASK_CHANGED. */
         post: operations["cancelTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Map places in scope (1.38.0, FR-PLC-001/004): text markers staff and the office put on the map (shop, market, mosque…), newest first.
+         *     Permission place.view. Scope: the caller's branches; super admin all. `status=deleted` needs place.manage (403 otherwise).
+         *     Use `bbox` for the visible map area; `pendingMove=true` lists only places with an open move request.
+         */
+        get: operations["listPlaces"];
+        put?: never;
+        /**
+         * @description Put a place on the map (1.38.0, FR-PLC-002). Visible to everyone in the branch at once, no approval. Idempotent by clientId per caller
+         *     (a repeat answers 200). Permission place.create. `branchId` defaults to the caller's first branch and must be one the caller can see.
+         *     Offline phones use the sync mutation `place` with the same body. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH, PLACE_INVALID_BRANCH.
+         */
+        post: operations["createPlace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/places/move-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Open move requests in scope, oldest first (1.38.0, FR-PLC-005): the office queue. Permission place.manage. */
+        get: operations["listPlaceMoveRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/places/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description One place with its history (1.38.0). Permission place.view; out of scope is 404; a deleted place is 404 unless the caller has place.manage. */
+        get: operations["getPlace"];
+        put?: never;
+        post?: never;
+        /** @description Remove a place from the map (1.38.0, FR-PLC-006). Soft delete: the row and its history are kept (status deleted); an open move request is closed. Idempotent. Permission place.manage. Audited. */
+        delete: operations["deletePlace"];
+        options?: never;
+        head?: never;
+        /**
+         * @description Change name, icon or note (1.38.0, FR-PLC-003). Permission place.create: a field staff member edits only the places they created; other places
+         *     and `location` (a direct move) need place.manage (403 otherwise). A direct move closes an open move request as rejected ("moved by the office").
+         *     `If-Match: W/"<version>"` is optional; a stale version is 412. Offline phones use the sync mutation `place_edit`.
+         *     409 INVALID_STATE: PLACE_DELETED. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH.
+         */
+        patch: operations["editPlace"];
+        trace?: never;
+    };
+    "/places/{id}/move-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Ask the office to move a place's marker (1.38.0, FR-PLC-004). Any place in scope, not only own ones. The marker stays where it is until an
+         *     office user with place.manage approves; they get an inbox item and a notification. One open request per place. Idempotent by clientId
+         *     (a repeat answers 200). Permission place.create. Offline phones use the sync mutation `place_move_request`.
+         *     409 INVALID_STATE: MOVE_PENDING (someone else's request is open), PLACE_DELETED. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH, MOVE_TOO_SHORT (under 5 m).
+         */
+        post: operations["requestPlaceMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/places/{id}/move-request/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Approve (the marker moves to the requested point) or reject (it stays; reason of at least 5 characters required) an open move request
+         *     (1.38.0, FR-PLC-005). The requester is notified either way. Permission place.manage. 409 INVALID_STATE: NO_PENDING_MOVE. 422 REASON_REQUIRED.
+         */
+        post: operations["decidePlaceMove"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3757,6 +3866,104 @@ export interface components {
             visitsCount?: number;
         };
         /**
+         * @description 1.38.0. A short fixed list; the clients draw their own symbol for each.
+         * @enum {string}
+         */
+        PlaceIcon: "shop" | "market" | "mosque" | "school" | "bank" | "hospital" | "bus_stop" | "office" | "landmark" | "other";
+        PlaceLocation: {
+            lat: number;
+            lng: number;
+        };
+        PlacePerson: {
+            id: string;
+            name: string;
+        };
+        PlaceCreate: {
+            /**
+             * Format: uuid
+             * @description Made on the device; the same clientId again is a replay
+             */
+            clientId: string;
+            /** @description The text shown next to the marker */
+            name: string;
+            icon: components["schemas"]["PlaceIcon"];
+            note?: string;
+            location: components["schemas"]["PlaceLocation"];
+            /** @description Default: the caller's first branch */
+            branchId?: string;
+        };
+        PlaceUpdate: {
+            name?: string;
+            icon?: components["schemas"]["PlaceIcon"];
+            note?: string | null;
+            /** @description Direct move; needs place.manage */
+            location?: components["schemas"]["PlaceLocation"];
+        };
+        PlaceMoveRequestCreate: {
+            /** Format: uuid */
+            clientId: string;
+            location: components["schemas"]["PlaceLocation"];
+            /** @description Why it should move (shown to the office) */
+            reason?: string;
+        };
+        PlacePendingMove: {
+            location: components["schemas"]["PlaceLocation"];
+            requestedBy: components["schemas"]["PlacePerson"];
+            /** Format: date-time */
+            requestedAt: string;
+            reason: string | null;
+            /** @description How far the marker would move */
+            distanceM: number;
+        };
+        PlaceMoveDecision: {
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            by: components["schemas"]["PlacePerson"];
+            /** Format: date-time */
+            at: string;
+            reason: string | null;
+            requestedBy: components["schemas"]["PlacePerson"];
+        };
+        PlaceEvent: {
+            /** @enum {string} */
+            type: "created" | "edited" | "moved" | "move_requested" | "move_approved" | "move_rejected" | "deleted";
+            by: components["schemas"]["PlacePerson"];
+            /** Format: date-time */
+            at: string;
+            note?: string | null;
+            from?: components["schemas"]["PlaceLocation"] | null;
+            to?: components["schemas"]["PlaceLocation"] | null;
+        };
+        /** @description A text marker on the map (1.38.0, FR-PLC-001). Sync entity `place`, sent to every device of its branch. Not linked to a customer and not a tracking point. */
+        Place: {
+            id: string;
+            /** @description The creator's clientId, so the creating device can match its offline row */
+            clientId: string | null;
+            branchId: string;
+            name: string;
+            icon: components["schemas"]["PlaceIcon"];
+            note: string | null;
+            location: components["schemas"]["PlaceLocation"];
+            /** @enum {string} */
+            status: "active" | "deleted";
+            /** @description Goes up by one on every change; send it as If-Match: W/"<version>" */
+            version: number;
+            pendingMove: components["schemas"]["PlacePendingMove"] | null;
+            /** @description The latest approve or reject, so the requester sees the reason */
+            lastMoveDecision: components["schemas"]["PlaceMoveDecision"] | null;
+            createdBy: components["schemas"]["PlacePerson"];
+            updatedBy: components["schemas"]["PlacePerson"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            deletedAt?: string | null;
+            deleteReason?: string | null;
+            /** @description History, newest last, at most the latest 50 */
+            events: components["schemas"]["PlaceEvent"][];
+        };
+        /**
          * @description 1.20.0. open → resolve_requested (staff) → resolved (admin verifies) or back to open (admin rejects with a reason); cancelled by an admin.
          * @enum {string}
          */
@@ -4342,10 +4549,10 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /**
-             * @description collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
+             * @description place, place_edit, place_move_request (1.38.0): see the payload description. collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
              * @enum {string}
              */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit" | "place" | "place_edit" | "place_move_request";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -4360,6 +4567,9 @@ export interface components {
              *     tag payload may carry `ifMatch` (customer version).
              *     1.12.0: broadcast_ack → { broadcastId, at? } (when the staff tapped "read"; kept between sending and now).
              *     1.20.0: task_resolve_request → { taskId, note?, requestedAt? } (the staff member says the task is done; idempotent, a repeat is a replay). Needs permission task.work.
+             *     1.38.0: place → PlaceCreate (same as POST /places; needs place.create; the result entityId is the server id) ·
+             *     place_edit → { placeId | placeClientId, name?, icon?, note? } (same as PATCH /places/{id} without location; placeClientId = the clientId of a place this user created, for edits made before the create was synced) ·
+             *     place_move_request → { placeId | placeClientId, clientId, location, reason? } (same as POST /places/{id}/move-request). Both need place.create.
              *     Every mutation is idempotent by mutationId; the same id with a different payload is rejected with IDEMPOTENCY_MISMATCH.
              */
             payload: {
@@ -4398,7 +4608,7 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task" | "place";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
@@ -4410,6 +4620,7 @@ export interface components {
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
              *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
              *     task → Task (1.20.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
+             *     place → Place (1.38.0; sent to every device of the place's branch on every change; a deleted place arrives as op=delete reason=deleted; the bootstrap snapshot holds the active places of the user's branches)
              */
             data?: {
                 [key: string]: unknown;
@@ -7783,6 +7994,232 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Task"];
+                };
+            };
+        };
+    };
+    listPlaces: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                /** @description Words in the name or note, any case */
+                q?: string;
+                icon?: components["schemas"]["PlaceIcon"];
+                /** @description minLng,minLat,maxLng,maxLat */
+                bbox?: string;
+                pendingMove?: boolean;
+                status?: "active" | "deleted";
+                limit?: number;
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Place"][];
+                        nextCursor: string | null;
+                    };
+                };
+            };
+        };
+    };
+    createPlace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceCreate"];
+            };
+        };
+        responses: {
+            /** @description Replay of the same clientId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+        };
+    };
+    listPlaceMoveRequests: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Place"][];
+                    };
+                };
+            };
+        };
+    };
+    getPlace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+        };
+    };
+    deletePlace: {
+        parameters: {
+            query?: {
+                reason?: string;
+            };
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+        };
+    };
+    editPlace: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+        };
+    };
+    requestPlaceMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceMoveRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Replay of the same clientId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+            /** @description Requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
+                };
+            };
+        };
+    };
+    decidePlaceMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Decision"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Place"];
                 };
             };
         };

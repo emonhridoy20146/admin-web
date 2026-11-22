@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { components } from '../api/schema';
+import type { Bounds } from '../map/geo';
+import type { MapMarker } from '../map/map-view';
 
 export type NavGroup = 'top' | 'field' | 'people' | 'insights' | 'admin';
 
@@ -47,6 +49,26 @@ export interface CustomerTabDef {
   useCount?: (customerId: string) => number | undefined;
 }
 
+/**
+ * A layer another feature draws on the customer map (e.g. map places, FR-PLC-001). The layer is a component rendered
+ * by the map page: it loads its own data for the view, hands its markers up (ids prefixed `<layer id>:`) and shows
+ * its own drawer when one of its markers is open (`openId`, without the prefix).
+ */
+export interface MapLayerProps {
+  bounds: Bounds | null;
+  onMarkers: (markers: MapMarker[]) => void;
+  openId: string | null;
+  onClose: () => void;
+}
+
+export interface MapLayerDef {
+  id: string;
+  title: string; // i18n key
+  order: number;
+  permission?: string;
+  component: ComponentType<MapLayerProps>;
+}
+
 export type Messages = Record<string, unknown>;
 
 export interface FeatureManifest {
@@ -58,7 +80,7 @@ export interface FeatureManifest {
   permissions: string[];
   events?: { emits?: string[]; listens?: string[] };
   commands?: CommandDef[];
-  widgets?: { dashboard?: WidgetDef[]; customerDetailTabs?: CustomerTabDef[] };
+  widgets?: { dashboard?: WidgetDef[]; customerDetailTabs?: CustomerTabDef[]; mapLayers?: MapLayerDef[] };
   /** i18n namespace = name */
   messages: { bn: Messages; en: Messages };
 }
