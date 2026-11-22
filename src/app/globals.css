@@ -318,5 +318,51 @@
   [data-sonner-toaster] {
     display: none !important;
   }
+
+  /* Paper carries the data, not the controls (FR-W-051). Action buttons, search boxes, sort and filter
+     selects, unchosen filter chips and tabs, row checkboxes and map controls are left out; the chosen
+     filter chip and the open tab stay as plain text so the sheet says what it shows. A `link` button is
+     text (a name, a reference) and stays; anything marked data-print-keep stays. Form values (inside a
+     <form>) are data and stay. */
+  main [data-ui='button']:not([data-variant='link']):not([data-print-keep]),
+  main :is(div, span, label):has(> input[type='search']),
+  main input[type='search'],
+  main :is(div, span):has(> select):not(form *),
+  main label:has(select):not(form *),
+  main select:not(form *),
+  main [role='combobox']:not(form *),
+  main label:not(form *):not(:has(input, select, textarea)),
+  main button[aria-pressed='false']:not(td *, th *),
+  main button[aria-expanded]:not(td *, th *, form *),
+  main [role='checkbox']:not(form *),
+  main th:has(> [role='checkbox']),
+  main td:has(> [role='checkbox']),
+  main [role='switch']:not(form *),
+  main [data-ui='chip'][aria-pressed='false'],
+  main [role='tab'][data-state='inactive'],
+  .leaflet-control-container {
+    display: none !important;
+  }
+  main [data-ui='chip'][aria-pressed='true'],
+  main button[aria-pressed='true']:not(td *, th *),
+  main [role='tab'][data-state='active'] {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    color: var(--fg) !important;
+    font-weight: 600;
+  }
+  main [data-ui='chip'][aria-pressed='true'] > svg {
+    display: none;
+  }
+  main [role='tablist'],
+  main [role='group']:has(> button[aria-pressed]) {
+    border: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    overflow: visible !important;
+  }
 }
 

@@ -102,6 +102,7 @@ export function FilterChip({ selected, onClick, children, count }: { selected: b
   return (
     <button
       type="button"
+      data-ui="chip"
       aria-pressed={selected}
       onClick={onClick}
       className={cn(

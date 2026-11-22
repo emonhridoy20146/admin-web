@@ -4,6 +4,7 @@ import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' 
 import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import promBn from '../../src/features/promises/i18n/bn.json' with { type: 'json' };
+import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import { login, nav } from '../fixtures';
 
@@ -59,3 +60,38 @@ test('the list pages print too: collections, cash on hand and promises have the 
   }
 });
 
+
+/** FR-W-051: paper carries the data, not the controls. */
+async function expectNoControlsOnPaper(page: Page) {
+  await page.emulateMedia({ media: 'print' });
+  const left = await page.evaluate(() => {
+    const seen = (el: Element) => {
+      const s = getComputedStyle(el);
+      const b = el.getBoundingClientRect();
+      return s.display !== 'none' && s.visibility !== 'hidden' && b.width > 0 && b.height > 0;
+    };
+    const q = (sel: string) => [...document.querySelectorAll(sel)].filter(seen).length;
+    return {
+      actionButtons: q("main [data-ui='button']:not([data-variant='link'])"),
+      searchBoxes: q("main input[type='search']"),
+      selects: q('main select'),
+      unchosenChips: q("main [data-ui='chip'][aria-pressed='false']"),
+      checkboxes: q("main [role='checkbox']"),
+      rows: q('main tbody tr'),
+    };
+  });
+  await page.emulateMedia({ media: 'screen' });
+  expect(left).toMatchObject({ actionButtons: 0, searchBoxes: 0, selects: 0, unchosenChips: 0, checkboxes: 0 });
+  return left;
+}
+
+test('every list prints its data without buttons, search boxes, filters or checkboxes (FR-W-051)', async ({ page }) => {
+  await login(page);
+  for (const title of [custBn.title, colBn.title, cashBn.title, promBn.title]) {
+    await nav(page, title);
+    await expect(page.locator('main tbody tr').first()).toBeVisible();
+    const left = await expectNoControlsOnPaper(page);
+    // the rows themselves are still there
+    expect(left.rows).toBeGreaterThan(0);
+  }
+});

@@ -38,6 +38,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      data-ui="button"
+      data-variant={variant}
       className={cn(
         'inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap transition-[background,color,box-shadow,opacity] duration-[var(--dur-fast)] select-none',
         'disabled:opacity-50 [@media(pointer:coarse)]:min-h-11',

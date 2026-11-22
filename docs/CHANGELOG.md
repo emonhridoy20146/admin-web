@@ -1,6 +1,9 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+### Fixed (owner report 2026-11-22: print showed the whole page; FR-W-051)
+- **Print and "Save as PDF" now carry the data only, on every page.** Before, the sidebar and header were hidden but action buttons, search boxes, sort and filter selects, filter chips, tabs, row checkboxes and map controls were printed on most pages (only the few report pages had been cleaned by hand). One rule set in `globals.css` (`@media print`) now leaves them out everywhere; the chosen filter chip, period and open tab stay as plain text so the sheet says what it shows; form values (settings) and `link` buttons (names, references) stay; `data-print-keep` keeps an element. `Button` and `FilterChip` carry `data-ui` for this. Journey: `print.spec.ts` checks customers, collections, cash and promises print rows with no controls.
+- The print journey accepts the hyphenated font name newer Chromium writes into the PDF.
 ### Changed (owner request 2026-11-22: English by default)
 - **The panel opens in English with Western digits** for anyone who has not chosen a language yet (`ui-store` and format defaults, `<html lang>`). A language already chosen in the browser (`fos.ui`) is kept; Bangla and Bangla digits stay complete behind the language switch. The Playwright journeys assert the Bangla screens, so `playwright.config.ts` starts every test with Bangla chosen (`storageState`).
 Contract pinned: field-api `openapi.yaml` **1.33.0** (additive; types regenerated; permission catalog 59 keys).
