@@ -53,7 +53,8 @@ export function LoginPage() {
     setError(null);
     try {
       const r = await login(username, password);
-      if (r.user?.locale && r.user.locale !== useUi.getState().locale) setUi({ locale: r.user.locale });
+      // The panel keeps this browser's language (English by default, owner 2026-11-22). The server profile's `locale`
+      // is the staff app's and notifications' language and is 'bn' for everyone, so it must not switch the panel.
       router.replace(r.user?.mustChangePassword ? `/change-password/?next=${encodeURIComponent(next)}` : next);
     } catch (err) {
       setError(err);

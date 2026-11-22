@@ -1,6 +1,9 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+
+### Fixed (owner report 2026-11-22: the panel turned Bangla after sign-in)
+- Signing in no longer switches the panel to the user's server-profile `locale`. That value is the staff app's and notifications' language and is `bn` for everyone (the header language menu never writes it), so every sign-in turned the panel Bangla although English is the default. The panel now keeps this browser's choice (English unless the user picked Bangla in the header). New journey W-E15 (fresh browser, user profile `bn`: still English after sign-in).
 Contract pinned: field-api `openapi.yaml` **1.37.0** (`node scripts/sync-contract.mjs ../field-api/docs` then `pnpm gen:api`; additive, includes 1.36.0 (`events` on `/attendance/me/today`, not used here): `GET /media/purge/preview`, `POST /media/purge`, `POST /attendance/photos/delete`, `AttendanceEvent.selfieDeleted`, `MediaPurgePreview`, `MediaPurgeResult`, `cloudStorage` on `/system/health`; permission catalog 61 keys with the new `media.delete`).
 ### Added (contract 1.37.0, owner request 2026-11-22: photos in Cloudinary, delete photos; FR-W-054, FR-W-055, master FR-MED-002..004, field-api ADR-050, ADR-W23)
 - **Admin → Photo storage** (`/admin/photos`, feature `system`, `media.delete`): where photos are kept (Cloudinary, or the server's own storage when Cloudinary is not set up), the photos of previous months per month with count and size, a checkbox for deposit slips and refund proofs (off, with a warning), and **Delete all**: a confirm dialog where the admin types `DELETE <YYYY-MM>` exactly; the page then calls `POST /media/purge` until nothing remains, with a progress bar, and says how many photos (and how much space) were deleted.
