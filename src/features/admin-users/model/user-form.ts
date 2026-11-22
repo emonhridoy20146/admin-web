@@ -7,6 +7,17 @@ export const ROLES = [
   'viewer',
 ] as const satisfies readonly Role[];
 
+/** Roles that collect money and so should carry an ERP employee (the form asks for it for these). */
+export const COLLECTING_ROLES: readonly Role[] = ['field_staff', 'branch_manager'];
+
+/**
+ * Contract 1.35.0 (ADR-049): a collector with no ERP employee is still posted to the ERP, by name only (no referrer
+ * employee). The panel warns so the office links them.
+ */
+export function needsErpLink(u: Pick<User, 'role' | 'erpEmployeeId' | 'active'>): boolean {
+  return u.active !== false && COLLECTING_ROLES.includes(u.role!) && !u.erpEmployeeId;
+}
+
 export interface UserFormValues {
   nameBn: string;
   nameEn: string;

@@ -58,7 +58,8 @@ export const STATUS: Record<string, { tone: Tone; label: string }> = {
   resolved_refund: { tone: 'neutral', label: 'status.resolved_refund' },
   resolved_voided: { tone: 'neutral', label: 'status.resolved_voided' },
   voided: { tone: 'neutral', label: 'status.voided' },
-  // deposit
+  // deposit (`submitted`: 1.35.0, final and sent to the ERP; the other four are deposits from before 1.35.0)
+  submitted: { tone: 'success', label: 'status.submitted' },
   pending: { tone: 'pending', label: 'status.pending' },
   verified: { tone: 'success', label: 'status.verified' },
   rejected: { tone: 'danger', label: 'status.rejected' },

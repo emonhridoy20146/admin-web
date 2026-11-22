@@ -3,12 +3,6 @@ import type { FeatureManifest } from '@/shared/feature/types';
 import { EV } from '@/shared/feature/events';
 import bn from './i18n/bn.json';
 import en from './i18n/en.json';
-import { useDeposits } from './api/cash';
-
-/** Nav badge: deposits waiting for verification in the current branch. */
-function usePendingDepositBadge(): number | undefined {
-  return useDeposits('pending', undefined, 100).data?.items.length || undefined;
-}
 
 export const cashManifest: FeatureManifest = {
   name: 'cash',
@@ -21,11 +15,11 @@ export const cashManifest: FeatureManifest = {
       navGroup: 'field',
       icon: Banknote,
       order: 30,
-      useBadge: usePendingDepositBadge,
+      // 1.35.0 (ADR-049): deposits are final, nothing waits for the office, so the entry has no count badge
     },
   ],
-  permissions: ['cash.view', 'cash.deposit.verify', 'cash.deposit.delete', 'cash.limit.manage'],
-  events: { emits: [EV.depositDecided], listens: [EV.collectionVoided, EV.collectionResolved] },
+  permissions: ['cash.view', 'cash.limit.manage'],
+  events: { listens: [EV.collectionVoided, EV.collectionResolved] },
   commands: [
     { id: 'cash.open', title: 'cash:title', icon: Banknote, href: '/cash/', permission: 'cash.view' },
   ],

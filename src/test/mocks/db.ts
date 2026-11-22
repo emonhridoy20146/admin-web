@@ -405,25 +405,17 @@ cashPositions.slice(5, 6).forEach((p) => ((p.onHandPoisha = 4_250_000), (p.state
 staff.filter((s) => s.active).forEach((s, i) => {
   if (i % 3 !== 0) return;
   for (let d = 0; d < 3; d++) {
-    const status: S['Deposit']['status'] = d === 0 ? (i % 2 ? 'pending' : 'verified') : d === 1 && i === 6 ? 'rejected' : 'verified';
+    // contract 1.35.0: today's deposits are `submitted` (final, they list the collections they took); the older ones are
+    // deposits from before 1.35.0 that a manager verified or rejected
+    const status: S['Deposit']['status'] = d === 0 ? 'submitted' : d === 1 && i === 6 ? 'rejected' : 'verified';
     const amt = Math.round(int(1500000, 4500000) / 10000) * 10000;
     deposits.push({
       id: oid('6755'), clientId: crypto.randomUUID(), userId: s.id, userName: s.name?.en, amountPoisha: amt,
       destination: pick(['branch_cashier', 'branch_cashier', 'bank'] as const), reference: d === 0 ? `SLIP-${int(1000, 9999)}` : `BC-${int(1000, 9999)}`,
       depositedAt: isoAt(now().minus({ days: d }).startOf('day').plus({ hours: 17, minutes: int(0, 50) }).minus({ days: d === 0 && now().hour < 17 ? 0 : 0 })),
-      status, verifiedBy: status !== 'pending' ? managers[0]!.id : undefined, verifiedAt: status !== 'pending' ? isoAt(now().minus({ days: d, hours: -1 })) : undefined,
+      status, verifiedBy: status !== 'submitted' ? managers[0]!.id : undefined, verifiedAt: status !== 'submitted' ? isoAt(now().minus({ days: d, hours: -1 })) : undefined,
       rejectReason: status === 'rejected' ? 'Slip amount does not match the cash counted at the counter.' : undefined,
     });
-    if (status === 'pending') {
-      const pos = cashPositions.find((p) => p.userId === s.id);
-      if (pos) {
-        // cash stays on hand until the deposit is verified
-        pos.pendingDepositsPoisha = (pos.pendingDepositsPoisha ?? 0) + amt;
-        pos.onHandPoisha = (pos.onHandPoisha ?? 0) + amt;
-        pos.oldestUndepositedAt ??= deposits[deposits.length - 1]!.depositedAt;
-        pos.state = pos.onHandPoisha >= pos.limitPoisha! ? 'exceeded' : pos.onHandPoisha >= pos.limitPoisha! * 0.8 ? 'warning' : 'ok';
-      }
-    }
   }
 });
 deposits.forEach((d) => {
@@ -436,6 +428,27 @@ deposits.forEach((d) => {
 cashPositions.forEach((p) => {
   if (p.oldestUndepositedAt && p.oldestUndepositedAt > isoAt(now())) p.oldestUndepositedAt = isoAt(now().minus({ minutes: int(60, 180) }));
 });
+// FR-CASH-010 (1.35.0): a submitted deposit takes every collection the person held when it was made (cash and the
+// rest, each whole) since yesterday (so the demo has some before 7 am); its amount is the cash, the rest is
+// `nonCashPoisha`. No random draws here, so the seed stays put.
+const GONE = ['voided', 'resolved_voided', 'resolved_refund'];
+for (const d of deposits.filter((x) => x.status === 'submitted')) {
+  const taken = collections.filter((c) => c.collector?.id === d.userId && !c.depositId && !GONE.includes(c.status!) && c.recordedAt! >= isoAt(now().minus({ days: 1 }).startOf('day')) && c.recordedAt! < d.depositedAt!);
+  taken.forEach((c) => ((c.depositId = d.id!), (c.depositedAt = d.depositedAt!)));
+  const cash = taken.filter((c) => c.method === 'cash');
+  d.amountPoisha = cash.reduce((n, c) => n + c.amountPoisha!, 0);
+  d.nonCashPoisha = taken.reduce((n, c) => n + c.amountPoisha!, 0) - d.amountPoisha;
+  d.nonCashCount = taken.length - cash.length;
+  d.collectionCount = taken.length;
+  const pos = cashPositions.find((p) => p.userId === d.userId);
+  if (pos) {
+    pos.onHandPoisha = Math.max(0, (pos.onHandPoisha ?? 0) - d.amountPoisha);
+    pos.state = pos.onHandPoisha >= pos.limitPoisha! ? 'exceeded' : pos.onHandPoisha >= pos.limitPoisha! * 0.8 ? 'warning' : 'ok';
+    if (!pos.onHandPoisha) pos.oldestUndepositedAt = null;
+  }
+}
+// a deposit of nothing is refused by the server (NOTHING_TO_DEPOSIT), so the mock keeps none
+for (let k = deposits.length - 1; k >= 0; k--) if (deposits[k]!.status === 'submitted' && !deposits[k]!.collectionCount) deposits.splice(k, 1);
 
 // ---------- inbox ----------
 export const inbox: S['InboxItem'][] = [];
@@ -450,13 +463,15 @@ cashPositions.filter((p) => p.state === 'exceeded').forEach((p) => {
   const u = userById(p.userId)!;
   addInbox('cash.limit_exceeded', 'high', u.branchIds?.[0], 'user', u.id!, `${u.name?.bn}-এর হাতে নগদ সীমা ছাড়িয়েছে`, `${u.name?.en} is over the cash-on-hand limit`, '/cash/', int(10, 120));
 });
-deposits.filter((d) => d.status === 'pending').forEach((d) => {
-  const u = userById(d.userId)!;
-  addInbox('cash.deposit_pending', 'medium', u.branchIds?.[0], 'deposit', d.id!, `জমা যাচাই বাকি: ${u.name?.bn}`, `Deposit awaiting verification: ${u.name?.en}`, `/cash/?drawer=deposit:${d.id}`, int(30, 400));
-});
 {
   const cleared = customers.find((c) => c.item.tag?.state === 'tagged' && c.item.totalOutstandingPoisha === 0)!;
   addInbox('tag.balance_cleared', 'medium', cleared.branchId, 'customer', cleared.item.id!, `${cleared.item.name?.bn} বকেয়া পরিশোধ করেছেন — ট্যাগ পর্যালোচনা করুন`, `${cleared.item.name?.en} cleared the balance — review the tag`, `/customers/${cleared.item.id}/`, 240);
+}
+// a reminder raised before 1.35.0 for a deposit that nobody verified; the server raises none any more (ADR-049)
+{
+  const old = deposits.find((d) => d.status === 'verified')!;
+  const u = userById(old.userId)!;
+  addInbox('cash.deposit.pending', 'medium', u.branchIds?.[0], 'deposit', old.id!, 'জমা ২৪ ঘণ্টার বেশি যাচাই হয়নি', 'Deposit unverified for more than 24 hours', '/cash/deposits?status=pending', 1500);
 }
 collections.filter((c) => c.flags?.includes('mock_location')).slice(0, 2).forEach((c) => addInbox('fraud.mock_location', 'high', collectionBranch(c), 'collection', c.id!, `মক লোকেশন সন্দেহ: ${userById(c.collector?.id)?.name?.bn}`, `Mock location suspected: ${c.collector?.name}`, `/collections/?drawer=collection:${c.id}`, int(40, 500)));
 addInbox('device.pending_approval', 'medium', branches[1]!.id, 'device', 'dev-1', `${staff[14]!.name?.bn} নতুন ফোন থেকে লগইন করতে চান`, `${staff[14]!.name?.en} wants to sign in from a new phone`, '/admin/devices/', 95);

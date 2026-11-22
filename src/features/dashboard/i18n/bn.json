@@ -11,7 +11,7 @@
   "receipts": "{{n}}টি রসিদ",
   "cashOnHand": "কর্মীদের হাতে নগদ",
   "overLimit": "{{n}} জন সীমা ছাড়িয়েছেন",
-  "pendingDeposits": "{{n}}টি জমা যাচাই বাকি",
+  "cashOnHandSub": "এখনো জমা হয়নি",
   "overdue": "বকেয়া গ্রাহক",
   "overdueAmount": "বকেয়া {{amount}}",
   "conflicts": "কনফ্লিক্ট ও ব্যর্থতা",

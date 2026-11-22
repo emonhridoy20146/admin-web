@@ -10,7 +10,7 @@ type Status = 'open' | 'snoozed' | 'resolved';
 
 export function useInbox(status: Status, limit = 50) {
   const branchId = useBranchId();
-  useInvalidateOn([EV.collectionResolved, EV.depositDecided, EV.customerTagged], [['inbox']]);
+  useInvalidateOn([EV.collectionResolved, EV.customerTagged], [['inbox']]);
   return useQuery({
     queryKey: ['inbox', 'list', { branchId, status, limit }],
     queryFn: () => unwrap(api.GET('/inbox', { params: { query: { branchId, status, limit } } })),

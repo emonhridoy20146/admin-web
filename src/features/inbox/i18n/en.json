@@ -15,11 +15,13 @@
   "snoozedToast": "Snoozed until tomorrow",
   "resolvedToast": "Marked resolved",
   "ago": "{{t}}",
+  "retired": {
+    "deposit": "Old deposit reminder: deposits need no check any more"
+  },
   "types": {
     "collection.conflict": "Collection conflict",
     "collection.posting_failed": "ERP posting failed",
     "cash.limit_exceeded": "Cash over limit",
-    "cash.deposit_pending": "Deposit to verify",
     "tag.balance_cleared": "Tag review",
     "fraud.mock_location": "Mock location",
     "device.pending_approval": "New device",
@@ -30,7 +32,6 @@
     "collection.conflict": "Resolve",
     "collection.posting_failed": "Review",
     "cash.limit_exceeded": "View cash",
-    "cash.deposit_pending": "Verify",
     "tag.balance_cleared": "Review tag",
     "fraud.mock_location": "Investigate",
     "device.pending_approval": "Approve",

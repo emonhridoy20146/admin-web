@@ -1,4 +1,4 @@
-import type { CashPosition, Deposit } from '../api/cash';
+import type { CashPosition, Deposit, DepositLine } from '../api/cash';
 
 const STATE_RANK: Record<string, number> = { exceeded: 0, warning: 1, ok: 2 };
 
@@ -26,7 +26,6 @@ export interface CashSummary {
   holders: number;
   exceeded: number;
   warning: number;
-  pendingDepositsPoisha: number;
   oldest: string | null;
 }
 
@@ -38,12 +37,11 @@ export function summarize(list: CashPosition[]): CashSummary {
       if ((p.onHandPoisha ?? 0) > 0) acc.holders++;
       if (p.state === 'exceeded') acc.exceeded++;
       if (p.state === 'warning') acc.warning++;
-      acc.pendingDepositsPoisha += p.pendingDepositsPoisha ?? 0;
       if (p.oldestUndepositedAt && (!oldest || p.oldestUndepositedAt < oldest))
         oldest = p.oldestUndepositedAt;
       return acc;
     },
-    { onHandPoisha: 0, holders: 0, exceeded: 0, warning: 0, pendingDepositsPoisha: 0, oldest: null },
+    { onHandPoisha: 0, holders: 0, exceeded: 0, warning: 0, oldest: null },
   );
   s.oldest = oldest;
   return s;
@@ -55,4 +53,67 @@ export function depositUserName(
   positions: CashPosition[] | undefined,
 ): string | undefined {
   return d.userName || positions?.find((p) => p.userId === d.userId)?.userName;
+}
+
+/** FR-CASH-010 (1.35.0): a deposit made from 1.35.0 on is `submitted`, final, and lists every collection it handed in. */
+export function isFinalDeposit(d: Pick<Deposit, 'status'> | undefined): boolean {
+  return d?.status === 'submitted';
+}
+
+export interface DepositsTotal {
+  count: number;
+  cashPoisha: number;
+  nonCashPoisha: number;
+  collections: number;
+}
+
+/** Deposits made on or after `sinceIso` (field-system money handed in, not an ERP balance). */
+export function depositsSince(list: Deposit[], sinceIso: string): DepositsTotal {
+  return list
+    .filter((d) => isFinalDeposit(d) && (d.depositedAt ?? '') >= sinceIso)
+    .reduce<DepositsTotal>(
+      (acc, d) => ({
+        count: acc.count + 1,
+        cashPoisha: acc.cashPoisha + (d.amountPoisha ?? 0),
+        nonCashPoisha: acc.nonCashPoisha + (d.nonCashPoisha ?? 0),
+        collections: acc.collections + (d.collectionCount ?? 0),
+      }),
+      { count: 0, cashPoisha: 0, nonCashPoisha: 0, collections: 0 },
+    );
+}
+
+/** Where a deposited collection stands with the ERP: in it, on its way, needs the office, or no longer counts. */
+export type ErpStage = 'posted' | 'onTheWay' | 'problem' | 'voided';
+
+export function erpStage(status: DepositLine['status']): ErpStage {
+  switch (status) {
+    case 'posted':
+    case 'resolved_posted':
+      return 'posted';
+    case 'conflict':
+    case 'posting_failed':
+      return 'problem';
+    case 'voided':
+    case 'resolved_voided':
+    case 'resolved_refund':
+      return 'voided';
+    default:
+      return 'onTheWay';
+  }
+}
+
+export type ErpSplit = Record<ErpStage, { poisha: number; count: number }>;
+
+/**
+ * CLAUDE.md §2.6: the money a deposit handed in, split by ERP state, so the panel never shows field money as if it were
+ * in the ERP. Each line is a whole collection (1.35.0).
+ */
+export function erpSplit(items: Pick<DepositLine, 'status' | 'amountPoisha'>[]): ErpSplit {
+  const out: ErpSplit = { posted: { poisha: 0, count: 0 }, onTheWay: { poisha: 0, count: 0 }, problem: { poisha: 0, count: 0 }, voided: { poisha: 0, count: 0 } };
+  for (const i of items) {
+    const s = out[erpStage(i.status)];
+    s.poisha += i.amountPoisha;
+    s.count++;
+  }
+  return out;
 }

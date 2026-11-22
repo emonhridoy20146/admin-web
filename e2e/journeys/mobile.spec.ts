@@ -13,7 +13,8 @@ async function openMenuAndGo(page: import('@playwright/test').Page, name: string
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
 }
 
-test('W-E13 at 390 px: inbox → resolve a conflict → verify a deposit, with ≥ 44 px targets', async ({ page }) => {
+// 1.35.0 (ADR-049): deposits are final, so the journey ends by reading a deposit instead of verifying one.
+test('W-E13 at 390 px: inbox → resolve a conflict → read a deposit, with ≥ 44 px targets', async ({ page }) => {
   await login(page);
   await openMenuAndGo(page, inboxBn.title);
 
@@ -25,11 +26,20 @@ test('W-E13 at 390 px: inbox → resolve a conflict → verify a deposit, with �
   await expect(page.getByText(colBn.resolved).first()).toBeVisible();
 
   await openMenuAndGo(page, cashBn.title);
-  const verify = page.locator('#deposits ul > li').first().getByRole('button', { name: cashBn.verify, exact: true });
-  expect((await verify.boundingBox())!.height).toBeGreaterThanOrEqual(40);
-  await verify.click();
-  await page.getByRole('dialog').getByRole('button', { name: /যাচাই করুন/ }).click();
-  await expect(page.getByText(cashBn.verified).first()).toBeVisible();
+  const tab = page.getByRole('group', { name: cashBn.deposits }).getByRole('button', { name: cashBn.depositTab.all, exact: true });
+  expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  // below 640 px a deposit is a card in a list; no verify or reject anywhere
+  const card = page.locator('#deposits ul[aria-label] > li').first();
+  await expect(card).toContainText('৳');
+  await expect(page.locator('#deposits').getByRole('button', { name: /যাচাই|প্রত্যাখ্যান/ })).toHaveCount(0);
+  expect((await card.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await card.click();
+  const drawer = page.getByRole('dialog');
+  await expect(drawer.getByTestId('deposit-head')).toBeVisible();
+  await expect(drawer.getByTestId('cash-line').first()).toBeVisible();
+  const wide = await drawer.evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(wide).toBeLessThanOrEqual(0);
+  await page.keyboard.press('Escape');
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);

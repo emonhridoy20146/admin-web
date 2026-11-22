@@ -15,11 +15,13 @@
   "snoozedToast": "আগামীকাল পর্যন্ত স্থগিত",
   "resolvedToast": "সমাধান চিহ্নিত হয়েছে",
   "ago": "{{t}}",
+  "retired": {
+    "deposit": "পুরনো জমার রিমাইন্ডার: জমা এখন আর যাচাই লাগে না"
+  },
   "types": {
     "collection.conflict": "আদায় কনফ্লিক্ট",
     "collection.posting_failed": "ERP পোস্টিং ব্যর্থ",
     "cash.limit_exceeded": "নগদ সীমা ছাড়িয়েছে",
-    "cash.deposit_pending": "জমা যাচাই",
     "tag.balance_cleared": "ট্যাগ পর্যালোচনা",
     "fraud.mock_location": "নকল লোকেশন",
     "device.pending_approval": "নতুন ডিভাইস",
@@ -30,7 +32,6 @@
     "collection.conflict": "সমাধান",
     "collection.posting_failed": "পর্যালোচনা",
     "cash.limit_exceeded": "নগদ দেখুন",
-    "cash.deposit_pending": "যাচাই",
     "tag.balance_cleared": "ট্যাগ দেখুন",
     "fraud.mock_location": "তদন্ত",
     "device.pending_approval": "অনুমোদন",

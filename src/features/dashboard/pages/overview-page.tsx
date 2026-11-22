@@ -81,7 +81,7 @@ export function OverviewPage() {
           icon={Banknote}
           href="/cash/"
           value={<MoneyText poisha={d?.cash?.onHandPoisha ?? 0} />}
-          sub={t('pendingDeposits', { n: formatNumber(d?.cash?.pendingDeposits ?? 0) })}
+          sub={t('cashOnHandSub')}
           tone={(d?.cash?.overLimitStaff ?? 0) > 0 ? 'attention' : 'default'}
           footer={(d?.cash?.overLimitStaff ?? 0) > 0 ? <span className="font-medium text-danger">{t('overLimit', { n: formatNumber(d?.cash?.overLimitStaff ?? 0) })}</span> : undefined}
         />

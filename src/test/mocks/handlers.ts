@@ -1251,7 +1251,8 @@ export const handlers = [
     const pos = db.cashPositions.find((p) => p.userId === params.id);
     const u = db.userById(String(params.id));
     if (!pos || !u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '') || (ctx.user.role === 'field_staff' && ctx.user.id !== u.id)) return problem(404, 'NOT_FOUND', 'User not found');
-    const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? 1 : -1));
+    // 1.35.0: a collection a deposit took (`depositId`) is out of hand
+    const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !c.depositId && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? 1 : -1));
     let left = pos.onHandPoisha ?? 0;
     const items: S['CashInHandItem'][] = [];
     for (const c of cash) {
@@ -1267,8 +1268,14 @@ export const handlers = [
     const dep = db.deposits.find((d) => d.id === params.id);
     const u = dep ? db.userById(dep.userId!) : undefined;
     if (!dep || !u || !scope(ctx, url).includes(u.branchIds?.[0] ?? '') || (ctx.user.role === 'field_staff' && ctx.user.id !== u.id)) return problem(404, 'NOT_FOUND', 'Deposit not found');
-    const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? -1 : 1));
-    const order = db.deposits.filter((d) => d.userId === u.id && d.status !== 'rejected' && d.status !== 'deleted').sort((a, b) => (a.depositedAt! < b.depositedAt! ? -1 : 1));
+    // FR-CASH-010 (1.35.0): a submitted deposit lists every collection it took, whole, with method and ERP state
+    if (dep.status === 'submitted') {
+      const taken = db.collections.filter((c) => c.depositId === dep.id).sort((a, b) => (a.recordedAt! < b.recordedAt! ? -1 : 1));
+      const lines = taken.map((c) => ({ ...mockCashLine(c), coveredPoisha: c.amountPoisha!, method: c.method!, erpReceiptNo: c.erpReceiptNo ?? null }));
+      return HttpResponse.json({ deposit: { ...dep, userName: u.name?.en ?? '' }, coveredPoisha: taken.filter((c) => c.method === 'cash').reduce((n, c) => n + c.amountPoisha!, 0), unmatchedPoisha: 0, items: lines, generatedAt: new Date().toISOString() } satisfies S['DepositCoverage']);
+    }
+    const cash = db.collections.filter((c) => c.collector?.id === u.id && c.method === 'cash' && !c.depositId && !['voided', 'resolved_voided', 'resolved_refund'].includes(c.status!)).sort((a, b) => (a.recordedAt! < b.recordedAt! ? -1 : 1));
+    const order = db.deposits.filter((d) => d.userId === u.id && (d.status === 'pending' || d.status === 'verified')).sort((a, b) => (a.depositedAt! < b.depositedAt! ? -1 : 1));
     let skip = order.slice(0, order.findIndex((d) => d.id === dep.id)).reduce((n, d) => n + (d.amountPoisha ?? 0), 0);
     let left = dep.status === 'rejected' || dep.status === 'deleted' ? 0 : (dep.amountPoisha ?? 0);
     const items: S['DepositCoverage']['items'] = [];
@@ -1295,64 +1302,14 @@ export const handlers = [
     const p = page(all, url);
     return HttpResponse.json({ items: p.items, nextCursor: p.nextCursor });
   })),
-  http.post(`${BASE}/cash/deposits/:id/verify`, authed(({ params, ctx }) => {
-    const deny = need(ctx, 'cash.deposit.verify');
-    if (deny) return deny;
-    const d = db.deposits.find((x) => x.id === params.id);
-    if (!d) return problem(404, 'NOT_FOUND', 'Deposit not found');
-    if (d.status !== 'pending') return problem(409, 'ALREADY_DECIDED', 'Deposit already decided');
-    d.status = 'verified';
-    d.verifiedBy = ctx.user.id;
-    d.verifiedAt = new Date().toISOString();
-    const pos = db.cashPositions.find((p) => p.userId === d.userId);
-    if (pos) {
-      pos.pendingDepositsPoisha = Math.max(0, (pos.pendingDepositsPoisha ?? 0) - d.amountPoisha!);
-      pos.onHandPoisha = Math.max(0, (pos.onHandPoisha ?? 0) - d.amountPoisha!);
-      pos.state = pos.onHandPoisha >= pos.limitPoisha! ? 'exceeded' : pos.onHandPoisha >= pos.limitPoisha! * 0.8 ? 'warning' : 'ok';
-    }
-    db.inbox.filter((i) => i.entityId === d.id).forEach((i) => (i.status = 'resolved'));
-    db.addAudit({ actor: actor(ctx.user), action: 'deposit.verify', entity: 'deposit', entityId: d.id, before: { status: 'pending' }, after: { status: 'verified', amountPoisha: d.amountPoisha }, reason: '' });
-    return HttpResponse.json({});
-  })),
-  // FR-CASH-009 (1.32.0): an admin deletes a pending or verified deposit; the row stays as `deleted`, the money is back on hand
-  http.post(`${BASE}/cash/deposits/:id/delete`, authed(async ({ request, params, ctx }) => {
-    const deny = need(ctx, 'cash.deposit.delete');
-    if (deny) return deny;
-    const d = db.deposits.find((x) => x.id === params.id);
-    if (!d) return problem(404, 'NOT_FOUND', 'Deposit not found');
-    if (d.status !== 'pending' && d.status !== 'verified') return problem(409, 'INVALID_STATE', 'Deposit cannot be deleted', 'NOT_DELETABLE');
-    const b = (await request.json()) as { reason: string };
-    const was = d.status;
-    d.status = 'deleted';
-    d.deletedBy = ctx.user.id;
-    d.deletedAt = new Date().toISOString();
-    d.deleteReason = b.reason;
-    const pos = db.cashPositions.find((p) => p.userId === d.userId);
-    if (pos) {
-      if (was === 'pending') pos.pendingDepositsPoisha = Math.max(0, (pos.pendingDepositsPoisha ?? 0) - d.amountPoisha!);
-      else pos.onHandPoisha = (pos.onHandPoisha ?? 0) + d.amountPoisha!;
-      pos.state = pos.onHandPoisha! >= pos.limitPoisha! ? 'exceeded' : pos.onHandPoisha! >= pos.limitPoisha! * 0.8 ? 'warning' : 'ok';
-    }
-    db.inbox.filter((i) => i.entityId === d.id).forEach((i) => (i.status = 'resolved'));
-    db.addAudit({ actor: actor(ctx.user), action: 'cash.deposit.deleted', entity: 'deposit', entityId: d.id, before: { status: was, amountPoisha: d.amountPoisha }, after: { status: 'deleted' }, reason: b.reason });
-    return HttpResponse.json(d);
-  })),
-  http.post(`${BASE}/cash/deposits/:id/reject`, authed(async ({ request, params, ctx }) => {
-    const deny = need(ctx, 'cash.deposit.verify');
-    if (deny) return deny;
-    const d = db.deposits.find((x) => x.id === params.id)!;
-    if (d.status !== 'pending') return problem(409, 'ALREADY_DECIDED', 'Deposit already decided');
-    const b = (await request.json()) as { reason: string };
-    d.status = 'rejected';
-    d.rejectReason = b.reason;
-    d.verifiedBy = ctx.user.id;
-    d.verifiedAt = new Date().toISOString();
-    const pos = db.cashPositions.find((p) => p.userId === d.userId);
-    if (pos) pos.pendingDepositsPoisha = Math.max(0, (pos.pendingDepositsPoisha ?? 0) - d.amountPoisha!);
-    db.inbox.filter((i) => i.entityId === d.id).forEach((i) => (i.status = 'resolved'));
-    db.addAudit({ actor: actor(ctx.user), action: 'deposit.reject', entity: 'deposit', entityId: d.id, before: { status: 'pending' }, after: { status: 'rejected' }, reason: b.reason });
-    return HttpResponse.json({});
-  })),
+  // 1.35.0 (ADR-049): a deposit is final; verify, reject and delete answer 409 INVALID_STATE DEPOSIT_FINAL (404 out of scope)
+  ...(['verify', 'reject', 'delete'] as const).map((action) =>
+    http.post(`${BASE}/cash/deposits/:id/${action}`, authed(({ params, ctx, url }) => {
+      const d = db.deposits.find((x) => x.id === params.id);
+      if (!d || !scope(ctx, url).includes(db.userById(d.userId)?.branchIds?.[0] ?? '')) return problem(404, 'NOT_FOUND', 'Deposit not found');
+      return problem(409, 'INVALID_STATE', 'A deposit is final', 'DEPOSIT_FINAL', { reason: 'DEPOSIT_FINAL' });
+    })),
+  ),
 
   // ---------- inbox / dashboard / search ----------
   http.get(`${BASE}/inbox`, authed(({ ctx, url }) => {

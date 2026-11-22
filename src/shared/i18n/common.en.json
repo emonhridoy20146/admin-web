@@ -57,6 +57,7 @@
     "verified": "Verified",
     "rejected": "Rejected",
     "deleted": "Deleted",
+    "submitted": "Deposited",
     "cash_ok": "Within limit",
     "cash_warning": "Near limit",
     "cash_exceeded": "Over limit",

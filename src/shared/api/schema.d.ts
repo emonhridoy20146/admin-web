@@ -1114,6 +1114,7 @@ export interface paths {
         };
         get: operations["listDeposits"];
         put?: never;
+        /** @description cash.deposit.record. 1.35.0 (FR-CASH-010, ADR-049): hands in everything the caller holds at once: all the cash in hand (amountPoisha must equal it) and every mobile banking, bank or card collection not handed in yet. The deposit is `submitted` and final: each collection it took gets `depositId`, is posted to the ERP (now, or when ERP posting is switched on) and can no longer be edited or withdrawn. No office step. Before 1.35.0 a collection was posted when it was recorded; now it waits for its deposit. */
         post: operations["createDeposit"];
         delete?: never;
         options?: never;
@@ -1130,6 +1131,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Retired in 1.35.0 (ADR-049): a deposit is final. Answers 409 INVALID_STATE reason DEPOSIT_FINAL for every deposit (404 out of scope). Kept because /api/v1 is additive-only. */
         post: operations["verifyDeposit"];
         delete?: never;
         options?: never;
@@ -1146,7 +1148,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description cash.deposit.delete (1.32.0, FR-CASH-009; super admin, branch manager). Deletes a deposit that is `pending` or `verified` (a verified one gives its money back to the person's cash in hand). The row is kept with status `deleted`, `deletedBy`, `deletedAt`, `deleteReason`; it no longer counts anywhere. The depositor is notified (type `cash.deposit.deleted`) and the sync entity `deposit` carries the new status. Audited (`cash.deposit.deleted`). 409 INVALID_STATE reason: NOT_DELETABLE (already rejected or deleted). */
+        /** @description Retired in 1.35.0 (ADR-049): a deposit is final; answers 409 INVALID_STATE reason DEPOSIT_FINAL (404 out of scope). Before 1.35.0: cash.deposit.delete (1.32.0, FR-CASH-009; super admin, branch manager). Deleted a deposit that is `pending` or `verified` (a verified one gives its money back to the person's cash in hand). The row is kept with status `deleted`, `deletedBy`, `deletedAt`, `deleteReason`; it no longer counts anywhere. The depositor is notified (type `cash.deposit.deleted`) and the sync entity `deposit` carries the new status. Audited (`cash.deposit.deleted`). 409 INVALID_STATE reason: NOT_DELETABLE (already rejected or deleted). */
         post: operations["deleteDeposit"];
         delete?: never;
         options?: never;
@@ -1163,6 +1165,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Retired in 1.35.0 (ADR-049): a deposit is final. Answers 409 INVALID_STATE reason DEPOSIT_FINAL for every deposit (404 out of scope). Kept because /api/v1 is additive-only. */
         post: operations["rejectDeposit"];
         delete?: never;
         options?: never;
@@ -3413,6 +3416,13 @@ export interface components {
             };
             flags?: ("far_from_pin" | "mock_location" | "clock_skew" | "late_sync" | "duplicate_txn_ref" | "not_in_scope_at_record_time" | "no_location")[];
             distanceToPinM?: number | null;
+            /** @description 1.35.0 (FR-CASH-010): the deposit that handed it in. Until then the collection is in the collector's hand, is not in the ERP and may be edited or withdrawn; from then on it goes to the ERP and cannot be changed. */
+            depositId?: string | null;
+            /**
+             * Format: date-time
+             * @description 1.35.0
+             */
+            depositedAt?: string | null;
             cashOnHand?: components["schemas"]["CashPosition"];
         };
         CashPosition: {
@@ -3472,7 +3482,7 @@ export interface components {
             status: "open" | "kept" | "partially_kept" | "broken";
             onTime: boolean;
         };
-        /** @description 1.30.0 (FR-CASH-008). Which cash collections a deposit covered, oldest first; the first and the last may be covered only in part (`coveredPoisha` < `amountPoisha`). `unmatchedPoisha` is deposit money with no collection behind it (a collection voided after the deposit). Field-system cash, not an ERP balance. */
+        /** @description 1.30.0 (FR-CASH-008). 1.35.0: a `submitted` deposit lists every collection it handed in (cash and the rest, each whole, with `method`, `status` and `erpReceiptNo`). A deposit from before 1.35.0: which cash collections it covered, oldest first; the first and the last may be covered only in part (`coveredPoisha` < `amountPoisha`). `unmatchedPoisha` is deposit money with no collection behind it (a collection voided after the deposit). Field-system cash, not an ERP balance. */
         DepositCoverage: {
             deposit: components["schemas"]["Deposit"];
             coveredPoisha: number;
@@ -3480,6 +3490,9 @@ export interface components {
             items: (components["schemas"]["CashInHandItem"] & {
                 /** @description The part of this collection this deposit covered */
                 coveredPoisha: number;
+                method?: components["schemas"]["PaymentMethod"];
+                /** @description 1.35.0: the ERP payment number once posted */
+                erpReceiptNo?: string | null;
             })[];
             /** Format: date-time */
             generatedAt: string;
@@ -3487,6 +3500,7 @@ export interface components {
         DepositCreate: {
             /** Format: uuid */
             clientId: string;
+            /** @description 1.35.0 (FR-CASH-010): must equal all the cash in hand (422 BUSINESS_RULE DEPOSIT_MUST_BE_ALL / DEPOSIT_EXCEEDS_ON_HAND, details.onHandPoisha); 0 when only mobile banking, bank or card collections are handed in (nothing at all: NOTHING_TO_DEPOSIT). Before 1.35.0 minimum 1 and any part of it. */
             amountPoisha: number;
             /** @enum {string} */
             destination: "branch_cashier" | "bank" | "manager";
@@ -3502,10 +3516,16 @@ export interface components {
             /** @description Depositor display name (1.3.0) */
             userName?: string;
             /**
-             * @description `deleted` added in 1.32.0: an admin deleted the deposit; it counts nowhere
+             * @description `submitted` (1.35.0, FR-CASH-010): every deposit made from 1.35.0 on; final, the collections it took go to the ERP, nobody verifies, rejects or deletes it. `pending`, `verified`, `rejected`, `deleted` (1.32.0) are deposits from before 1.35.0.
              * @enum {string}
              */
-            status?: "pending" | "verified" | "rejected" | "deleted";
+            status?: "pending" | "verified" | "rejected" | "deleted" | "submitted";
+            /** @description 1.35.0: collections it handed in (cash and the rest); absent on deposits from before 1.35.0 */
+            collectionCount?: number;
+            /** @description 1.35.0: mobile banking, bank and card money it handed in (not part of amountPoisha) */
+            nonCashPoisha?: number;
+            /** @description 1.35.0 */
+            nonCashCount?: number;
             verifiedBy?: string;
             verifiedAt?: string;
             rejectReason?: string;
@@ -6847,7 +6867,7 @@ export interface operations {
         parameters: {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
-                status?: "pending" | "verified" | "rejected" | "deleted";
+                status?: "pending" | "verified" | "rejected" | "deleted" | "submitted";
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };

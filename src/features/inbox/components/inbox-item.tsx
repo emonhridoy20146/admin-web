@@ -15,13 +15,18 @@ const ICON: Record<string, LucideIcon> = {
   'collection.conflict': GitMerge,
   'collection.posting_failed': CloudOff,
   'cash.limit_exceeded': Banknote,
-  'cash.deposit_pending': Banknote,
   'tag.balance_cleared': Flag,
   'fraud.mock_location': ShieldAlert,
   'device.pending_approval': Smartphone,
   'location.proposal': MapPin,
   'promise.broken': Handshake,
 };
+/**
+ * 1.35.0 (ADR-049): deposits are final, so the server raises no "deposit to verify" reminder any more. One raised
+ * before the upgrade may still be open: it is shown as retired, without a link to an action that no longer exists,
+ * so the office can mark it resolved.
+ */
+export const RETIRED_TYPES: ReadonlySet<string> = new Set(['cash.deposit.pending', 'cash.deposit_pending']);
 const RAIL: Record<string, string> = { critical: 'bg-danger', high: 'bg-st-overdue', medium: 'bg-warning', low: 'bg-fg-disabled' };
 
 export function InboxRow({ item, compact, onSnooze, onResolve }: { item: InboxItem; compact?: boolean; onSnooze?: () => void; onResolve?: () => void }) {
@@ -30,7 +35,9 @@ export function InboxRow({ item, compact, onSnooze, onResolve }: { item: InboxIt
   const locale = useUi((s) => s.locale);
   const Icon = ICON[item.type ?? ''] ?? AlarmClock;
   const sev = STATUS[item.severity ?? 'low']!;
+  const retired = RETIRED_TYPES.has(item.type ?? '');
   const actionLabel = t(`action.${item.type}`, { defaultValue: t('action.default') });
+  const typeLabel = retired ? t('retired.deposit') : t(`types.${item.type}`, { defaultValue: item.type });
   return (
     <li className={cn('group relative flex items-start gap-3 py-3 ps-5 pe-3 sm:items-center sm:pe-4', !compact && 'hover:bg-surface-hover')}>
       <span className={cn('absolute inset-y-2 start-1.5 w-[3px] rounded-full', RAIL[item.severity ?? 'low'])} aria-hidden />
@@ -39,7 +46,7 @@ export function InboxRow({ item, compact, onSnooze, onResolve }: { item: InboxIt
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-sm font-medium text-fg-secondary">{t(`types.${item.type}`, { defaultValue: item.type })}</span>
+          <span className="text-sm font-medium text-fg-secondary">{typeLabel}</span>
           {!compact && <Badge tone={sev.tone}>{tc(sev.label)}</Badge>}
           <span className="text-xs text-fg-tertiary">{formatRelative(item.createdAt!)}</span>
         </div>
@@ -60,7 +67,7 @@ export function InboxRow({ item, compact, onSnooze, onResolve }: { item: InboxIt
             </Button>
           </Tooltip>
         )}
-        {item.link && (
+        {item.link && !retired && (
           <Link
             href={item.link}
             className={cn(

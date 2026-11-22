@@ -54,7 +54,7 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 ### 2.3 Colour — semantic & status
 | Token | Fg (light) | Bg (light) | Fg (dark) | Bg (dark) | Icon | Meaning |
 |---|---|---|---|---|---|---|
-| `success` | `#166534` | `#E8F6EC` | `#4ADE80` | `#0F2A1A` | check-circle | done, posted, verified |
+| `success` | `#166534` | `#E8F6EC` | `#4ADE80` | `#0F2A1A` | check-circle | done, posted, verified, deposited |
 | `warning` | `#92400E` | `#FEF3C7` | `#FBBF24` | `#2E2208` | alert-triangle | attention soon |
 | `danger` | `#B91C1C` | `#FDECEC` | `#F87171` | `#2D1212` | x-octagon | error, destructive |
 | `info` | `#0369A1` | `#E6F4FB` | `#38BDF8` | `#0B2230` | info | neutral info |
@@ -168,13 +168,13 @@ Items hidden when the user lacks the permission or the module flag is off.
 | Page | Route | Primary content | Default sort | Primary action |
 |---|---|---|---|---|
 | Overview | `/` | KPIs (collected vs target, visits, attendance, cash on hand, conflicts, overdue), 7-day trend, staff leaderboard table, inbox preview, ERP status | — | — |
-| Inbox | `/inbox` | Grouped by severity; each item one-line summary + action buttons inline (Resolve conflict, Verify deposit, Approve pin…) | severity, age | Resolve |
+| Inbox | `/inbox` | Grouped by severity; each item one-line summary + action buttons inline (Resolve conflict, Approve pin…) | severity, age | Resolve |
 | Customers | `/customers` | Table: name/code, phone, area, assignee, outstanding, days overdue, next due, badges, last visit, open promise | daysOverdue desc | Assign |
 | Customer detail | `/customers/[id]` | Header (name bn/en, code, phone, address, status badges, tag control); tabs: Overview (plans cards + schedule table), Payments (ERP + field, distinguished), Timeline, Notes, Visits (photos grid), Promises, Location (pin, proposals), Tag history | — | Tag / Assign |
 | Map | `/map` | Full-bleed Leaflet map, left panel filters + list synced with viewport, pin popups | — | Draw area → Assign |
 | Collections | `/collections` | Table with totals bar by method; status chips; flags column | recordedAt desc | Export |
 | Conflicts | `/collections/conflicts` | Card list with ERP response, customer context, resolution form | age | Resolve |
-| Cash & deposits | `/cash` | Positions table (on-hand bar vs limit, oldest cash age), deposits queue with slip preview | over-limit first | Verify |
+| Cash & deposits | `/cash` | Positions table (on-hand bar vs limit, oldest cash age), deposits list (final, read-only from 1.35.0) whose drawer shows each collection with its ERP state | over-limit first | — |
 | Promises | `/promises` | Calendar strip (today ± 7) + table; kept/broken rate | promisedDate | — |
 | Visits | `/visits` | Table + photo lightbox; outcome distribution | checkInAt desc | — |
 | Staff | `/staff` | Cards/table: photo, role, branch, today status (on duty, break, off), today collected, cash on hand, device, last sync | status | Add staff |
@@ -266,7 +266,7 @@ Toast bottom-right, 4 s, max 3; success/info only. Errors that need action are b
 | `2xl` | ≥ 1536 | Split views (list + map, list + detail) |
 - Each table column declares `priority` 1–5; columns with priority > n are hidden at each breakpoint and accessible via row expansion.
 - Touch targets ≥ 44 px on coarse pointers.
-- Manager phone-browser critical tasks (must be excellent at 360 px): Inbox, resolve conflict, verify deposit, approve handover/device/pin, live map, staff today.
+- Manager phone-browser critical tasks (must be excellent at 360 px): Inbox, resolve conflict, read a deposit, approve handover/device/pin, live map, staff today.
 
 ## 7. Accessibility
 WCAG 2.2 AA: contrast per tokens; keyboard: every action reachable, visible focus, `/` focuses search, `⌘K` command palette, `g i` inbox, `g c` customers; Radix provides ARIA patterns; tables use proper `<th scope>`; charts have table alternative; `lang="bn"` set on Bangla content for screen readers and font shaping; never rely on hover only (touch).

@@ -7,7 +7,7 @@ import { formatDate, formatDateTime, pickText } from '@/shared/lib/format';
 import { MoneyText } from '@/shared/ui/money';
 import { Badge, StatusBadge } from '@/shared/ui/badge';
 import type { Tone } from '@/shared/ui/status';
-import type { CashLine } from '../api/cash';
+import type { CashLine, DepositLine } from '../api/cash';
 
 const PROMISE_TONE: Record<NonNullable<CashLine['promise']>['status'], Tone> = { open: 'promised', kept: 'paid', partially_kept: 'dueToday', broken: 'danger' };
 
@@ -15,9 +15,12 @@ const PROMISE_TONE: Record<NonNullable<CashLine['promise']>['status'], Tone> = {
  * FR-W-044 / FR-W-048 (master FR-CASH-007/008): one cash collection as a line: customer (link), invoice, receipt,
  * time, status, the money this view is about (`shown`: in hand, or covered by a deposit) against the whole amount,
  * and the promise the money was collected against, if any. Field-system cash, not an ERP balance.
+ * FR-W-053 (FR-CASH-010, 1.35.0): with `erp`, a line of a final deposit also says the payment method and where it
+ * stands with the ERP (its ERP receipt number once posted, else that it is not in the ERP yet).
  */
-export function CashLines({ items, label, shown, partLabel }: { items: CashLine[]; label: string; shown: (c: CashLine) => number; partLabel: string }) {
+export function CashLines({ items, label, shown, partLabel, erp }: { items: (CashLine | DepositLine)[]; label: string; shown: (c: CashLine) => number; partLabel: string; erp?: boolean }) {
   const { t } = useTranslation('cash');
+  const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   return (
@@ -48,8 +51,22 @@ export function CashLines({ items, label, shown, partLabel }: { items: CashLine[
               <span>
                 <span className="font-mono">{c.receiptNo}</span> · <span className="tabular">{formatDateTime(c.recordedAt)}</span>
               </span>
-              <StatusBadge status={c.status} />
+              <span className="inline-flex flex-wrap items-center gap-1.5">
+                {erp && 'method' in c && c.method && <Badge tone="neutral" icon={false}>{tc(`method.${c.method}`)}</Badge>}
+                <StatusBadge status={c.status} />
+              </span>
             </div>
+            {erp && (
+              <p className="mt-1.5 text-xs text-fg-secondary" data-testid="cash-line-erp">
+                {'erpReceiptNo' in c && c.erpReceiptNo ? (
+                  <>
+                    {t('erpLine.receipt')} <span className="font-mono">{c.erpReceiptNo}</span>
+                  </>
+                ) : (
+                  <span className="text-st-pending">{t('erpLine.notYet')}</span>
+                )}
+              </p>
+            )}
             <PromiseLine promise={c.promise} />
           </li>
         );
