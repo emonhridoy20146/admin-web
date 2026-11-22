@@ -1,6 +1,10 @@
 # Changelog — admin-web
 
 ## [Unreleased]
+Contract pinned: field-api `openapi.yaml` **1.34.0** (additive; types regenerated; permission catalog 60 keys).
+### Added (contract 1.34.0, owner request 2026-11-22: the office ends a co-work; FR-W-052, master FR-CW-006)
+- **Co-work: "End co-work"** in the drawer of an ongoing session for `cowork.manage` (super admin, branch manager): reason code and text, a confirmation that says what happens (the group stops for everyone, unanswered invitations lapse, members are told, joint visits keep their credit, the session stays in the list). A session the office ended has an "Ended by office" badge, a block with who ended it, when and why, and its own line in "What happened when".
+- Audit: label for `cowork.ended_by_office`. Mock API: `POST /cowork/sessions/{id}/end`. Journey: `cowork-end.spec.ts` (manager ends a session; a viewer has no button).
 ### Changed (owner request 2026-11-22: a calmer, more deliberate shell; first design pass)
 - **Sidebar:** sections fold (click the section name; the choice is kept in the browser, the section holding the open page never hides it), hairlines between sections, count pills are soft red instead of solid, the open page is semibold.
 - **Customers:** search, invoice type, paid-this-month and sort sit on one line in one filter panel, the filter chips on the second, the pin-colour and work-mark legends on a tinted third. The two segmented controls no longer get cut off at 1440 px.

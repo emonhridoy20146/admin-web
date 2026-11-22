@@ -34,7 +34,7 @@
     "user.create": "Created a user", "user.update": "Edited a user", "user.deactivate": "Deactivated a user", "user.activate": "Reactivated a user", "user.reset_password": "Reset a password",
     "rbac.override.set": "Changed a user's permissions", "rbac.override.branch": "Changed branch permissions",
     "settings.update": "Changed settings", "flag.set": "Changed a feature flag",
-    "collection.void": "Voided a collection", "collection.withdrawn": "Collector withdrew a cash collection", "collection.edited": "Collector corrected a cash collection", "cash.deposit.deleted": "Deleted a deposit", "collection.resolve": "Resolved a conflict",
+    "collection.void": "Voided a collection", "collection.withdrawn": "Collector withdrew a cash collection", "collection.edited": "Collector corrected a cash collection", "cash.deposit.deleted": "Deleted a deposit", "cowork.ended_by_office": "Ended a co-work", "collection.resolve": "Resolved a conflict",
     "deposit.verify": "Verified a deposit", "deposit.reject": "Rejected a deposit",
     "tag.set": "Tagged a customer", "tag.remove": "Removed a tag",
     "handover.create": "Created a handover", "auth.login": "Signed in", "location.proposal.approve": "Approved a pin correction"

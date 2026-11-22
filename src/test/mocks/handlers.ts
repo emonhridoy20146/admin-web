@@ -756,6 +756,23 @@ export const handlers = [
     if (!s || !scope(ctx, url).includes(s.branchId ?? '')) return problem(404, 'NOT_FOUND', 'Co-work session not found');
     return HttpResponse.json(withVisitsCount(s));
   })),
+  // FR-CW-006 (1.34.0): an office user ends an open session with a reason; the row stays as ended
+  http.post(`${BASE}/cowork/sessions/:id/end`, authed(async ({ request, params, ctx, url }) => {
+    const deny = need(ctx, 'cowork.manage');
+    if (deny) return deny;
+    const s = db.coworkSessions.find((x) => x.id === params.id);
+    if (!s || !scope(ctx, url).includes(s.branchId ?? '')) return problem(404, 'NOT_FOUND', 'Co-work session not found');
+    const b = (await request.json()) as { reason?: string };
+    if (!b.reason || b.reason.trim().length < 5) return problem(400, 'VALIDATION_FAILED', 'A reason of at least 5 characters is required');
+    if (s.status === 'open') {
+      s.status = 'ended';
+      s.endedAt = new Date().toISOString();
+      s.endedBy = { id: ctx.user.id, name: ctx.user.name?.en ?? '' };
+      s.endReason = b.reason.trim();
+      db.addAudit({ actor: actor(ctx.user), action: 'cowork.ended_by_office', entity: 'cowork_session', entityId: s.id, before: { status: 'open' }, after: { status: 'ended' }, reason: s.endReason });
+    }
+    return HttpResponse.json(withVisitsCount(s));
+  })),
   http.post(`${BASE}/media/upload-url`, authed(async ({ request }) => {
     const b = (await request.json()) as { kind?: string; contentType?: string; sizeBytes?: number; sha256?: string };
     if (!b.kind || !['image/jpeg', 'image/webp', 'audio/aac', 'audio/mp4'].includes(b.contentType ?? '') || !b.sha256) return problem(400, 'VALIDATION_FAILED', 'kind, contentType and sha256 are required');

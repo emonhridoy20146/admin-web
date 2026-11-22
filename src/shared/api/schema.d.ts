@@ -1347,8 +1347,30 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Leave a session (1.9.0). Idempotent. Recording work-out leaves automatically. */
+        /** @description Leave a session (1.9.0). Idempotent. Recording work-out leaves automatically. The person who asked may leave before or after anyone accepts; since 1.34.0 (FR-CW-006) a session with nobody accepted left ends at once, so an unanswered request is cancelled this way, and a later respond answers 409 SESSION_ENDED. */
         post: operations["leaveCowork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cowork/sessions/{id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description cowork.manage (1.34.0, FR-CW-006). An office user ends an open session with a reason: status `ended`, `endedAt` now,
+         *     `endedBy` and `endReason` set. Branch scope; out of scope is 404. Idempotent: a session that is already over is returned
+         *     as it is. Everyone who was accepted or still invited gets notification `cowork.ended` and the session on their next pull.
+         *     Joint visits already recorded keep their credit. Audited as `cowork.ended_by_office`.
+         */
+        post: operations["endCoworkSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3627,6 +3649,13 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             endedAt?: string | null;
+            /** @description The office user who ended the session (1.34.0, FR-CW-006); absent when it ended by itself (people left, the day was over) */
+            endedBy?: {
+                id?: string;
+                name?: string;
+            };
+            /** @description The office user's reason (1.34.0); present with endedBy */
+            endReason?: string | null;
             /** @description Co-work visits recorded in this session (manager list and detail only) */
             visitsCount?: number;
         };
@@ -7267,6 +7296,36 @@ export interface operations {
                     "application/json": components["schemas"]["CoworkSession"];
                 };
             };
+        };
+    };
+    endCoworkSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkSession"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     listCoworkSessions: {

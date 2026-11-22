@@ -21,7 +21,8 @@
   },
   "status": {
     "open": "Ongoing",
-    "ended": "Ended"
+    "ended": "Ended",
+    "endedByOffice": "Ended by office"
   },
   "member": {
     "accepted": "In the group",
@@ -43,7 +44,8 @@
     "accepted": "{{who}} joined",
     "rejected": "{{who}} said no",
     "left": "{{who}} left",
-    "ended": "The group ended"
+    "ended": "The group ended",
+    "endedByOffice": "{{by}} (office) ended the group"
   },
   "people": "{{n}} people",
   "peopleLabel": "Worked together",
@@ -66,5 +68,19 @@
   "with": "with {{names}}",
   "empty": "Nobody worked together in this period",
   "emptyBody": "When someone asks a colleague to work together from the staff app, it shows up here.",
-  "notFound": "This co-work session was not found or is not in your branch."
+  "notFound": "This co-work session was not found or is not in your branch.",
+  "end": {
+    "button": "End co-work",
+    "title": "End this co-work?",
+    "desc": "The group stops now for everyone in it, and people who have not answered can no longer join. Each of them is told, with your reason. Joint visits already recorded keep their credit. The session stays in this list as ended.",
+    "confirm": "End co-work",
+    "done": "Co-work ended",
+    "byOffice": "Ended by {{name}} (office) at {{time}}",
+    "codes": {
+      "wrong_group": "Wrong people in the group",
+      "not_working": "They are not working together",
+      "misuse": "Used to inflate visit credit",
+      "other": "Other"
+    }
+  }
 }

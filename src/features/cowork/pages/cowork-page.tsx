@@ -2,10 +2,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Info, Users, type LucideIcon } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowRight, CircleStop, Info, Users, type LucideIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
+import { useCan } from '@/shared/auth/session';
 import { formatDate, formatDuration, formatNumber, formatTime, pickText } from '@/shared/lib/format';
 import { todayDhaka } from '@/shared/lib/time';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
@@ -17,8 +19,10 @@ import type { Tone } from '@/shared/ui/status';
 import { Avatar, Segmented } from '@/shared/ui/primitives';
 import { Select } from '@/shared/ui/form';
 import { Drawer } from '@/shared/ui/overlay';
+import { Button } from '@/shared/ui/button';
+import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { VisitOutcomeBadge } from '@/features/visits';
-import { useFieldStaff, useSession, useSessions, useSessionVisits, type Member, type Session } from '../api/cowork';
+import { useEndSession, useFieldStaff, useSession, useSessions, useSessionVisits, type Member, type Session } from '../api/cowork';
 import { nameOf, openMinutes, rangeFor, RANGES, sortedMembers, timeline, workedTogether } from '../model/session';
 
 const MEMBER_TONE: Record<string, Tone> = { accepted: 'success', left: 'neutral', invited: 'warning', rejected: 'danger' };
@@ -45,6 +49,9 @@ export function CoworkPage() {
   const one = useSession(openId, !inList && !q.isLoading);
   const open = inList ?? one.data ?? null;
   const show = (s: Session) => url.set({ drawer: s.id }, { push: true });
+  const canEnd = useCan('cowork.manage');
+  const end = useEndSession();
+  const [ending, setEnding] = useState(false);
 
   const columns: Column<Session>[] = [
     {
@@ -143,11 +150,21 @@ export function CoworkPage() {
         subtitle={open ? timeRange(open, t) : undefined}
         headerExtra={open ? <SessionBadge s={open} /> : undefined}
         footer={
-          open && canVisits && (open.visitsCount ?? 0) > 0 ? (
-            <Link href={`/visits/?session=${open.id}`} className="ms-auto inline-flex h-9 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-primary hover:bg-surface-hover">
-              {t('openVisits')}
-              <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
-            </Link>
+          open && ((canEnd && open.status === 'open') || (canVisits && (open.visitsCount ?? 0) > 0)) ? (
+            <>
+              {canEnd && open.status === 'open' && (
+                <Button variant="ghost" size="sm" className="me-auto text-danger hover:text-danger" onClick={() => setEnding(true)}>
+                  <CircleStop className="size-4" aria-hidden />
+                  {t('end.button')}
+                </Button>
+              )}
+              {canVisits && (open.visitsCount ?? 0) > 0 && (
+                <Link href={`/visits/?session=${open.id}`} className="ms-auto inline-flex h-9 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-primary hover:bg-surface-hover">
+                  {t('openVisits')}
+                  <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
+                </Link>
+              )}
+            </>
           ) : undefined
         }
       >
@@ -164,6 +181,23 @@ export function CoworkPage() {
           </div>
         )}
       </Drawer>
+
+      {open && (
+        <ReasonDialog
+          open={ending}
+          onOpenChange={setEnding}
+          title={t('end.title')}
+          description={t('end.desc')}
+          codes={(['wrong_group', 'not_working', 'misuse', 'other'] as const).map((c) => [c, t(`end.codes.${c}`)])}
+          minLength={5}
+          destructive
+          confirmLabel={t('end.confirm')}
+          onSubmit={async ({ reasonCode, reason }) => {
+            await end.mutateAsync({ id: open.id, reason: `${t(`end.codes.${reasonCode}`, { lng: 'en' })}: ${reason}` });
+            toast.success(t('end.done'));
+          }}
+        />
+      )}
     </>
   );
 }
@@ -177,7 +211,8 @@ function timeRange(s: Session, t: T): string {
 
 function SessionBadge({ s }: { s: Session }) {
   const { t } = useTranslation('cowork');
-  return s.status === 'open' ? <Badge tone="success" icon={Users}>{t('status.open')}</Badge> : <Badge tone="neutral">{t('status.ended')}</Badge>;
+  if (s.status === 'open') return <Badge tone="success" icon={Users}>{t('status.open')}</Badge>;
+  return s.endedBy ? <Badge tone="warning" icon={CircleStop}>{t('status.endedByOffice')}</Badge> : <Badge tone="neutral">{t('status.ended')}</Badge>;
 }
 
 function MembersCell({ s, onOpen }: { s: Session; onOpen: () => void }) {
@@ -218,6 +253,12 @@ function SessionDetail({ s, canVisits }: { s: Session; canVisits: boolean }) {
 
   return (
     <div className="space-y-6 p-5">
+      {s.endedBy && (
+        <div className="rounded-md border border-warning/30 bg-warning-bg px-3 py-2.5 text-sm" data-testid="cowork-ended-by-office">
+          <p className="font-medium text-warning">{t('end.byOffice', { name: s.endedBy.name ?? '—', time: s.endedAt ? formatTime(s.endedAt) : '' })}</p>
+          {s.endReason && <p className="mt-1 text-fg-secondary">{s.endReason}</p>}
+        </div>
+      )}
       <DescList
         items={[
           { label: t('col.startedBy'), value: <span lang={locale}>{nameOf(s, s.createdBy) ?? '—'}</span> },
@@ -277,7 +318,7 @@ function SessionDetail({ s, canVisits }: { s: Session; canVisits: boolean }) {
             <li key={i} className="relative text-sm">
               <span className={cn('absolute -start-[21px] top-1.5 size-2.5 rounded-full ring-2 ring-surface-raised', TL_TONE[e.kind])} aria-hidden />
               <span className="tabular me-2 text-fg-tertiary">{formatTime(e.at)}</span>
-              <span className="text-fg" lang={locale}>{t(`timeline.${e.kind}`, { who: e.who ?? '—', by: e.by ?? '—' })}</span>
+              <span className="text-fg" lang={locale}>{e.kind === 'ended' && s.endedBy ? t('timeline.endedByOffice', { by: s.endedBy.name ?? '—' }) : t(`timeline.${e.kind}`, { who: e.who ?? '—', by: e.by ?? '—' })}</span>
             </li>
           ))}
         </ol>

@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
 import { useBranchId } from '@/shared/lib/ui-store';
 import type { components, operations } from '@/shared/api/schema';
@@ -50,5 +50,14 @@ export function useFieldStaff() {
     queryKey: ['cowork', 'staff', branchId],
     queryFn: async () => (await unwrap(api.GET('/users', { params: { query: { branchId, role: 'field_staff', active: true, limit: 100 } } }))).items ?? [],
     staleTime: 5 * 60_000,
+  });
+}
+
+/** FR-W-052 (master FR-CW-006, contract 1.34.0): an office user ends an open session with a reason; the row stays as ended. */
+export function useEndSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => unwrap(api.POST('/cowork/sessions/{id}/end', { params: { path: { id } }, body: { reason } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['cowork'] }),
   });
 }

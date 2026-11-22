@@ -236,7 +236,7 @@
   {
     "key": "collection.view",
     "module": "collections",
-    "description": "View collections in scope (own only for FS)",
+    "description": "View collections in scope (the branch for FS)",
     "added": false,
     "reserved": false,
     "defaults": {
@@ -263,7 +263,7 @@
     "key": "collection.withdraw",
     "module": "collections",
     "description": "Withdraw (delete) your own cash collection until it is deposited (the row is kept as voided)",
-    "added": true,
+    "added": false,
     "reserved": false,
     "defaults": {
       "super_admin": true,
@@ -276,7 +276,7 @@
     "key": "collection.edit",
     "module": "collections",
     "description": "Correct the amount, note or payer of your own cash collection until it is deposited and before the ERP was sent it",
-    "added": true,
+    "added": false,
     "reserved": false,
     "defaults": {
       "super_admin": true,
@@ -341,7 +341,7 @@
     "key": "cash.deposit.delete",
     "module": "cash",
     "description": "Delete a pending or verified deposit (reason required; the row is kept as deleted)",
-    "added": true,
+    "added": false,
     "reserved": false,
     "defaults": {
       "super_admin": true,
@@ -634,6 +634,19 @@
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
+    }
+  },
+  {
+    "key": "cowork.manage",
+    "module": "cowork",
+    "description": "End a co-work session with a reason (1.34.0; the row is kept as ended)",
+    "added": true,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
     }
   },
   {

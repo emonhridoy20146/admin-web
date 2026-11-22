@@ -8,7 +8,7 @@ export const coworkManifest: FeatureManifest = {
   name: 'cowork',
   flag: 'module.cowork',
   routes: [{ path: '/cowork', title: 'cowork:title', permission: 'cowork.view', navGroup: 'field', icon: Users, order: 52 }],
-  permissions: ['cowork.view'],
+  permissions: ['cowork.view', 'cowork.manage'],
   commands: [{ id: 'cowork.open', title: 'cowork:title', icon: Users, href: '/cowork/', permission: 'cowork.view' }],
   messages: { bn, en },
 };
