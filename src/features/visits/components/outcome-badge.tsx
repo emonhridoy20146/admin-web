@@ -5,7 +5,7 @@ import type { Tone } from '@/shared/ui/status';
 
 export const OUTCOME_TONE: Record<string, Tone> = {
   paid: 'paid', partial_paid: 'dueToday', promised: 'promised', not_home: 'neutral', refused: 'danger',
-  shifted_address: 'warning', customer_dead: 'neutral', product_returned_request: 'warning', other: 'neutral',
+  shifted_address: 'warning', customer_dead: 'neutral', product_returned_request: 'warning', runaway: 'danger', other: 'neutral',
 };
 
 /** A visit outcome with its colour, icon and label; exported for other features (co-work session visits). */
