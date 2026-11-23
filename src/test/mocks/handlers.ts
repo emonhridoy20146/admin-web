@@ -797,10 +797,42 @@ export const handlers = [
       .filter((p) => (!from || p.promisedDate >= from) && (!to || p.promisedDate <= to))
       .filter((p) => !g('status') || p.status === g('status'))
       .filter((p) => !g('ownerId') || p.ownerId === g('ownerId'))
+      .filter((p) => !g('createdBy') || p.createdBy === g('createdBy'))
+      .filter((p) => !g('followUpOf') || p.followUpOf === g('followUpOf'))
+      .filter((p) => g('brokenWithoutFollowUp') !== 'true' || ((p.status === 'broken' || p.status === 'partially_kept') && !p.followUpId))
       .filter((p) => !g('customerId') || p.customerId === g('customerId'))
       .sort((a, b) => (a.promisedDate === b.promisedDate ? (a.id! < b.id! ? -1 : 1) : a.promisedDate < b.promisedDate ? -1 : 1));
     const pg = page(all, url);
     return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  // POST /promises (office, 1.45.0 follow-ups): idempotent by clientId; followUpOf must be a broken / partially kept
+  // promise of the same customer
+  http.post(`${BASE}/promises`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'promise.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['PromiseCreate'] & { followUpOf?: string };
+    const again = db.promises.find((x) => x.row.clientId === b.clientId);
+    if (again) return HttpResponse.json(again.row, { status: 200 });
+    const c = db.customerById(b.customerId);
+    if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+    if (!b.promisedDate || !(b.promisedAmountPoisha > 0)) return problem(400, 'VALIDATION_FAILED', 'Date and amount are required');
+    let prev: (typeof db.promises)[number] | undefined;
+    if (b.followUpOf) {
+      prev = db.promises.find((x) => x.row.id === b.followUpOf);
+      const reason = !prev ? 'NOT_FOUND' : prev.row.customerId !== b.customerId ? 'OTHER_CUSTOMER' : !['broken', 'partially_kept'].includes(prev.row.status ?? '') ? 'NOT_BROKEN' : null;
+      if (reason) return problem(422, 'BUSINESS_RULE', 'This promise cannot be followed up', 'PROMISE_FOLLOW_UP_INVALID', { reason });
+    }
+    const id = `6762${Math.random().toString(16).slice(2, 22).padEnd(20, '0')}`;
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    const row: S['PromiseListItem'] = {
+      id, clientId: b.clientId, customerId: b.customerId, erpPlanId: b.erpPlanId, promisedDate: b.promisedDate, promisedAmountPoisha: b.promisedAmountPoisha, note: b.note, status: 'open',
+      ownerId: c.item.assignee?.id, owner: { id: c.item.assignee?.id, name: c.item.assignee?.name }, createdBy: me.id, createdByName: me.name, paidTowardsPoisha: 0, createdAt: new Date().toISOString(),
+      customer: { id: c.item.id, name: c.item.name, code: c.item.code ?? undefined }, followUpOf: prev?.row.id ?? undefined, followUpId: null, attempt: prev ? (prev.row.attempt ?? 1) + 1 : 1, chainRootId: prev?.row.chainRootId ?? id,
+    };
+    if (prev) prev.row.followUpId = id;
+    db.promises.push({ branchId: c.branchId, row });
+    db.addAudit({ actor: actor(ctx.user), action: 'promise.created', entity: 'promise', entityId: id, branchId: c.branchId, after: { promisedDate: row.promisedDate, amountPoisha: row.promisedAmountPoisha, followUpOf: row.followUpOf } });
+    return HttpResponse.json(row, { status: 201 });
   })),
   http.post(`${BASE}/promises/:id/cancel`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'promise.create');
@@ -1099,6 +1131,96 @@ export const handlers = [
     return HttpResponse.json({});
   })),
 
+  // ---------- possible customers (FR-PRO-001, 1.45.0) ----------
+  http.get(`${BASE}/prospects`, authed(({ ctx, url }) => {
+    const view = perms(ctx.user).has('prospect.view');
+    if (!view && !perms(ctx.user).has('prospect.create')) return problem(403, 'FORBIDDEN', 'No access');
+    const sc = scope(ctx, url);
+    const g = (k: string) => url.searchParams.get(k);
+    const from = g('from');
+    const to = g('to');
+    if (from && to && from > to) return problem(400, 'VALIDATION_FAILED', 'from is after to');
+    const q = (g('q') ?? '').trim().toLowerCase();
+    const digits = q.replace(/\D/g, '');
+    const all = db.prospects
+      .filter((p) => sc.includes(p.branchId) && (view || p.createdBy.id === ctx.user.id))
+      .filter((p) => (!from || (p.createdDate ?? '') >= from) && (!to || (p.createdDate ?? '') <= to))
+      .filter((p) => !g('status') || p.status === g('status'))
+      .filter((p) => !g('createdBy') || p.createdBy.id === g('createdBy'))
+      .filter((p) => !q || [p.name, p.address ?? '', p.note ?? ''].some((x) => x.toLowerCase().includes(q)) || (digits.length >= 3 && p.phones.some((ph) => (ph.number ?? '').replace(/\D/g, '').includes(digits))));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor, total: all.length });
+  })),
+  http.get(`${BASE}/prospects/:id`, authed(({ ctx, params }) => {
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId)) return problem(404, 'NOT_FOUND', 'Not found');
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/prospects`, authed(async ({ ctx, request }) => {
+    const deny = need(ctx, 'prospect.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['ProspectCreate'];
+    const again = db.prospects.find((x) => x.clientId === b.clientId);
+    if (again) return HttpResponse.json(again, { status: 200 });
+    if (!b.name?.trim()) return problem(400, 'VALIDATION_FAILED', 'Name is required', undefined, { fields: { name: 'Required' } });
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    const at = new Date().toISOString();
+    const p: S['Prospect'] = {
+      id: `6771${Math.random().toString(16).slice(2, 22).padEnd(20, '0')}`, clientId: b.clientId, name: b.name.trim(), phones: (b.phones ?? []).map((x) => ({ number: x.number, label: x.label ?? null })),
+      address: b.address ?? null, note: b.note ?? null, location: b.location ?? null, branchId: b.branchId ?? ctx.user.branchIds?.[0] ?? db.branches[0]!.id!, createdBy: me, createdAt: at,
+      createdDate: db.today(), status: 'new', statusChangedAt: at, convertedCustomerId: null, convertedErpCustomerId: null, convertedAt: null, convertedBy: null,
+      fromProspectId: b.fromProspectId ?? null, history: [{ status: 'new', at, by: me, reason: b.fromProspectId ? 'Re-entry' : null }], updatedAt: at, version: 1,
+    };
+    db.prospects.unshift(p);
+    return HttpResponse.json(p, { status: 201 });
+  })),
+  http.patch(`${BASE}/prospects/:id`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'prospect.manage');
+    if (deny) return deny;
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Not found');
+    const b = (await request.json()) as S['ProspectUpdate'];
+    if (b.status && p.status === 'converted') return problem(409, 'INVALID_STATE', 'A converted prospect is re-opened first', 'PROSPECT_CONVERTED', { reason: 'PROSPECT_CONVERTED' });
+    const at = new Date().toISOString();
+    Object.assign(p, { ...(b.name ? { name: b.name } : {}), ...(b.address !== undefined ? { address: b.address } : {}), ...(b.note !== undefined ? { note: b.note } : {}) });
+    if (b.status && b.status !== p.status) {
+      p.status = b.status;
+      p.statusChangedAt = at;
+      p.history.push({ status: b.status, at, by: { id: ctx.user.id!, name: ctx.user.name?.en ?? '' }, reason: b.reason ?? null });
+    }
+    p.updatedAt = at;
+    p.version++;
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/prospects/:id/convert`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'prospect.manage');
+    if (deny) return deny;
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Not found');
+    if (p.status === 'converted') return problem(409, 'INVALID_STATE', 'Already converted', 'PROSPECT_CONVERTED', { reason: 'PROSPECT_CONVERTED' });
+    const b = (await request.json()) as { customerId?: string; erpCustomerCode?: string; note?: string };
+    const c = b.customerId ? db.customerById(b.customerId) : b.erpCustomerCode ? db.customers.find((x) => x.item.code === b.erpCustomerCode) : undefined;
+    if (!b.customerId && !b.erpCustomerCode) return problem(400, 'VALIDATION_FAILED', 'customerId or erpCustomerCode is required');
+    if (b.customerId && !c) return problem(404, 'NOT_FOUND', 'Customer not found');
+    const at = new Date().toISOString();
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    Object.assign(p, { status: 'converted', statusChangedAt: at, convertedAt: at, convertedBy: me, convertedCustomerId: c?.item.id ?? null, convertedErpCustomerId: c?.item.code ?? b.erpCustomerCode ?? null, updatedAt: at, version: p.version + 1 });
+    p.history.push({ status: 'converted', at, by: me, reason: b.note ?? null, convertedCustomerId: p.convertedCustomerId, convertedErpCustomerId: p.convertedErpCustomerId });
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/prospects/:id/reopen`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'prospect.manage');
+    if (deny) return deny;
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Not found');
+    if (p.status !== 'converted' && p.status !== 'dropped') return problem(409, 'INVALID_STATE', 'Already open', 'PROSPECT_OPEN', { reason: 'PROSPECT_OPEN' });
+    const b = (await request.json()) as { reason: string };
+    const at = new Date().toISOString();
+    Object.assign(p, { status: 'new', statusChangedAt: at, convertedAt: null, convertedBy: null, convertedCustomerId: null, convertedErpCustomerId: null, updatedAt: at, version: p.version + 1 });
+    p.history.push({ status: 'new', at, by: { id: ctx.user.id!, name: ctx.user.name?.en ?? '' }, reason: b.reason ?? null });
+    return HttpResponse.json(p);
+  })),
+
   // ---------- activity (FR-ACT-001, 1.28.0) ----------
   http.get(`${BASE}/activity`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'activity.view');
@@ -1111,7 +1233,11 @@ export const handlers = [
     const seen = db.activitySeen.get(ctx.user.id!) ?? null;
     const limit = Math.min(100, Number(url.searchParams.get('limit') ?? 30) || 30);
     const cursor = url.searchParams.get('cursor');
-    const all = mine.filter((a) => (!type || a.type === type) && (!userId || a.actor?.id === userId));
+    const dayOf = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    if (from && to && from > to) return problem(400, 'VALIDATION_FAILED', 'from is after to');
+    const all = mine.filter((a) => (!type || a.type === type) && (!userId || a.actor?.id === userId) && (!from || dayOf(a.at) >= from) && (!to || dayOf(a.at) <= to));
     const start = cursor ? all.findIndex((a) => a.id === cursor) + 1 : 0;
     const page = all.slice(start, start + limit).map((a) => ({ ...a, unseen: !seen || a.at > seen }));
     // as the server: the count covers the caller's whole scope, whatever the filters
@@ -1199,7 +1325,13 @@ export const handlers = [
     };
     const k = key[sort] ?? key['-daysOverdue']!;
     all = [...all].sort((a, b) => (k(a) < k(b) ? -1 : k(a) > k(b) ? 1 : 0));
-    const p = page(all.map((c) => ({ ...c.item, ...mockActivity(c) })), url);
+    // 1.46.0: limit up to 1000 and a 0-based `offset` that wins over the cursor
+    const off = url.searchParams.get('offset');
+    const lim = Math.min(1000, Math.max(1, Number(url.searchParams.get('limit') ?? 50) || 50));
+    const rows = all.map((c) => ({ ...c.item, ...mockActivity(c) }));
+    const p = off != null
+      ? { items: rows.slice(Number(off), Number(off) + lim), nextCursor: Number(off) + lim < rows.length ? btoa(`o:${Number(off) + lim}`) : null, total: rows.length }
+      : page(rows, url);
     // like field-api: `total` (and since 1.24.0 `invoiceTotals`) only when asked for (includeTotal=true)
     if (url.searchParams.get('includeTotal') === 'true') {
       const counts = all.map((c) => ({ ...mockActivity(c).invoiceCount, inst: c.item.openInvoices?.installment ?? 0, credit: c.item.openInvoices?.credit ?? 0 }));
@@ -1214,7 +1346,8 @@ export const handlers = [
     const c = db.customerById(params.id!);
     if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
     recomputeCustomer(c);
-    return HttpResponse.json({ ...c.detail, ...mockActivity(c) }, { headers: { ETag: `"${c.detail.version}"` } });
+    const recentPromises = db.promises.filter((p) => p.row.customerId === c.item.id).map((p) => p.row).sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')).slice(0, 20);
+    return HttpResponse.json({ ...c.detail, ...mockActivity(c), recentPromises }, { headers: { ETag: `"${c.detail.version}"` } });
   })),
   http.post(`${BASE}/customers/:id/refresh`, authed(({ params }) => {
     const c = db.customerById(params.id!)!;
@@ -1426,7 +1559,12 @@ export const handlers = [
     const sc = scope(ctx, url);
     const st = url.searchParams.get('status') ?? 'open';
     const type = url.searchParams.get('type');
-    const inScope = db.inbox.filter((i) => !i.branchId || sc.includes(i.branchId));
+    // 1.45.0: from/to = Asia/Dhaka days the item was raised; counts follow the same days
+    const dayOf = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    if (from && to && from > to) return problem(400, 'VALIDATION_FAILED', 'from is after to');
+    const inScope = db.inbox.filter((i) => (!i.branchId || sc.includes(i.branchId)) && (!from || dayOf(i.createdAt!) >= from) && (!to || dayOf(i.createdAt!) <= to));
     const sev = { critical: 0, high: 1, medium: 2, low: 3 } as const;
     const all = inScope.filter((i) => i.status === st).filter((i) => !type || i.type?.startsWith(type)).sort((a, b) => sev[a.severity!] - sev[b.severity!] || (a.createdAt! < b.createdAt! ? -1 : 1));
     const counts: Record<string, number> = { open: 0, critical: 0, high: 0, medium: 0, low: 0 };
@@ -1481,6 +1619,7 @@ export const handlers = [
       overdue: { customers: cust.filter((c) => (c.item.daysOverdue ?? 0) > 0).length, amountPoisha: cust.filter((c) => (c.item.daysOverdue ?? 0) > 0).reduce((s, c) => s + c.item.totalOutstandingPoisha!, 0), badSuggested: cust.filter((c) => c.item.badges?.includes('bad_suggested')).length, tagged: cust.filter((c) => c.item.tag?.state === 'tagged').length },
       erp: { ...db.erpStatus, lastSuccessAt: new Date(Date.now() - 3 * 60_000).toISOString() },
       trend7d,
+      ...overview145(sc, url, inScopeCol, staffIn, cust, pos, present),
     };
     return HttpResponse.json(out);
   })),
@@ -2090,3 +2229,78 @@ export const handlers = [
   })),
   http.get(`${BASE}/notifications`, authed(() => HttpResponse.json({ items: [], nextCursor: null }))),
 ];
+
+/** 1.45.0 (FR-DSH-002) dashboard statistics with list links, worked out from the mock data like the server does. */
+function overview145(sc: string[], url: URL, col: S['Collection'][], staffIn: db.MockUser[], cust: db.MockCustomer[], pos: S['CashPosition'][], present: number): Partial<S['DashboardOverview']> {
+  const today = db.today();
+  const day = (iso: string) => (iso ? new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10) : '');
+  const from = url.searchParams.get('from') ?? `${today.slice(0, 7)}-01`;
+  const to = url.searchParams.get('to') ?? today;
+  const next = (d: string, n = 1) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  const L = (path: string, query: Record<string, string> = {}) => ({ path, query });
+  const amt = (rows: S['Collection'][], link: ReturnType<typeof L>) => ({ amountPoisha: rows.reduce((s, c) => s + (c.amountPoisha ?? 0), 0), count: rows.length, link });
+  const inRange = col.filter((c) => day(c.recordedAt!) >= from && day(c.recordedAt!) <= to);
+  const month = today.slice(0, 7);
+  const prevMonth = (() => { const d = new Date(`${month}-01T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
+  const prevEnd = next(`${month}-01`, -1);
+  const series: { date: string; amountPoisha: number; count: number }[] = [];
+  for (let d = from; d <= to; d = next(d)) { const r = inRange.filter((c) => day(c.recordedAt!) === d); series.push({ date: d, amountPoisha: r.reduce((s, c) => s + c.amountPoisha!, 0), count: r.length }); }
+  const methods = [...new Set(inRange.map((c) => c.method!))].map((m) => ({ method: m, ...amt(inRange.filter((c) => c.method === m), L('/collections', { from, to, method: m })) })).sort((a, b) => b.amountPoisha - a.amountPoisha);
+  const vis = db.visits.filter((v) => sc.includes(v.branchId) && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= to);
+  const outcomes = [...new Set(vis.map((v) => v.row.outcome!))].map((o) => ({ outcome: o, count: vis.filter((v) => v.row.outcome === o).length, link: L('/visits', { from, to, outcome: o }) })).sort((a, b) => b.count - a.count);
+  const vSeries: { date: string; count: number }[] = [];
+  for (let d = from; d <= to; d = next(d)) vSeries.push({ date: d, count: vis.filter((v) => day(v.row.checkInAt) === d).length });
+  const prom = db.promises.filter((p) => sc.includes(p.branchId)).map((p) => p.row);
+  const due = prom.filter((p) => p.promisedDate >= from && p.promisedDate <= to);
+  const cnt = (st: string) => due.filter((p) => p.status === st).length;
+  const decided = cnt('kept') + cnt('partially_kept') + cnt('broken');
+  const openDue = (a: string, b: string) => { const r = prom.filter((p) => p.status === 'open' && p.promisedDate >= a && p.promisedDate <= b); return { amountPoisha: r.reduce((s, p) => s + p.promisedAmountPoisha, 0), count: r.length, link: L('/promises', { from: a, to: b, status: 'open' }) }; };
+  const noFollow = prom.filter((p) => (p.status === 'broken' || p.status === 'partially_kept') && !p.followUpId && p.promisedDate >= from && p.promisedDate <= to);
+  const byUser = new Map<string, { name: string; amount: number; count: number; visits: number }>();
+  for (const c of inRange) { const k = c.collector?.id ?? ''; const r = byUser.get(k) ?? { name: c.collector?.name ?? '', amount: 0, count: 0, visits: 0 }; r.amount += c.amountPoisha!; r.count++; byUser.set(k, r); }
+  for (const v of vis) { const k = v.row.user?.id ?? ''; const r = byUser.get(k) ?? { name: v.row.user?.name ?? '', amount: 0, count: 0, visits: 0 }; r.visits++; byUser.set(k, r); }
+  const rows = [...byUser.entries()].filter(([k]) => k);
+  const pros = db.prospects.filter((p) => sc.includes(p.branchId));
+  const sess = db.coworkSessions.filter((x) => sc.includes(x.branchId ?? '') && (x.businessDate ?? '') >= from && (x.businessDate ?? '') <= to);
+  const late = Math.max(1, Math.round(staffIn.length * 0.1));
+  const overdue = cust.filter((c) => (c.item.daysOverdue ?? 0) > 0);
+  return {
+    range: { from, to, days: series.length },
+    collections: {
+      today: amt(col.filter((c) => day(c.recordedAt!) === today), L('/collections', { from: today, to: today })),
+      thisMonth: amt(col.filter((c) => day(c.recordedAt!).startsWith(month)), L('/collections', { from: `${month}-01`, to: today })),
+      previousMonth: amt(col.filter((c) => day(c.recordedAt!).startsWith(prevMonth)), L('/collections', { from: `${prevMonth}-01`, to: prevEnd })),
+      inRange: amt(inRange, L('/collections', { from, to })),
+      series,
+      byMethod: methods,
+      erpPosted: amt(inRange.filter((c) => ['posted', 'resolved_posted'].includes(c.status!)), L('/collections', { from, to, status: 'posted' })),
+      pendingInField: amt(inRange.filter((c) => ['received', 'posting', 'posting_failed', 'conflict'].includes(c.status!)), L('/collections', { from, to, status: 'received' })),
+    },
+    visitStats: { total: { count: vis.length, link: L('/visits', { from, to }) }, uniqueCustomers: new Set(vis.map((v) => v.row.customer?.id)).size, series: vSeries, byOutcome: outcomes },
+    promiseStats: {
+      dueToday: openDue(today, today), next7Days: openDue(next(today), next(today, 7)), next15Days: openDue(next(today), next(today, 15)),
+      kept: { count: cnt('kept'), link: L('/promises', { from, to, status: 'kept' }) }, partiallyKept: { count: cnt('partially_kept'), link: L('/promises', { from, to, status: 'partially_kept' }) },
+      broken: { count: cnt('broken'), link: L('/promises', { from, to, status: 'broken' }) },
+      keptRate: decided ? Math.round((cnt('kept') / decided) * 100) / 100 : null, brokenRate: decided ? Math.round((cnt('broken') / decided) * 100) / 100 : null,
+      brokenWithoutFollowUp: { count: noFollow.length, link: L('/promises', { from, to, brokenWithoutFollowUp: 'true' }) },
+    },
+    overdueCustomers: { amountPoisha: overdue.reduce((s, c) => s + (c.item.overduePoisha ?? 0), 0), count: overdue.length, link: L('/customers', { filter: 'overdue' }) },
+    payStates: (['bad', 'missed_many', 'missed_one', 'due_today', 'on_track', 'paid_off'] as const).map((ps) => ({ payState: ps, count: cust.filter((c) => (c.item.payState ?? 'on_track') === ps).length, link: L('/customers', { payState: ps }) })),
+    topStaff: {
+      byCollection: rows.filter(([, r]) => r.amount > 0).sort((a, b) => b[1].amount - a[1].amount).slice(0, 5).map(([id, r]) => ({ userId: id, name: r.name, amountPoisha: r.amount, count: r.count, link: L('/collections', { from, to, collectorId: id }) })),
+      byVisits: rows.filter(([, r]) => r.visits > 0).sort((a, b) => b[1].visits - a[1].visits).slice(0, 5).map(([id, r]) => ({ userId: id, name: r.name, count: r.visits, link: L('/visits', { from, to, userId: id }) })),
+    },
+    attendanceToday: {
+      present: { count: present, link: L('/attendance/days', { date: today }) }, late: { count: late, link: L('/attendance/days', { date: today }) },
+      absent: { count: staffIn.length - present, link: L('/attendance/days', { date: today }) }, onLeave: { count: 1, link: L('/attendance/days', { date: today }) }, onDutyNow: { count: present - 1, link: L('/attendance/days', { date: today }) },
+    },
+    pinApprovals: { count: db.proposals.filter((p) => sc.includes(p.branchId) && p.row.status === 'pending').length, link: L('/location-proposals', { status: 'pending' }) },
+    cashInHand: { amountPoisha: pos.reduce((s, p) => s + (p.onHandPoisha ?? 0), 0), count: pos.filter((p) => (p.onHandPoisha ?? 0) > 0).length, link: L('/cash/positions') },
+    coworkStats: { sessions: { count: sess.length, link: L('/cowork/sessions', { from, to }) } },
+    prospectStats: {
+      created: { count: pros.filter((p) => (p.createdDate ?? '') >= from && (p.createdDate ?? '') <= to).length, link: L('/prospects', { from, to }) },
+      converted: { count: pros.filter((p) => p.status === 'converted' && p.convertedAt && day(p.convertedAt) >= from && day(p.convertedAt) <= to).length, link: L('/prospects', { from, to, status: 'converted' }) },
+      openNow: { count: pros.filter((p) => p.status === 'new' || p.status === 'contacted').length, link: L('/prospects', {}) },
+    },
+  };
+}

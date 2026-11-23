@@ -10,14 +10,32 @@ export type CustomerDetail = components['schemas']['CustomerDetail'];
 export type ContactAttempt = components['schemas']['ContactAttempt'];
 export type CustomerQuery = NonNullable<operations['listCustomers']['parameters']['query']>;
 
-export function useCustomers(params: Omit<CustomerQuery, 'branchId'>) {
+/** Page sizes of the customers list (owner 2026-11-23): 100 by default, 500 and 1000 for working through a list. */
+export const CUSTOMER_PAGE_SIZES = [100, 500, 1000] as const;
+export type CustomerPageSize = (typeof CUSTOMER_PAGE_SIZES)[number];
+
+type CustomerPage = components['schemas']['CustomerPage'];
+export interface CustomerPageView {
+  items: CustomerListItem[];
+  total?: number;
+  invoiceTotals?: CustomerPage['invoiceTotals'];
+  hasNext: boolean;
+}
+
+/**
+ * FR-W-060: page `page` (1-based) of `size` rows in one request: `offset=(page-1)*size`, `limit` up to 1000
+ * (contract 1.46.0), with the exact `total` for the numbered pager.
+ */
+export function useCustomerPage(params: Omit<CustomerQuery, 'branchId' | 'cursor' | 'limit' | 'offset'>, page: number, size: CustomerPageSize) {
   const branchId = useBranchId();
   useInvalidateOn([EV.customerTagged, EV.collectionResolved, EV.assignmentChanged], [['customers']]);
-  // includeTotal: the "total customers" number in the header and the pager (field-api caps it at 10,000)
-  const query: CustomerQuery = { ...params, branchId, includeTotal: true };
+  const query: CustomerQuery = { ...params, branchId, includeTotal: true, limit: size, offset: (Math.max(1, page) - 1) * size };
   return useQuery({
     queryKey: ['customers', 'list', query],
-    queryFn: () => unwrap(api.GET('/customers', { params: { query } })),
+    queryFn: async (): Promise<CustomerPageView> => {
+      const r = await unwrap(api.GET('/customers', { params: { query } }));
+      return { items: r.items ?? [], total: r.total, invoiceTotals: r.invoiceTotals ?? undefined, hasNext: !!r.nextCursor };
+    },
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });

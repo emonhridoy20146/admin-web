@@ -2081,8 +2081,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Promised dates `from` / `to` work for future days too: "next 7 days" is `from=<today>&to=<today+7>` (1.45.0, verified).
+         *     1.45.0 (FR-PRM-006): `createdBy` = who made the promise (staff filter; `ownerId` is the customer's assignee);
+         *     `brokenWithoutFollowUp=true` = broken or partially kept promises that have no follow-up promise (cancelled follow-ups
+         *     do not count), newest first, so the office can see who was not followed up; with `status` it narrows to that status.
+         *     `followUpOf=<id>` lists the follow-ups of one promise.
+         */
         get: operations["listPromises"];
         put?: never;
+        /**
+         * @description Permission promise.create (field staff, branch managers and super admins by default, so the office can record a
+         *     promise from admin-web too). Same rules as the sync mutation `promise`, idempotent by clientId.
+         *     1.45.0 (FR-PRM-006): `followUpOf` links the new promise to a broken (or partially kept) promise of the same customer.
+         *     The broken promise keeps its status; the new one is an ordinary promise with `attempt` = previous attempt + 1.
+         *     422 BUSINESS_RULE `PROMISE_FOLLOW_UP_INVALID` (details.reason NOT_FOUND | OTHER_CUSTOMER | NOT_BROKEN) when it
+         *     cannot be linked. A promise made from admin-web (web client) is audited (`promise.created`).
+         */
         post: operations["createPromise"];
         delete?: never;
         options?: never;
@@ -2100,6 +2115,96 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["cancelPromise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prospects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Added in 1.45.0 (FR-PRO-001, module `prospects`, flag `module.prospects`). Possible customers in the caller's branch
+         *     scope, newest first. Permission prospect.view; a caller with only prospect.create (field staff) sees the ones they
+         *     created. `from` / `to` = Asia/Dhaka business date of creation (inclusive); `q` matches name, phone digits, address and note.
+         */
+        get: operations["listProspects"];
+        put?: never;
+        /**
+         * @description Added in 1.45.0. Permission prospect.create. Same as the sync mutation `prospect`. Idempotent by clientId: the same
+         *     clientId again answers 200 with the stored prospect (another user's clientId → 409 IDEMPOTENCY_MISMATCH).
+         *     The branch is the creator's home branch, or `branchId` (in scope) for office users. `fromProspectId` copies nothing
+         *     but records that this is a re-entry of an older prospect (the office "create new from old").
+         *     An unknown or out-of-scope `branchId` or `fromProspectId` is 400 VALIDATION_FAILED.
+         */
+        post: operations["createProspect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prospects/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Added in 1.45.0. prospect.view in scope, or the creator. Out of scope is 404. */
+        get: operations["getProspect"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Added in 1.45.0. prospect.manage. Edits the details and/or moves the status between new, contacted and dropped
+         *     (converted only through /convert; a converted prospect is re-opened through /reopen). Every status change is kept
+         *     in `history`. Audited (`prospect.updated`). Edit, convert and reopen answer 409 INVALID_STATE (reason PROSPECT_CHANGED)
+         *     when another change landed at the same moment; reload and retry. A repeat with nothing new changes nothing.
+         */
+        patch: operations["updateProspect"];
+        trace?: never;
+    };
+    "/prospects/{id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.45.0. prospect.manage. Marks the prospect converted and links it to the FOS customer (`customerId`) or
+         *     to an ERP customer code (`erpCustomerCode`; resolved to the FOS customer when that customer is already synced,
+         *     else kept as the code). Unknown or out-of-scope customerId → 404. Already converted → 409 INVALID_STATE
+         *     (reason PROSPECT_CONVERTED). Audited (`prospect.converted`).
+         */
+        post: operations["convertProspect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/prospects/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Added in 1.45.0. prospect.manage. A converted or dropped prospect goes back to `new` (re-entry); the conversion link is cleared on the prospect and kept in `history`. Other statuses → 409 INVALID_STATE (reason PROSPECT_OPEN). Audited (`prospect.reopened`). */
+        post: operations["reopenProspect"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2511,6 +2616,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 1.45.0: `from` / `to` (inclusive Asia/Dhaka business dates) narrow the items to those raised on those days; `counts` follow the same dates. Without them, unchanged. */
         get: operations["listInbox"];
         put?: never;
         post?: never;
@@ -2596,6 +2702,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description report.view, branch scope (an out-of-scope branchId is 404). The fields up to `trend7d` are unchanged.
+         *     1.45.0 (FR-DSH-002): one call carries what the admin home page needs. `from` / `to` (inclusive Asia/Dhaka business
+         *     dates, at most 366 days, `to` today or earlier; default: first day of the month of `date` … `date`) set the range of
+         *     the series, method split, outcome split, promise rates, top staff, co-work and prospects figures; "today",
+         *     "this month", "previous month" and the now-figures (cash in hand, attendance today, pins waiting) do not depend on it.
+         *     Every number carries a `link` { path, query }: the list endpoint (path under /api/v1) and the query parameters
+         *     that list exactly the rows behind the number, so the client can open the list with one click. Sections of
+         *     switched-off modules come back as zeros or empty arrays. Field staff see only their own figures (scope).
+         *     Nothing here is an official ERP balance (cached ERP values carry erpFetchedAt in `erp`).
+         */
         get: operations["dashboardOverview"];
         put?: never;
         post?: never;
@@ -2909,9 +3026,18 @@ export interface components {
             flags?: {
                 [key: string]: boolean;
             };
+            attendanceRequired?: components["schemas"]["AttendanceRequired"];
             /** Format: date-time */
             serverTime?: string;
         };
+        /**
+         * @description Added in 1.45.0 (FR-ATT-014). True when this user must do attendance (work-in/out, breaks): they hold
+         *     `attendance.record` and not `attendance.exempt`. The staff app hides attendance (and does not hold location
+         *     or work for a work-in) when false. Super admins hold `attendance.exempt` by default; an admin can grant or deny
+         *     it per user or branch like any permission. Exempt users are never counted absent, late or present in
+         *     attendance days, counts and reports.
+         */
+        AttendanceRequired: boolean;
         User: {
             id?: string;
             name?: components["schemas"]["I18nText"];
@@ -3338,7 +3464,9 @@ export interface components {
         };
         CustomerPage: {
             items?: components["schemas"]["CustomerListItem"][];
+            /** @description Next page after this one (also when the page was asked with `offset`); null on the last page */
             nextCursor?: string | null;
+            /** @description Only with includeTotal=true; exact since 1.46.0 */
             total?: number;
             /** @description Added in 1.24.0 (FR-CUS-018), only with includeTotal=true. Invoices of every customer the query matches (not one page): all, with a balance, and those by kind */
             invoiceTotals?: {
@@ -3549,6 +3677,8 @@ export interface components {
             } | null;
             recentNotes?: components["schemas"]["Note"][];
             lastVisit?: components["schemas"]["Visit"] | null;
+            /** @description Added in 1.45.0 (FR-PRM-006). The customer's last 20 promises, newest first, with followUpOf / followUpId / attempt, so the chain original → broken → follow-up → kept/broken can be drawn. Present when module.promises is on */
+            recentPromises?: components["schemas"]["Promise"][];
             version?: number;
         };
         MapPin: {
@@ -4135,6 +4265,8 @@ export interface components {
             promisedDate: string;
             promisedAmountPoisha: number;
             note?: string;
+            /** @description Added in 1.45.0 (FR-PRM-006). Id of the broken or partially kept promise this one follows up (same customer). Omit for a first promise */
+            followUpOf?: string | null;
         };
         Promise: components["schemas"]["PromiseCreate"] & {
             id?: string;
@@ -4148,6 +4280,19 @@ export interface components {
             status?: components["schemas"]["PromiseStatus"];
             paidTowardsPoisha?: number;
             createdAt?: string;
+            /** @description Added in 1.45.0. The promise this one follows up; null for a first promise */
+            followUpOf?: string | null;
+            /** @description Added in 1.45.0. The newest follow-up of this promise that is not cancelled; null when nobody followed it up */
+            followUpId?: string | null;
+            /** @description Added in 1.45.0. 1 for a first promise, 2 for its follow-up, 3 for the follow-up of that, … */
+            attempt?: number;
+            /** @description Added in 1.45.0. Id of the first promise of the chain (its own id for a first promise); GET /promises?customerId= returns the whole chain */
+            chainRootId?: string;
+            /**
+             * Format: date-time
+             * @description Added in 1.45.0. When the promise was kept, broken, superseded or cancelled
+             */
+            closedAt?: string | null;
         };
         /** @description Visit plus display refs, returned by GET /visits (1.4.0) */
         VisitListItem: components["schemas"]["Visit"] & {
@@ -4160,6 +4305,13 @@ export interface components {
                 id?: string;
                 name?: string;
             };
+            /**
+             * Format: date
+             * @description Added in 1.45.0. Asia/Dhaka business date of checkInAt (the day filters `date` / `from` / `to` use)
+             */
+            businessDate?: string;
+            /** @description Added in 1.45.0. Asia/Dhaka wall-clock time of checkInAt, HH:mm (24 h), so a table can show date and time without converting */
+            checkInLocalTime?: string;
         };
         /** @description Promise plus display refs, returned by GET /promises (1.4.0) */
         PromiseListItem: components["schemas"]["Promise"] & {
@@ -4631,10 +4783,10 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /**
-             * @description place, place_edit, place_move_request (1.38.0): see the payload description. collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
+             * @description prospect (1.45.0) payload ProspectCreate (same as POST /prospects; needs prospect.create and module.prospects; idempotent by clientId). promise (1.45.0) may carry followUpOf. place, place_edit, place_move_request (1.38.0): see the payload description. collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
              * @enum {string}
              */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit" | "place" | "place_edit" | "place_move_request";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit" | "place" | "place_edit" | "place_move_request" | "prospect";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -4694,7 +4846,7 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task" | "place";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task" | "place" | "prospect";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
@@ -4706,6 +4858,7 @@ export interface components {
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
              *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
              *     task → Task (1.20.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
+             *     prospect → Prospect (1.45.0; sent to the staff member who created it, on create and on every office change; the bootstrap snapshot holds their prospects of the last 90 days and every one not converted or dropped)
              *     place → Place (1.38.0; since 1.42.0 (ADR-054) sent to every device of every branch on every change; a deleted place arrives as op=delete reason=deleted; the bootstrap snapshot holds the active places of all branches. Devices whose cursor predates 1.42.0 get CURSOR_EXPIRED once and take a fresh snapshot)
              */
             data?: {
@@ -4767,6 +4920,7 @@ export interface components {
             };
             cash?: components["schemas"]["CashPosition"];
             target?: components["schemas"]["MyTarget"];
+            attendanceRequired?: components["schemas"]["AttendanceRequired"];
             /** Format: date-time */
             serverTime?: string;
         };
@@ -4786,6 +4940,7 @@ export interface components {
             };
             cash?: components["schemas"]["CashPosition"];
             target?: components["schemas"]["MyTarget"];
+            attendanceRequired?: components["schemas"]["AttendanceRequired"];
             /** Format: date-time */
             serverTime?: string;
         };
@@ -4915,6 +5070,225 @@ export interface components {
                 collectedPoisha?: number;
                 visits?: number;
             }[];
+            /** @description Added in 1.45.0 */
+            range?: {
+                /** Format: date */
+                from: string;
+                /** Format: date */
+                to: string;
+                days: number;
+            };
+            /** @description Added in 1.45.0. Field collections (FOS), counted like `collected` (withdrawn and voided left out) */
+            collections?: {
+                today?: components["schemas"]["DashboardAmount"];
+                thisMonth?: components["schemas"]["DashboardAmount"];
+                previousMonth?: components["schemas"]["DashboardAmount"];
+                inRange?: components["schemas"]["DashboardAmount"];
+                /** @description One entry per day of the range, zeros included */
+                series?: {
+                    /** Format: date */
+                    date: string;
+                    amountPoisha: number;
+                    count: number;
+                }[];
+                /** @description In range, largest first */
+                byMethod?: (components["schemas"]["DashboardAmount"] & {
+                    method: components["schemas"]["PaymentMethod"];
+                })[];
+                erpPosted?: components["schemas"]["DashboardAmount"];
+                pendingInField?: components["schemas"]["DashboardAmount"] & unknown;
+            };
+            /** @description Added in 1.45.0. Visits in range */
+            visitStats?: {
+                total?: components["schemas"]["DashboardCount"];
+                uniqueCustomers?: number;
+                series?: {
+                    /** Format: date */
+                    date: string;
+                    count: number;
+                }[];
+                byOutcome?: (components["schemas"]["DashboardCount"] & {
+                    outcome: string;
+                })[];
+            };
+            /** @description Added in 1.45.0. Open promises due today / in the next 7 and 15 days (from today), and how the promises due in the range ended */
+            promiseStats?: {
+                dueToday?: components["schemas"]["DashboardAmount"];
+                next7Days?: components["schemas"]["DashboardAmount"];
+                next15Days?: components["schemas"]["DashboardAmount"];
+                kept?: components["schemas"]["DashboardCount"];
+                partiallyKept?: components["schemas"]["DashboardCount"];
+                broken?: components["schemas"]["DashboardCount"];
+                /** @description kept ÷ (kept + partiallyKept + broken), 2 decimals; null when none was decided */
+                keptRate?: number | null;
+                brokenRate?: number | null;
+                brokenWithoutFollowUp?: components["schemas"]["DashboardCount"];
+            };
+            overdueCustomers?: components["schemas"]["DashboardAmount"] & unknown;
+            /** @description Added in 1.45.0. Customers in scope by pin colour */
+            payStates?: (components["schemas"]["DashboardCount"] & {
+                payState: components["schemas"]["PayState"];
+            })[];
+            /** @description Added in 1.45.0. Top 5 in range */
+            topStaff?: {
+                byCollection?: (components["schemas"]["DashboardAmount"] & {
+                    userId: string;
+                    name: string;
+                })[];
+                byVisits?: (components["schemas"]["DashboardCount"] & {
+                    userId: string;
+                    name: string;
+                })[];
+            };
+            /** @description Added in 1.45.0. Today (Asia/Dhaka) whatever the range; users exempt from attendance are not counted */
+            attendanceToday?: {
+                present?: components["schemas"]["DashboardCount"];
+                late?: components["schemas"]["DashboardCount"];
+                absent?: components["schemas"]["DashboardCount"];
+                onLeave?: components["schemas"]["DashboardCount"];
+                onDutyNow?: components["schemas"]["DashboardCount"];
+            };
+            pinApprovals?: components["schemas"]["DashboardCount"] & unknown;
+            cashInHand?: components["schemas"]["DashboardAmount"] & unknown;
+            /** @description Added in 1.45.0. Co-work sessions in range */
+            coworkStats?: {
+                sessions?: components["schemas"]["DashboardCount"];
+            };
+            /** @description Added in 1.45.0. Possible customers (module.prospects): created in range, and converted in range */
+            prospectStats?: {
+                created?: components["schemas"]["DashboardCount"];
+                converted?: components["schemas"]["DashboardCount"];
+                openNow?: components["schemas"]["DashboardCount"];
+            };
+        };
+        /**
+         * @description Added in 1.45.0
+         * @enum {string}
+         */
+        ProspectStatus: "new" | "contacted" | "converted" | "dropped";
+        /** @description Added in 1.45.0 (FR-PRO-001) */
+        ProspectCreate: {
+            /** Format: uuid */
+            clientId: string;
+            name: string;
+            phones?: {
+                /** @description Bangladesh mobile, stored as +8801XXXXXXXXX */
+                number: string;
+                label?: string;
+            }[];
+            address?: string;
+            note?: string;
+            location?: {
+                lat: number;
+                lng: number;
+                accuracyM?: number;
+            } | null;
+            /** @description Office users only, in scope; field staff always get their home branch */
+            branchId?: string;
+            /** @description Re-entry: the older prospect this one is created from */
+            fromProspectId?: string;
+        };
+        /** @description Added in 1.45.0. Only the fields sent change */
+        ProspectUpdate: {
+            name?: string;
+            phones?: {
+                number: string;
+                label?: string;
+            }[];
+            address?: string | null;
+            note?: string | null;
+            location?: {
+                lat: number;
+                lng: number;
+                accuracyM?: number;
+            } | null;
+            /** @enum {string} */
+            status?: "new" | "contacted" | "dropped";
+            /** @description Why the status changed (kept in history) */
+            reason?: string;
+        };
+        ProspectHistoryEntry: {
+            status: components["schemas"]["ProspectStatus"];
+            /** Format: date-time */
+            at: string;
+            by: {
+                id?: string;
+                name?: string;
+            };
+            reason?: string | null;
+            convertedCustomerId?: string | null;
+            convertedErpCustomerId?: string | null;
+        };
+        /** @description Added in 1.45.0 (FR-PRO-001). A possible customer recorded by staff or the office */
+        Prospect: {
+            id: string;
+            clientId: string;
+            name: string;
+            phones: {
+                number?: string;
+                label?: string | null;
+            }[];
+            address?: string | null;
+            note?: string | null;
+            location?: {
+                lat?: number;
+                lng?: number;
+                accuracyM?: number | null;
+            } | null;
+            branchId: string;
+            createdBy: {
+                id: string;
+                name: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date
+             * @description Asia/Dhaka business date of createdAt
+             */
+            createdDate?: string;
+            status: components["schemas"]["ProspectStatus"];
+            /** Format: date-time */
+            statusChangedAt?: string;
+            /** @description FOS customer id */
+            convertedCustomerId?: string | null;
+            /** @description ERP customer code when known */
+            convertedErpCustomerId?: string | null;
+            /** Format: date-time */
+            convertedAt?: string | null;
+            convertedBy?: {
+                id?: string;
+                name?: string;
+            } | null;
+            fromProspectId?: string | null;
+            history: components["schemas"]["ProspectHistoryEntry"][];
+            /** Format: date-time */
+            updatedAt?: string;
+            version: number;
+        };
+        /** @description Added in 1.45.0. The list behind a dashboard number: GET /api/v1{path}?{query}. Query values are strings; arrays are comma separated */
+        DashboardLink: {
+            /** @example /collections */
+            path: string;
+            /**
+             * @example {
+             *       "from": "2026-11-01",
+             *       "to": "2026-11-23",
+             *       "method": "cash"
+             *     }
+             */
+            query: {
+                [key: string]: string;
+            };
+        };
+        DashboardCount: {
+            count: number;
+            link: components["schemas"]["DashboardLink"];
+        };
+        DashboardAmount: {
+            amountPoisha: number;
+            count: number;
+            link: components["schemas"]["DashboardLink"];
         };
         StaffPerformanceRow: {
             userId?: string;
@@ -5263,6 +5637,10 @@ export interface components {
     parameters: {
         Id: string;
         BranchId: string;
+        /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0; a value after `to` is 400 */
+        FromDate: string;
+        /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0 */
+        ToDate: string;
         /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
         PayStateFilter: components["schemas"]["PayState"][];
         /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
@@ -5401,6 +5779,7 @@ export interface operations {
                         flags?: {
                             [key: string]: boolean;
                         };
+                        attendanceRequired?: components["schemas"]["AttendanceRequired"];
                     };
                 };
             };
@@ -6356,9 +6735,13 @@ export interface operations {
                 near?: string;
                 radiusM?: number;
                 sort?: "distance" | "-daysOverdue" | "name" | "-totalOutstanding" | "nextDueDate";
-                limit?: components["parameters"]["Limit"];
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Return `total` (capped at 10,000). Added in 1.1.0 */
+                /** @description Rows per page. Maximum 1000 since 1.46.0 (was 200) */
+                limit?: number;
+                /** @description Opaque `nextCursor` of the previous page. Ignored when `offset` is sent */
+                cursor?: string;
+                /** @description Added in 1.46.0. 0-based row number to start at (page N of size L = `offset=(N-1)*L`); works with every filter and sort, wins over `cursor`. Past the end = empty `items`, `nextCursor` null. With sort=distance only the nearest 2000 in the radius are paged */
+                offset?: number;
+                /** @description Return `total`, every customer the query matches (added in 1.1.0; exact since 1.46.0, was capped at 10,000) */
                 includeTotal?: boolean;
                 /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
                 payState?: components["parameters"]["PayStateFilter"];
@@ -8725,7 +9108,7 @@ export interface operations {
                     contentType: "image/jpeg" | "image/webp" | "audio/aac" | "audio/mp4";
                     sizeBytes: number;
                     sha256: string;
-                    /** Format: date-time */
+                    /** @description ISO-8601 date-time. Since 1.45.0 a value without `Z` or an offset (e.g. `2026-11-23T16:12:05.000`, what a phone sends from a local DateTime) is accepted and read as Asia/Dhaka wall-clock time; before, it was refused with 400 and the photo never uploaded */
                     capturedAt?: string;
                     geo?: components["schemas"]["GeoFix"];
                 };
@@ -9072,6 +9455,12 @@ export interface operations {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
                 ownerId?: string;
+                /** @description Added in 1.45.0. Who made the promise */
+                createdBy?: string;
+                /** @description Added in 1.45.0 */
+                brokenWithoutFollowUp?: "true" | "false";
+                /** @description Added in 1.45.0 */
+                followUpOf?: string;
                 /** @description Documented in 1.4.0 */
                 customerId?: string;
                 /** @description Promised date; wins over from/to */
@@ -9151,6 +9540,194 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    listProspects: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0; a value after `to` is 400 */
+                from?: components["parameters"]["FromDate"];
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0 */
+                to?: components["parameters"]["ToDate"];
+                status?: components["schemas"]["ProspectStatus"];
+                createdBy?: string;
+                q?: string;
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Prospect"][];
+                        nextCursor: string | null;
+                        /** @description Rows matching the filters (all pages) */
+                        total: number;
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    createProspect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProspectCreate"];
+            };
+        };
+        responses: {
+            /** @description Idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prospect"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prospect"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    getProspect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prospect"];
+                };
+            };
+            404: components["responses"]["Problem"];
+        };
+    };
+    updateProspect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProspectUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prospect"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    convertProspect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    customerId?: string;
+                    erpCustomerCode?: string;
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prospect"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    reopenProspect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reason"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Prospect"];
+                };
+            };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
         };
     };
     listAttendanceEvents: {
@@ -9922,6 +10499,10 @@ export interface operations {
                 branchId?: components["parameters"]["BranchId"];
                 status?: "open" | "snoozed" | "resolved";
                 type?: string;
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0; a value after `to` is 400 */
+                from?: components["parameters"]["FromDate"];
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0 */
+                to?: components["parameters"]["ToDate"];
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -9955,6 +10536,10 @@ export interface operations {
                 type?: "collection" | "visit" | "promise" | "pin" | "collection_withdrawn" | "collection_edited" | "deposit_deleted";
                 /** @description Only what this staff member did */
                 userId?: string;
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0; a value after `to` is 400 */
+                from?: components["parameters"]["FromDate"];
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0 */
+                to?: components["parameters"]["ToDate"];
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
             };
@@ -10057,6 +10642,10 @@ export interface operations {
             query?: {
                 branchId?: components["parameters"]["BranchId"];
                 date?: string;
+                /** @description Added in 1.45.0 */
+                from?: string;
+                /** @description Added in 1.45.0 */
+                to?: string;
             };
             header?: never;
             path?: never;
@@ -10073,6 +10662,10 @@ export interface operations {
                     "application/json": components["schemas"]["DashboardOverview"];
                 };
             };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     globalSearch: {

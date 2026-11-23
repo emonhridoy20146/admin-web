@@ -36,3 +36,10 @@ export async function confirmWithReason(page: Page, reason: string, confirm: str
   else await btn.click();
   await expect(dialog).toBeHidden();
 }
+
+/** Picks a preset of the shared date filter (FR-W-063), by its Bangla label (e.g. commonBn.range['7d']). */
+export async function pickRange(page: Page, label: string) {
+  await page.getByTestId('date-range').click();
+  await page.getByRole('dialog').getByRole('button', { name: new RegExp(`^${label}`) }).click();
+  await expect(page.getByTestId('date-range')).toContainText(label);
+}

@@ -8,11 +8,14 @@ export type ActivityItem = components['schemas']['ActivityItem'];
 export type ActivityType = ActivityItem['type'];
 
 /** FR-W-046 (master FR-ACT-001): the staff activity feed, newest first, paged by cursor; polls every 60 s. */
-export function useActivity(type: ActivityType | undefined, userId: string | undefined) {
+export function useActivity(type: ActivityType | undefined, userId: string | undefined, range: { from?: string; to?: string } = {}) {
   const branchId = useBranchId();
+  // 1.45.0: from/to = Asia/Dhaka days (FR-W-063)
+  const from = range.from || undefined;
+  const to = range.to || undefined;
   return useInfiniteQuery({
-    queryKey: ['activity', 'list', { branchId, type, userId }],
-    queryFn: ({ pageParam }) => unwrap(api.GET('/activity', { params: { query: { branchId, type, userId, limit: 40, ...(pageParam ? { cursor: pageParam } : {}) } } })),
+    queryKey: ['activity', 'list', { branchId, type, userId, from, to }],
+    queryFn: ({ pageParam }) => unwrap(api.GET('/activity', { params: { query: { branchId, type, userId, from, to, limit: 40, ...(pageParam ? { cursor: pageParam } : {}) } } })),
     initialPageParam: '' as string,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     refetchInterval: 60_000,

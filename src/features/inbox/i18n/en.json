@@ -38,5 +38,6 @@
     "location.proposal": "Review pin",
     "promise.broken": "Open customer",
     "default": "Open"
-  }
+  },
+  "raised": "Raised on"
 }

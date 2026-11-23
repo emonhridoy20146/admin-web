@@ -25,10 +25,12 @@ export function usePromises(params: Omit<PromiseQuery, 'branchId'>) {
 export function useCreatePromise() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { customerId: string; promisedDate: string; promisedAmountPoisha: number; erpPlanId?: string; note?: string }) =>
-      unwrap(api.POST('/promises', { body: { ...body, clientId: crypto.randomUUID() } })),
+    // `clientId` is made once per dialog by the caller, so a retry after a network error cannot make two promises
+    mutationFn: ({ clientId, ...body }: { clientId?: string; customerId: string; promisedDate: string; promisedAmountPoisha: number; erpPlanId?: string; note?: string; followUpOf?: string }) =>
+      unwrap(api.POST('/promises', { body: { ...body, clientId: clientId ?? crypto.randomUUID() } })),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['promises'] });
+      void qc.invalidateQueries({ queryKey: ['customers', 'detail'] });
       emit(EV.promiseCreated);
     },
   });
@@ -42,5 +44,15 @@ export function useCancelPromise() {
       void qc.invalidateQueries({ queryKey: ['promises'] });
       emit(EV.promiseChanged);
     },
+  });
+}
+
+/** FR-PRM-006: every promise of one customer (newest 100), to draw the follow-up chains. */
+export function useCustomerPromises(customerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['promises', 'customer', customerId],
+    enabled: !!customerId,
+    queryFn: async () => (await unwrap(api.GET('/promises', { params: { query: { customerId: customerId!, limit: 100 } } }))).items ?? [],
+    staleTime: 30_000,
   });
 }

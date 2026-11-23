@@ -6,6 +6,7 @@ import shellBn from '../../src/features/shell/i18n/bn.json' with { type: 'json' 
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import systemBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
+import prosBn from '../../src/features/prospects/i18n/bn.json' with { type: 'json' };
 import { confirmWithReason, login } from '../fixtures';
 
 async function openMenuAndGo(page: import('@playwright/test').Page, name: string) {
@@ -142,4 +143,33 @@ test('places move requests at 390 px: cards, ≥ 44 px actions, no sideways scro
   // every button of the card is a finger-size target (Leaflet's zoom controls are links with role=button, sized by Leaflet)
   for (const b of await card.locator('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+// Batch 1123 (FR-W-060/063/066): the page is never wider than the phone, the pager reads "page n of m", the date filter
+// and the possible-customer drawer actions fit.
+test('390 px: no sideways scroll on the dashboard, customers and possible customers; pager and drawer fit', async ({ page }) => {
+  // the drawer slides in; measure where it rests
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await login(page);
+  const noSideways = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(page.getByTestId('kpi-strip')).toBeVisible();
+  await noSideways();
+
+  await openMenuAndGo(page, custBn.title);
+  await expect(page.getByTestId('pager')).toContainText(commonBn.table.pageOf.replace('{{n}}', '১').replace('{{pages}}', '৪'));
+  await noSideways();
+
+  await openMenuAndGo(page, prosBn.title);
+  await noSideways();
+  const trigger = page.getByTestId('date-range');
+  expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  await page.getByRole('list', { name: prosBn.title }).getByRole('button').first().click();
+  const actions = page.getByTestId('prospect-actions');
+  await expect(actions).toBeVisible();
+  for (const b of await actions.getByRole('button').all()) {
+    const r = (await b.boundingBox())!;
+    expect(r.x).toBeGreaterThanOrEqual(0);
+    expect(r.x + r.width).toBeLessThanOrEqual(390);
+    expect(r.y + r.height).toBeLessThanOrEqual(844);
+  }
 });

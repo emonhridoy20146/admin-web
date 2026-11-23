@@ -60,5 +60,24 @@
     "customer": "Select a customer",
     "amount": "Enter an amount",
     "date": "Pick a date"
+  },
+  "chain": {
+    "tab": "Promises",
+    "title": "Follow-up chain",
+    "titleN": "Chain of {{n}} promises",
+    "single": "Promise",
+    "attempt": "Attempt {{n}}",
+    "by": "by {{name}}",
+    "none": "No promises for this customer yet."
+  },
+  "followUp": {
+    "action": "New follow-up promise",
+    "title": "New follow-up promise",
+    "desc": "{{name}} broke the promise of {{date}} ({{amount}}). This will be attempt {{n}}.",
+    "was": "Broken promise: {{date}}, {{amount}} (paid {{paid}})",
+    "confirm": "Make follow-up",
+    "created": "Follow-up promise saved",
+    "filter": "Broken, no follow-up",
+    "none": "No follow-up"
   }
 }

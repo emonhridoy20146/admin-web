@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test';
 import coworkBn from '../../src/features/cowork/i18n/bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
+import { login, nav, pickRange } from '../fixtures';
 
 /** FR-W-052 (master FR-CW-006): the office ends an ongoing co-work with a reason; the session stays in the list as ended. */
 test('co-work: a manager ends an ongoing session with a reason, and it shows who ended it and why', async ({ page }) => {
   await login(page, 'manager');
   await nav(page, coworkBn.title);
-  await page.getByRole('button', { name: coworkBn.range.today, exact: true }).click();
+  await pickRange(page, commonBn.range.today);
   await page.waitForURL(/range=today/);
   const ongoing = page.locator('tbody tr').filter({ hasText: coworkBn.status.open });
   await expect(ongoing.first()).toBeVisible();

@@ -492,7 +492,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.places', 'Map places (text markers on the map)', true], ['module.activity', 'Staff activity feed', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.places', 'Map places (text markers on the map)', true], ['module.activity', 'Staff activity feed', true], ['module.prospects', 'Possible customers (1.45.0)', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -629,6 +629,26 @@ for (const c of customers) {
 }
 // a few open promises already past their date (within grace) so "late" shows up
 promises.filter((p) => p.row.status === 'open' && p.row.promisedDate > T).slice(0, 6).forEach((p, i) => (p.row.promisedDate = now().minus({ days: 1 + (i % 2) }).toISODate()!));
+// 1.45.0 (FR-PRM-006): every promise is attempt 1 of its own chain; some broken ones were followed up (attempt 2, and one
+// of those broken again and followed up once more), the rest are "broken without follow-up"
+for (const p of promises) Object.assign(p.row, { attempt: 1, chainRootId: p.row.id, followUpOf: null, followUpId: null, createdBy: p.row.createdBy ?? p.row.ownerId, createdByName: p.row.createdByName ?? p.row.owner?.name });
+{
+  const broken = promises.filter((p) => p.row.status === 'broken');
+  const follow = (orig: MockPromise, status: S['PromiseStatus'], days: number) => {
+    const date = now().plus({ days });
+    const row: S['PromiseListItem'] = {
+      ...orig.row, id: oid('6761'), clientId: crypto.randomUUID(), promisedDate: date.toISODate()!, status, paidTowardsPoisha: status === 'kept' ? orig.row.promisedAmountPoisha : 0,
+      createdAt: isoAt(now().minus({ days: Math.max(0, -days) + 1 })), note: undefined, followUpOf: orig.row.id, followUpId: null, attempt: (orig.row.attempt ?? 1) + 1, chainRootId: orig.row.chainRootId,
+    };
+    orig.row.followUpId = row.id!;
+    const m = { branchId: orig.branchId, row };
+    promises.push(m);
+    return m;
+  };
+  broken.slice(0, 6).forEach((b, i) => follow(b, i % 3 === 0 ? 'kept' : 'open', i % 3 === 0 ? -1 : 2 + i));
+  const again = follow(broken[6] ?? broken[0]!, 'broken', -2);
+  follow(again, 'open', 3);
+}
 
 export interface MockVisit { row: S['VisitListItem']; branchId: string }
 export const visits: MockVisit[] = [];
@@ -679,7 +699,9 @@ for (const b of branches) {
       const size = Math.min(free.length, r3() < 0.7 ? 2 : 3);
       const picked = [...free].sort(() => r3() - 0.5).slice(0, size);
       picked.forEach((x) => used.add(x.id!));
-      const start = now().startOf('day').minus({ days: d }).plus({ hours: 9, minutes: 30 + i3(0, 90) });
+      const planned = now().startOf('day').minus({ days: d }).plus({ hours: 9, minutes: 30 + i3(0, 90) });
+      // today's sessions started before "now", so an open session exists at any hour (the journeys ran red before 9:30 Dhaka)
+      const start = d === 0 && planned > now() ? DateTime.max(now().minus({ minutes: 20 + g * 5 }), now().startOf('day')) : planned;
       if (start > now()) continue;
       const creator = picked[0]!;
       const members: S['CoworkMember'][] = [{ userId: creator.id, name: creator.name?.en, status: 'accepted', invitedBy: creator.id, invitedAt: isoAt(start), respondedAt: isoAt(start), leftAt: null }];
@@ -1546,4 +1568,41 @@ export function requestPlaceMove(p: MockPlace, by: MockUser, to: { lat: number; 
   const bank = addPlace(managers[0]!, 'সোনালী ব্যাংক', 'bank', null, { lat: 22.7015, lng: 90.3668 }, B[0]!, 20);
   requestPlaceMove(bank, b0[1]!, { lat: 22.7019, lng: 90.3675 }, null, 1);
   addPlace(b1[0]!, 'পটুয়াখালী বাস স্ট্যান্ড', 'bus_stop', null, { lat: 22.3607, lng: 90.3312 }, B[1]!, 10);
+}
+
+// ---------- possible customers (FR-PRO-001, contract 1.45.0) ----------
+export const prospects: S['Prospect'][] = [];
+{
+  let seed = 20261123;
+  const r3 = () => ((seed = (seed * 1664525 + 1013904223) >>> 0), seed / 4294967296);
+  const p3 = <T,>(a: readonly T[]): T => a[Math.floor(r3() * a.length)]!;
+  const FIRST = ['Abdul', 'Rahim', 'Karim', 'Salma', 'Nasrin', 'Jamal', 'Rubina', 'Habib', 'Shirin', 'Mizan', 'Faruk', 'Ayesha'];
+  const LAST = ['Hossain', 'Mia', 'Begum', 'Talukder', 'Sikder', 'Molla', 'Khan', 'Howlader'];
+  const PLACES = ['Galachipa bazar, near the mosque', 'Amkhola union, ward 3', 'Patuakhali sadar road', 'Charkajol, by the school', 'Dakua, ferry ghat', 'Bakerganj hat'];
+  const NOTES_P = ['Wants a fridge on installments', 'Asked about a 32 inch TV', 'Will come to the showroom on Friday', 'ফ্রিজ কিস্তিতে নিতে চান', 'মোটরসাইকেলের দাম জানতে চেয়েছেন', ''];
+  const field = staff.filter((u) => u.role === 'field_staff' && u.active);
+  for (let i = 0; i < 46; i++) {
+    const by = p3(field);
+    const daysAgo = Math.floor(r3() * 50);
+    const created = now().minus({ days: daysAgo, hours: Math.floor(r3() * 8) });
+    const status = p3(['new', 'new', 'new', 'contacted', 'contacted', 'converted', 'dropped'] as const);
+    const byRef = { id: by.id!, name: by.name?.en ?? '' };
+    const history: S['ProspectHistoryEntry'][] = [{ status: 'new', at: isoAt(created), by: byRef, reason: null }];
+    const later = created.plus({ days: 1 + Math.floor(r3() * 3) });
+    const office = { id: staff.find((u) => u.role === 'branch_manager')?.id ?? by.id!, name: staff.find((u) => u.role === 'branch_manager')?.name?.en ?? 'Manager' };
+    if (status !== 'new') history.push({ status: 'contacted', at: isoAt(later), by: office, reason: 'Called, interested' });
+    const conv = status === 'converted' ? customers[Math.floor(r3() * customers.length)]! : null;
+    if (status === 'converted') history.push({ status: 'converted', at: isoAt(later.plus({ days: 2 })), by: office, reason: null, convertedCustomerId: conv!.item.id!, convertedErpCustomerId: conv!.item.code ?? null });
+    if (status === 'dropped') history.push({ status: 'dropped', at: isoAt(later.plus({ days: 1 })), by: office, reason: 'Not interested any more' });
+    const last = history[history.length - 1]!;
+    prospects.push({
+      id: oid('6770'), clientId: crypto.randomUUID(), name: `${p3(FIRST)} ${p3(LAST)}`,
+      phones: [{ number: `+8801${7 + Math.floor(r3() * 3)}${String(Math.floor(r3() * 1e8)).padStart(8, '0')}`, label: null }],
+      address: p3(PLACES), note: p3(NOTES_P) || null, location: r3() < 0.6 ? { lat: 22.16 + r3() * 0.05, lng: 90.42 + r3() * 0.05, accuracyM: 12 } : null,
+      branchId: by.branchIds?.[0] ?? branches[0]!.id!, createdBy: byRef, createdAt: isoAt(created), createdDate: created.setZone('Asia/Dhaka').toISODate()!,
+      status, statusChangedAt: last.at, convertedCustomerId: conv?.item.id ?? null, convertedErpCustomerId: conv?.item.code ?? null, convertedAt: status === 'converted' ? last.at : null,
+      convertedBy: status === 'converted' ? office : null, fromProspectId: null, history, updatedAt: last.at, version: history.length,
+    });
+  }
+  prospects.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

@@ -39,5 +39,147 @@
   "failed": "Failed",
   "lastSync": "Last successful sync",
   "visitTarget": "visit credit {{credit}} of {{target}}",
-  "leaderboard": "Leaderboard"
+  "leaderboard": "Leaderboard",
+  "asOf": "as of {{time}}",
+  "monthToDate": "This month so far",
+  "vsLastMonth": "Last month, same days: {{amount}}",
+  "sameDaysLastMonth": "vs same days last month",
+  "pendingErp": "Waiting for the ERP",
+  "pendingErpSub": "Field collections not posted yet",
+  "failedN": "{{n}} failed",
+  "attendance": "Present today",
+  "attendanceSub": "{{late}} late · {{absent}} absent",
+  "mobileMoney": "Mobile money",
+  "total": "Total",
+  "trend30": {
+    "title": "Collections, last 30 days",
+    "sub": "Per day by payment method · {{total}} in all. Click a day to see its collections.",
+    "best": "Best day: {{date}} ({{amount}})"
+  },
+  "month": {
+    "title": "This month against last month",
+    "sub": "Running total by day of the month · last month in all: {{last}}",
+    "open": "Open this month's collections",
+    "this": "This month",
+    "last": "Last month",
+    "day": "Day {{n}}",
+    "dayCol": "Day"
+  },
+  "alerts": {
+    "title": "Needs a decision",
+    "sub": "Open each to act on it",
+    "clear": "Nothing waiting",
+    "conflicts": "Conflicts and failed postings",
+    "conflictsBody": "The ERP refused these collections",
+    "pins": "Pin corrections to approve",
+    "pinsBody": "Staff proposed new map pins",
+    "cash": "Staff over the cash limit",
+    "cashBody": "Ask them to deposit",
+    "erpFailed": "ERP postings failed",
+    "erpFailedBody": "Will be retried; check the reason",
+    "erpPending": "Waiting for the ERP",
+    "erpPendingBody": "Posted automatically when the ERP answers"
+  },
+  "pay": {
+    "title": "Customers by pay state",
+    "sub": "{{n}} customers, the same colours as the map",
+    "state": {
+      "bad": "Bad / term over",
+      "missed_many": "Several missed",
+      "missed_one": "One missed",
+      "due_today": "Due today",
+      "on_track": "On track",
+      "paid_off": "Paid off"
+    }
+  },
+  "att": {
+    "title": "Attendance today",
+    "sub": "{{n}} on duty now",
+    "none": "No attendance recorded yet today.",
+    "ofAll": "of {{n}} field staff present",
+    "onTime": "On time",
+    "late": "Late",
+    "absent": "Absent"
+  },
+  "prom": {
+    "title": "Promises",
+    "sub": "Kept this month, and today",
+    "noneDue": "No promises due this month yet",
+    "rate": "{{pct}} kept this month",
+    "kept": "{{kept}} of {{due}} due this month were kept",
+    "dueToday": "Due today",
+    "keptToday": "Kept today",
+    "broken": "Broken yesterday"
+  },
+  "leaders": {
+    "title": "Top collectors this month",
+    "sub": "Field collections recorded this month",
+    "none": "No collections this month yet."
+  },
+  "branches": {
+    "title": "Branches this month",
+    "sub": "Field collections from the 1st to today; click a branch to open it",
+    "counts": "{{receipts}} receipts · {{visits}} visits",
+    "branch": "Branch",
+    "visits": "Visits"
+  },
+  "modulesOff": {
+    "title": "{{n}} modules are turned off",
+    "action": "Open feature flags"
+  },
+  "open": "Open",
+  "outcome": {
+    "paid": "Paid",
+    "partial_paid": "Paid in part",
+    "promised": "Promised",
+    "not_home": "Not at home",
+    "refused": "Refused to pay",
+    "shifted_address": "Moved address",
+    "customer_dead": "Customer deceased",
+    "product_returned_request": "Wants to return product",
+    "runaway": "Runaway",
+    "other": "Other"
+  },
+  "period": {
+    "title": "For the period",
+    "sub": "Collections, visits and promises in the days you choose; click any number to see the list.",
+    "collections": "Collected in the period",
+    "collectionsSub": "Field collections by payment method",
+    "noCollections": "No collections in this period.",
+    "inErp": "In the ERP",
+    "notInErp": "Not in the ERP yet",
+    "visits": "Visits by outcome",
+    "visitsSub": "{{n}} visits to {{c}} customers",
+    "noVisits": "No visits in this period.",
+    "promSub": "How the promises due in the period ended",
+    "noneDecided": "No promise came due in this period",
+    "keptOf": "kept, of {{n}} decided",
+    "kept": "Kept",
+    "partial": "Partly kept",
+    "broken": "Broken",
+    "noFollowUp": "{{n}} broken without a follow-up promise",
+    "ahead": "Open promises coming up",
+    "dueToday": "Due today",
+    "next7": "Next 7 days",
+    "next15": "Next 15 days"
+  },
+  "top": {
+    "title": "Top staff in the period",
+    "sub": "Click a person to see their collections or visits",
+    "by": "Rank by",
+    "money": "Money",
+    "visits": "Visits",
+    "none": "Nothing recorded in this period."
+  },
+  "pros": {
+    "title": "Possible customers",
+    "sub": "Recorded and converted in the period",
+    "created": "Recorded",
+    "converted": "Became customers",
+    "openNow": "Still open now",
+    "rate": "{{pct}} of those recorded became customers",
+    "noneYet": "None recorded in this period.",
+    "cowork": "Co-work",
+    "coworkSessions": "Co-work sessions in the period"
+  }
 }

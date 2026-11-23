@@ -187,6 +187,23 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
     if (ready.current) redraw.current();
   }, [markers, clusters, lines, paths]);
 
+  // FR-W-061: the map follows its box (full screen, a panel opening beside it, a rotated phone). Leaflet only measures
+  // on window resize, so without this the tiles stop at the old edge and clicks land in the wrong place.
+  useEffect(() => {
+    const box = el.current;
+    if (!created || !box || typeof ResizeObserver === 'undefined') return;
+    let frame = 0;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.current?.invalidateSize({ pan: false, debounceMoveend: true }));
+    });
+    ro.observe(box);
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
+  }, [created]);
+
   const fitKey = !fit ? '' : 'center' in fit ? `${fit.center.lat},${fit.center.lng}@${fit.zoom}` : `${fit.minLat},${fit.minLng},${fit.maxLat},${fit.maxLng}`;
   useEffect(() => {
     if (!fit) return;

@@ -65,11 +65,8 @@ test('customer list: "paid this month" / "not paid this month" split the list an
   await expect(group).toBeVisible();
 
   const marksOfRows = async () => {
-    const rows = page.locator('tbody tr');
-    const n = await rows.count();
-    const out: string[] = [];
-    for (let i = 0; i < n; i++) out.push((await rows.nth(i).locator('[data-mark=paid] .sr-only').textContent())?.trim() ?? '');
-    return out;
+    // one read for the whole page (100 rows since FR-W-060)
+    return page.locator('tbody tr').evaluateAll((rows) => rows.map((r) => r.querySelector('[data-mark=paid] .sr-only')?.textContent?.trim() ?? ''));
   };
 
   await group.getByRole('button', { name: custBn.paidMonth.no, exact: true }).click();

@@ -27,7 +27,12 @@ test('staff activity: the bell counts new lines, the feed names person and custo
   // the person's name is a button that shows only their work
   await lines.first().getByRole('button').first().click();
   await page.waitForURL(/userId=/);
-  await expect(page.getByRole('button', { name: new RegExp(actBn.onlyPerson.replace('{{name}}', '.+')) })).toBeVisible();
+  // the staff filter (FR-W-063) now shows that person; every line is theirs
+  const userId = new URL(page.url()).searchParams.get('userId')!;
+  await expect(page.getByTestId('staff-select')).toHaveValue(userId);
+  await expect(lines.first()).toBeVisible();
+  const names = await lines.evaluateAll((els) => els.map((e) => e.querySelector('button')?.textContent?.trim() ?? ''));
+  expect(new Set(names).size).toBe(1);
 
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);

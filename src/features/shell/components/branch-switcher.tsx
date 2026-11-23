@@ -76,11 +76,11 @@ export function BranchSwitcher() {
       <DropdownTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-sm border border-line bg-surface px-2.5 text-base font-medium text-fg shadow-e1 hover:bg-surface-hover [@media(pointer:coarse)]:h-11"
+          className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-sm border border-line bg-surface px-2 text-base font-medium text-fg shadow-e1 hover:bg-surface-hover sm:gap-2 sm:px-2.5 [@media(pointer:coarse)]:h-11"
           aria-label={`${ts('branch')}: ${label}`}
         >
           <Building2 className="size-4 text-fg-tertiary" aria-hidden />
-          <span className="max-w-[120px] truncate sm:max-w-[180px]">{label}</span>
+          <span className="max-w-[72px] truncate min-[420px]:max-w-[120px] sm:max-w-[180px]">{label}</span>
           <ChevronsUpDown className="size-3.5 text-fg-tertiary" aria-hidden />
         </button>
       </DropdownTrigger>
