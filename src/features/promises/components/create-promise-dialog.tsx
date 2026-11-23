@@ -2,7 +2,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { formatMoney } from '@/shared/lib/format';
+import { formatDate, formatMoney, formatNumber } from '@/shared/lib/format';
+import { ErrorBanner } from '@/shared/ui/feedback';
 import { todayDhaka } from '@/shared/lib/time';
 import { Dialog } from '@/shared/ui/overlay';
 import { Button } from '@/shared/ui/button';
@@ -10,25 +11,54 @@ import { Field, Input, Textarea } from '@/shared/ui/form';
 import { CustomerPicker } from '@/shared/ui/customer-picker';
 import { useCreatePromise } from '../api/promises';
 
-export function CreatePromiseDialog({ open, onOpenChange, initialCustomer }: { open: boolean; onOpenChange: (o: boolean) => void; initialCustomer?: { id: string; name: string } }) {
+/** The broken (or partially kept) promise a new promise follows up (FR-PRM-006, 1.45.0). */
+export interface FollowUpOf {
+  id: string;
+  customerId: string;
+  customerName: string;
+  promisedDate: string;
+  promisedAmountPoisha: number;
+  paidTowardsPoisha?: number;
+  attempt?: number;
+  erpPlanId?: string;
+}
+
+/**
+ * New promise from the office. With `followUp` it is the next promise of a broken one: same customer (fixed), the
+ * plan carried over, sent with `followUpOf`; the server numbers it attempt n + 1. Money action: not optimistic, the
+ * button names the amount.
+ */
+export function CreatePromiseDialog({ open, onOpenChange, initialCustomer, followUp, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; initialCustomer?: { id: string; name: string }; followUp?: FollowUpOf | null; onCreated?: (id: string) => void }) {
   const { t } = useTranslation('promises');
   const create = useCreatePromise();
   const today = todayDhaka();
 
-  const [customerId, setCustomerId] = useState(initialCustomer?.id ?? '');
-  const [customerName, setCustomerName] = useState(initialCustomer?.name ?? '');
+  const first = followUp ? { id: followUp.customerId, name: followUp.customerName } : initialCustomer;
+  const [customerId, setCustomerId] = useState(first?.id ?? '');
+  const [customerName, setCustomerName] = useState(first?.name ?? '');
+  const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(today);
-  const [plan, setPlan] = useState('');
+  const [plan, setPlan] = useState(followUp?.erpPlanId ?? '');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // a dialog opened for another broken promise starts from that promise
+  const [forId, setForId] = useState(followUp?.id);
+  if (followUp?.id !== forId) {
+    setForId(followUp?.id);
+    setCustomerId(first?.id ?? '');
+    setCustomerName(first?.name ?? '');
+    setPlan(followUp?.erpPlanId ?? '');
+  }
 
   const reset = () => {
-    setCustomerId(initialCustomer?.id ?? '');
-    setCustomerName(initialCustomer?.name ?? '');
+    setCustomerId(first?.id ?? '');
+    setCustomerName(first?.name ?? '');
     setAmount('');
     setDate(today);
-    setPlan('');
+    setPlan(followUp?.erpPlanId ?? '');
+    setClientId(crypto.randomUUID());
+    create.reset();
     setNote('');
     setErrors({});
   };
@@ -44,22 +74,26 @@ export function CreatePromiseDialog({ open, onOpenChange, initialCustomer }: { o
 
   const submit = async () => {
     if (!validate()) return;
-    await create.mutateAsync({
+    const made = await create.mutateAsync({
+      clientId,
+      followUpOf: followUp?.id,
       customerId,
       promisedDate: date,
       promisedAmountPoisha: Math.round(Number(amount) * 100),
       erpPlanId: plan || undefined,
       note: note || undefined,
     });
-    toast.success(t('created'));
+    toast.success(followUp ? t('followUp.created') : t('created'));
+    if (made?.id) onCreated?.(made.id);
     reset();
     onOpenChange(false);
   };
 
   const confirmLabel = useMemo(() => {
-    if (!amount || Number(amount) <= 0) return t('create');
-    return `${t('create')} · ${formatMoney(Math.round(Number(amount) * 100))}`;
-  }, [amount, t]);
+    const verb = followUp ? t('followUp.confirm') : t('create');
+    if (!amount || Number(amount) <= 0) return verb;
+    return `${verb} · ${formatMoney(Math.round(Number(amount) * 100))}`;
+  }, [amount, t, followUp]);
 
   return (
     <Dialog
@@ -68,8 +102,12 @@ export function CreatePromiseDialog({ open, onOpenChange, initialCustomer }: { o
         if (!o) reset();
         onOpenChange(o);
       }}
-      title={t('createTitle')}
-      description={t('createDesc')}
+      title={followUp ? t('followUp.title') : t('createTitle')}
+      description={
+        followUp
+          ? t('followUp.desc', { name: followUp.customerName, date: formatDate(followUp.promisedDate), amount: formatMoney(followUp.promisedAmountPoisha), n: formatNumber((followUp.attempt ?? 1) + 1) })
+          : t('createDesc')
+      }
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => { reset(); onOpenChange(false); }}>
@@ -82,6 +120,14 @@ export function CreatePromiseDialog({ open, onOpenChange, initialCustomer }: { o
       }
     >
       <div className="space-y-4 px-5 pb-2">
+        {create.error ? <ErrorBanner error={create.error} /> : null}
+        {followUp ? (
+          <div className="rounded-md border border-line bg-surface-subtle px-3 py-2.5 text-sm">
+            <div className="text-xs text-fg-tertiary">{t('field.customer')}</div>
+            <div className="font-medium text-fg">{followUp.customerName}</div>
+            <div className="mt-1 text-xs text-fg-secondary">{t('followUp.was', { date: formatDate(followUp.promisedDate), amount: formatMoney(followUp.promisedAmountPoisha), paid: formatMoney(followUp.paidTowardsPoisha ?? 0) })}</div>
+          </div>
+        ) : (
         <Field label={t('field.customer')} help={t('field.customerHelp')} error={errors.customer} required>
           {(id) => (
             <CustomerPicker
@@ -92,6 +138,7 @@ export function CreatePromiseDialog({ open, onOpenChange, initialCustomer }: { o
             />
           )}
         </Field>
+        )}
 
         <Field label={t('field.amount')} error={errors.amount} required>
           {(id, desc) => (

@@ -797,10 +797,42 @@ export const handlers = [
       .filter((p) => (!from || p.promisedDate >= from) && (!to || p.promisedDate <= to))
       .filter((p) => !g('status') || p.status === g('status'))
       .filter((p) => !g('ownerId') || p.ownerId === g('ownerId'))
+      .filter((p) => !g('createdBy') || p.createdBy === g('createdBy'))
+      .filter((p) => !g('followUpOf') || p.followUpOf === g('followUpOf'))
+      .filter((p) => g('brokenWithoutFollowUp') !== 'true' || ((p.status === 'broken' || p.status === 'partially_kept') && !p.followUpId))
       .filter((p) => !g('customerId') || p.customerId === g('customerId'))
       .sort((a, b) => (a.promisedDate === b.promisedDate ? (a.id! < b.id! ? -1 : 1) : a.promisedDate < b.promisedDate ? -1 : 1));
     const pg = page(all, url);
     return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor });
+  })),
+  // POST /promises (office, 1.45.0 follow-ups): idempotent by clientId; followUpOf must be a broken / partially kept
+  // promise of the same customer
+  http.post(`${BASE}/promises`, authed(async ({ request, ctx }) => {
+    const deny = need(ctx, 'promise.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['PromiseCreate'] & { followUpOf?: string };
+    const again = db.promises.find((x) => x.row.clientId === b.clientId);
+    if (again) return HttpResponse.json(again.row, { status: 200 });
+    const c = db.customerById(b.customerId);
+    if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
+    if (!b.promisedDate || !(b.promisedAmountPoisha > 0)) return problem(400, 'VALIDATION_FAILED', 'Date and amount are required');
+    let prev: (typeof db.promises)[number] | undefined;
+    if (b.followUpOf) {
+      prev = db.promises.find((x) => x.row.id === b.followUpOf);
+      const reason = !prev ? 'NOT_FOUND' : prev.row.customerId !== b.customerId ? 'OTHER_CUSTOMER' : !['broken', 'partially_kept'].includes(prev.row.status ?? '') ? 'NOT_BROKEN' : null;
+      if (reason) return problem(422, 'BUSINESS_RULE', 'This promise cannot be followed up', 'PROMISE_FOLLOW_UP_INVALID', { reason });
+    }
+    const id = `6762${Math.random().toString(16).slice(2, 22).padEnd(20, '0')}`;
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    const row: S['PromiseListItem'] = {
+      id, clientId: b.clientId, customerId: b.customerId, erpPlanId: b.erpPlanId, promisedDate: b.promisedDate, promisedAmountPoisha: b.promisedAmountPoisha, note: b.note, status: 'open',
+      ownerId: c.item.assignee?.id, owner: { id: c.item.assignee?.id, name: c.item.assignee?.name }, createdBy: me.id, createdByName: me.name, paidTowardsPoisha: 0, createdAt: new Date().toISOString(),
+      customer: { id: c.item.id, name: c.item.name, code: c.item.code ?? undefined }, followUpOf: prev?.row.id ?? undefined, followUpId: null, attempt: prev ? (prev.row.attempt ?? 1) + 1 : 1, chainRootId: prev?.row.chainRootId ?? id,
+    };
+    if (prev) prev.row.followUpId = id;
+    db.promises.push({ branchId: c.branchId, row });
+    db.addAudit({ actor: actor(ctx.user), action: 'promise.created', entity: 'promise', entityId: id, branchId: c.branchId, after: { promisedDate: row.promisedDate, amountPoisha: row.promisedAmountPoisha, followUpOf: row.followUpOf } });
+    return HttpResponse.json(row, { status: 201 });
   })),
   http.post(`${BASE}/promises/:id/cancel`, authed(async ({ request, params, ctx }) => {
     const deny = need(ctx, 'promise.create');
@@ -1218,7 +1250,8 @@ export const handlers = [
     const c = db.customerById(params.id!);
     if (!c || !custBranchOk(ctx, c)) return problem(404, 'NOT_FOUND', 'Customer not found');
     recomputeCustomer(c);
-    return HttpResponse.json({ ...c.detail, ...mockActivity(c) }, { headers: { ETag: `"${c.detail.version}"` } });
+    const recentPromises = db.promises.filter((p) => p.row.customerId === c.item.id).map((p) => p.row).sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')).slice(0, 20);
+    return HttpResponse.json({ ...c.detail, ...mockActivity(c), recentPromises }, { headers: { ETag: `"${c.detail.version}"` } });
   })),
   http.post(`${BASE}/customers/:id/refresh`, authed(({ params }) => {
     const c = db.customerById(params.id!)!;

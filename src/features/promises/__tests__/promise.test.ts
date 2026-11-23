@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canCancel, daysTo, isLate, paidRatio, windowFor } from '../model/promise';
+import { canCancel, chainOf, chainsOf, daysTo, isLate, needsFollowUp, paidRatio, windowFor } from '../model/promise';
 
 const T = '2026-11-15';
 
@@ -28,5 +28,24 @@ describe('promise model', () => {
   it('only open promises can be cancelled', () => {
     expect(canCancel('open')).toBe(true);
     expect(canCancel('kept')).toBe(false);
+  });
+});
+
+describe('promise chains (FR-PRM-006, 1.45.0)', () => {
+  const p = (id: string, status: string, followUpOf: string | null, createdAt: string) => ({ id, status, followUpOf, followUpId: null, attempt: 1, createdAt }) as never;
+  const all = [p('a', 'broken', null, '2026-11-01'), p('b', 'broken', 'a', '2026-11-05'), p('c', 'open', 'b', '2026-11-10'), p('x', 'kept', null, '2026-11-02'), p('z', 'cancelled', 'x', '2026-11-03')];
+  it('walks back to the first promise and forward to the last', () => {
+    expect(chainOf('b', all).map((q: { id: string }) => q.id)).toEqual(['a', 'b', 'c']);
+    expect(chainOf('a', all).map((q: { id: string }) => q.id)).toEqual(['a', 'b', 'c']);
+  });
+  it('leaves cancelled follow-ups out of the live chain, keeps them in the history', () => {
+    expect(chainOf('x', all).map((q: { id: string }) => q.id)).toEqual(['x']);
+    expect(chainsOf(all).map((c) => c.map((q: { id: string }) => q.id).join(''))).toEqual(['abc', 'xz']);
+  });
+  it('knows which promises need a follow-up', () => {
+    expect(needsFollowUp({ status: 'broken', followUpId: null })).toBe(true);
+    expect(needsFollowUp({ status: 'partially_kept' })).toBe(true);
+    expect(needsFollowUp({ status: 'broken', followUpId: 'b' })).toBe(false);
+    expect(needsFollowUp({ status: 'kept' })).toBe(false);
   });
 });

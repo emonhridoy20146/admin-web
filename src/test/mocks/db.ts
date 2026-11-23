@@ -629,6 +629,26 @@ for (const c of customers) {
 }
 // a few open promises already past their date (within grace) so "late" shows up
 promises.filter((p) => p.row.status === 'open' && p.row.promisedDate > T).slice(0, 6).forEach((p, i) => (p.row.promisedDate = now().minus({ days: 1 + (i % 2) }).toISODate()!));
+// 1.45.0 (FR-PRM-006): every promise is attempt 1 of its own chain; some broken ones were followed up (attempt 2, and one
+// of those broken again and followed up once more), the rest are "broken without follow-up"
+for (const p of promises) Object.assign(p.row, { attempt: 1, chainRootId: p.row.id, followUpOf: null, followUpId: null, createdBy: p.row.createdBy ?? p.row.ownerId, createdByName: p.row.createdByName ?? p.row.owner?.name });
+{
+  const broken = promises.filter((p) => p.row.status === 'broken');
+  const follow = (orig: MockPromise, status: S['PromiseStatus'], days: number) => {
+    const date = now().plus({ days });
+    const row: S['PromiseListItem'] = {
+      ...orig.row, id: oid('6761'), clientId: crypto.randomUUID(), promisedDate: date.toISODate()!, status, paidTowardsPoisha: status === 'kept' ? orig.row.promisedAmountPoisha : 0,
+      createdAt: isoAt(now().minus({ days: Math.max(0, -days) + 1 })), note: undefined, followUpOf: orig.row.id, followUpId: null, attempt: (orig.row.attempt ?? 1) + 1, chainRootId: orig.row.chainRootId,
+    };
+    orig.row.followUpId = row.id!;
+    const m = { branchId: orig.branchId, row };
+    promises.push(m);
+    return m;
+  };
+  broken.slice(0, 6).forEach((b, i) => follow(b, i % 3 === 0 ? 'kept' : 'open', i % 3 === 0 ? -1 : 2 + i));
+  const again = follow(broken[6] ?? broken[0]!, 'broken', -2);
+  follow(again, 'open', 3);
+}
 
 export interface MockVisit { row: S['VisitListItem']; branchId: string }
 export const visits: MockVisit[] = [];

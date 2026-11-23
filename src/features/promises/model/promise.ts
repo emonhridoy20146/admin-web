@@ -39,3 +39,47 @@ export function paidRatio(p: Pick<PromiseItem, 'promisedAmountPoisha' | 'paidTow
 export function canCancel(status: PromiseStatus | undefined): boolean {
   return status === 'open';
 }
+
+type Linked = Pick<PromiseItem, 'id' | 'followUpOf' | 'followUpId' | 'attempt' | 'status' | 'chainRootId'>;
+
+/**
+ * FR-PRM-006 (1.45.0): the chain a promise belongs to, first promise first: original → broken → follow-up → …
+ * Built from the customer's promises by walking `followUpOf` back to the root and the follow-ups forward; a link to a
+ * promise that is not in the list ends the chain there (the customer's list holds the last 20).
+ */
+export function chainOf<T extends Linked>(id: string, all: T[]): T[] {
+  const byId = new Map(all.filter((p) => p.id).map((p) => [p.id!, p]));
+  const start = byId.get(id);
+  if (!start) return [];
+  const back: T[] = [];
+  const seen = new Set<string>();
+  for (let p: T | undefined = start; p && !seen.has(p.id!); p = p.followUpOf ? byId.get(p.followUpOf) : undefined) {
+    seen.add(p.id!);
+    back.unshift(p);
+  }
+  const followers = (of: string) => all.filter((p) => p.followUpOf === of && p.status !== 'cancelled');
+  for (let p: T | undefined = followers(start.id!)[0]; p && !seen.has(p.id!); p = followers(p.id!)[0]) {
+    seen.add(p.id!);
+    back.push(p);
+  }
+  return back;
+}
+
+/** All chains of a customer, newest chain first; each chain first promise first. */
+export function chainsOf<T extends Linked & { createdAt?: string }>(all: T[]): T[][] {
+  const roots = new Map<string, T[]>();
+  for (const p of all) {
+    if (!p.id) continue;
+    const c = chainOf(p.id, all);
+    const key = c[0]?.id ?? p.id;
+    // the longest walk wins, so a cancelled follow-up still shows at the end of its chain
+    if ((roots.get(key)?.length ?? 0) < c.length) roots.set(key, c);
+  }
+  const last = (c: T[]) => c.reduce((m, p) => ((p.createdAt ?? '') > m ? (p.createdAt ?? '') : m), '');
+  return [...roots.values()].sort((a, b) => last(b).localeCompare(last(a)));
+}
+
+/** A broken or partially kept promise nobody followed up yet: the office may make the next promise. */
+export function needsFollowUp(p: Pick<PromiseItem, 'status' | 'followUpId'>): boolean {
+  return (p.status === 'broken' || p.status === 'partially_kept') && !p.followUpId;
+}

@@ -18,7 +18,7 @@ export const PAST_PRESETS: RangePreset[] = ['today', 'yesterday', '7d', '30d', '
 /** Feeds that are useful without a date (inbox, activity): "All time" first and the default. */
 export const FEED_PRESETS: RangePreset[] = ['all', 'today', 'yesterday', '7d', '30d', 'month', 'lastMonth'];
 /** Promises also look ahead. */
-export const PROMISE_PRESETS: RangePreset[] = ['today', 'next7', 'next15', 'yesterday', '7d', 'month', 'lastMonth'];
+export const PROMISE_PRESETS: RangePreset[] = ['today', 'next7', 'next15', 'yesterday', '7d', 'month', 'lastMonth', 'all'];
 
 export interface DayRange {
   from: string;

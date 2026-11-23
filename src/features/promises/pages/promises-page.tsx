@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -14,7 +14,6 @@ import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
-import type { Tone } from '@/shared/ui/status';
 import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
 import { StaffSelect } from '@/shared/ui/staff-select';
 import { PROMISE_PRESETS } from '@/shared/lib/date-range';
@@ -23,11 +22,14 @@ import { MoneyText } from '@/shared/ui/money';
 import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
-import { useCancelPromise, usePromises, type PromiseItem } from '../api/promises';
-import { canCancel, daysTo, isLate, paidRatio, STATUSES } from '../model/promise';
+import { useCancelPromise, useCustomerPromises, usePromises, type PromiseItem } from '../api/promises';
+import { AttemptBadge, PromiseChain, PROMISE_TONE } from '../components/promise-chain';
+import type { FollowUpOf } from '../components/create-promise-dialog';
+import { FilterChip } from '@/shared/ui/primitives';
+import { canCancel, chainOf, daysTo, isLate, needsFollowUp, paidRatio, STATUSES } from '../model/promise';
 import { CreatePromiseDialog } from '../components/create-promise-dialog';
 
-const TONE: Record<string, Tone> = { open: 'promised', kept: 'paid', partially_kept: 'dueToday', broken: 'danger', superseded: 'neutral', cancelled: 'neutral' };
+const TONE = PROMISE_TONE;
 
 export function PromisesPage() {
   const { t } = useTranslation('promises');
@@ -37,14 +39,27 @@ export function PromisesPage() {
   const url = useUrlState();
   const today = todayDhaka();
   const range = useDateRange({ presets: PROMISE_PRESETS, reset: ['cursor'] });
-  const ownerId = url.get('ownerId');
+  // 1.45.0: staff = who made the promise (createdBy); `nofollow` = broken without a follow-up (FR-PRM-006)
+  const staff = url.get('staff');
+  const noFollow = url.get('nofollow') === '1';
   const status = oneOf(url.get('status'), ['', ...STATUSES] as const, '');
   const cursor = url.get('cursor');
   const [limit, setLimit] = useState(25);
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
-  const q = usePromises({ from: range.from, to: range.to, ownerId: ownerId || undefined, status: status || undefined, cursor: cursor || undefined, limit });
+  const q = usePromises({ from: range.from || undefined, to: range.to || undefined, createdBy: staff || undefined, brokenWithoutFollowUp: noFollow ? 'true' : undefined, status: status || undefined, cursor: cursor || undefined, limit });
   const openId = url.get('drawer');
-  const open = q.data?.items.find((p) => p.id === openId) ?? null;
+  const inList = q.data?.items.find((p) => p.id === openId) ?? null;
+  // a chain step can be a promise outside this page of the list: it is found among the customer's promises
+  const [drawerCustomer, setDrawerCustomer] = useState<string | null>(null);
+  useEffect(() => {
+    if (inList?.customerId) setDrawerCustomer(inList.customerId);
+  }, [inList?.customerId]);
+  const custPromises = useCustomerPromises(openId ? (inList?.customerId ?? drawerCustomer) : null);
+  const open = inList ?? custPromises.data?.find((p) => p.id === openId) ?? null;
+  const chain = open?.id ? chainOf(open.id, custPromises.data ?? [open]) : [];
+  const [follow, setFollow] = useState<FollowUpOf | null>(null);
+  const followOf = (p: Pick<PromiseItem, 'id' | 'promisedDate' | 'promisedAmountPoisha' | 'paidTowardsPoisha' | 'attempt' | 'erpPlanId'>): FollowUpOf | null =>
+    open ? { id: p.id!, customerId: open.customerId, customerName: pickText(open.customer?.name, locale), promisedDate: p.promisedDate, promisedAmountPoisha: p.promisedAmountPoisha, paidTowardsPoisha: p.paidTowardsPoisha, attempt: p.attempt, erpPlanId: p.erpPlanId } : null;
   const [cancelOpen, setCancelOpen] = useState(false);
   const cancel = useCancelPromise();
   const [createOpen, setCreateOpen] = useState(false);
@@ -88,7 +103,19 @@ export function PromisesPage() {
         </span>
       ),
     },
-    { id: 'status', header: t('col.status'), priority: 1, mobile: 'badges', cell: (p) => <Badge tone={TONE[p.status ?? 'open'] ?? 'neutral'}>{t(`status.${p.status ?? 'open'}`)}</Badge> },
+    {
+      id: 'status',
+      header: t('col.status'),
+      priority: 1,
+      mobile: 'badges',
+      cell: (p) => (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <Badge tone={TONE[p.status ?? 'open'] ?? 'neutral'}>{t(`status.${p.status ?? 'open'}`)}</Badge>
+          <AttemptBadge attempt={p.attempt} />
+          {needsFollowUp(p) && <span className="text-xs font-medium text-danger">{t('followUp.none')}</span>}
+        </span>
+      ),
+    },
     { id: 'date', header: t('col.date'), priority: 2, mobile: 'meta', cell: when },
     { id: 'owner', header: t('col.owner'), priority: 2, mobile: 'meta', cell: (p) => p.owner?.name ?? <span className="text-fg-tertiary">—</span> },
     { id: 'madeBy', header: t('col.madeBy'), priority: 3, mobile: 'meta', cell: (p) => p.createdByName || p.owner?.name || <span className="text-fg-tertiary">—</span> },
@@ -115,7 +142,8 @@ export function PromisesPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <DateRangeFilter value={range} onChange={(c, r) => (pager.reset(), range.set(c, r))} label={t('when')} />
         <div className="flex flex-wrap items-center gap-2">
-          <StaffSelect value={ownerId} onChange={(id) => (pager.reset(), url.set({ ownerId: id, cursor: null }))} />
+          <FilterChip selected={noFollow} onClick={() => (pager.reset(), url.set({ nofollow: noFollow ? null : '1', cursor: null }))}>{t('followUp.filter')}</FilterChip>
+          <StaffSelect value={staff} onChange={(id) => (pager.reset(), url.set({ staff: id, cursor: null }))} label={t('col.madeBy')} />
           <Select aria-label={t('col.status')} value={status} onChange={(e) => (pager.reset(), url.set({ status: e.target.value || null, cursor: null }))} className="h-9 sm:w-52">
             <option value="">{t('allStatus')}</option>
             {STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
@@ -146,6 +174,12 @@ export function PromisesPage() {
           open ? (
             <>
               {canCancel(open.status) && canManage && <Button variant="destructive" onClick={() => setCancelOpen(true)}>{t('cancel')}</Button>}
+              {needsFollowUp(open) && canManage && (
+                <Button variant="primary" onClick={() => setFollow(followOf(open))}>
+                  <Plus className="size-4" aria-hidden />
+                  {t('followUp.action')}
+                </Button>
+              )}
               <Link href={`/customers/${open.customer?.id ?? open.customerId}/`} className="ms-auto inline-flex h-9 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-primary hover:bg-surface-hover">
                 {t('openCustomer')}
                 <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />
@@ -174,6 +208,17 @@ export function PromisesPage() {
                 { label: t('plan'), value: open.erpPlanId ? <span className="font-mono text-sm">{open.erpPlanId}</span> : '—' },
               ]}
             />
+            {chain.length > 1 || (open.attempt ?? 1) > 1 || needsFollowUp(open) ? (
+              <section>
+                <h3 className="mb-2 text-sm font-semibold text-fg-secondary">{t('chain.title')}</h3>
+                <PromiseChain
+                  chain={chain}
+                  currentId={open.id}
+                  hrefOf={(p) => `/promises/?${new URLSearchParams({ ...Object.fromEntries(url.params), drawer: p.id! }).toString()}`}
+                  onFollowUp={canManage ? (p) => setFollow(followOf(p as PromiseItem)) : undefined}
+                />
+              </section>
+            ) : null}
             {open.note && (
               <section>
                 <h3 className="mb-1 text-sm font-semibold text-fg-secondary">{t('note')}</h3>
@@ -185,6 +230,15 @@ export function PromisesPage() {
       </Drawer>
 
       <CreatePromiseDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreatePromiseDialog
+        open={!!follow}
+        onOpenChange={(o) => !o && setFollow(null)}
+        followUp={follow}
+        onCreated={(id) => {
+          setDrawerCustomer(open?.customerId ?? null);
+          url.set({ drawer: id }, { push: true });
+        }}
+      />
 
       <ReasonDialog
         open={cancelOpen}
