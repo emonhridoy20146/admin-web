@@ -3464,7 +3464,9 @@ export interface components {
         };
         CustomerPage: {
             items?: components["schemas"]["CustomerListItem"][];
+            /** @description Next page after this one (also when the page was asked with `offset`); null on the last page */
             nextCursor?: string | null;
+            /** @description Only with includeTotal=true; exact since 1.46.0 */
             total?: number;
             /** @description Added in 1.24.0 (FR-CUS-018), only with includeTotal=true. Invoices of every customer the query matches (not one page): all, with a balance, and those by kind */
             invoiceTotals?: {
@@ -6733,9 +6735,13 @@ export interface operations {
                 near?: string;
                 radiusM?: number;
                 sort?: "distance" | "-daysOverdue" | "name" | "-totalOutstanding" | "nextDueDate";
-                limit?: components["parameters"]["Limit"];
-                cursor?: components["parameters"]["Cursor"];
-                /** @description Return `total` (capped at 10,000). Added in 1.1.0 */
+                /** @description Rows per page. Maximum 1000 since 1.46.0 (was 200) */
+                limit?: number;
+                /** @description Opaque `nextCursor` of the previous page. Ignored when `offset` is sent */
+                cursor?: string;
+                /** @description Added in 1.46.0. 0-based row number to start at (page N of size L = `offset=(N-1)*L`); works with every filter and sort, wins over `cursor`. Past the end = empty `items`, `nextCursor` null. With sort=distance only the nearest 2000 in the radius are paged */
+                offset?: number;
+                /** @description Return `total`, every customer the query matches (added in 1.1.0; exact since 1.46.0, was capped at 10,000) */
                 includeTotal?: boolean;
                 /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
                 payState?: components["parameters"]["PayStateFilter"];
