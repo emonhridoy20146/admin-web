@@ -265,5 +265,25 @@
     "fullscreen": "Full screen",
     "exitFullscreen": "Exit full screen",
     "exitFullscreenHint": "Exit full screen (Esc)"
+  },
+  "range": {
+    "label": "Date range",
+    "presets": "Quick ranges",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "month": "This month",
+    "lastMonth": "Last month",
+    "next7": "Next 7 days",
+    "next15": "Next 15 days",
+    "custom": "Custom range",
+    "customHelp": "Pick the first and last day; both are included.",
+    "from": "From",
+    "to": "To",
+    "apply": "Apply",
+    "days_one": "{{n}} day · {{span}}",
+    "days_other": "{{n}} days · {{span}}",
+    "pickBoth": "Pick both days."
   }
 }
