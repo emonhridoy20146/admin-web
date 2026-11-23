@@ -9,12 +9,14 @@
 import { DateTime } from 'luxon';
 import { DHAKA, addDays } from './time';
 
-export const RANGE_PRESETS = ['today', 'yesterday', '7d', '30d', 'month', 'lastMonth', 'next7', 'next15'] as const;
+export const RANGE_PRESETS = ['all', 'today', 'yesterday', '7d', '30d', 'month', 'lastMonth', 'next7', 'next15'] as const;
 export type RangePreset = (typeof RANGE_PRESETS)[number];
 export type RangeChoice = RangePreset | 'custom';
 
 /** Presets of a list that looks back (most lists). */
 export const PAST_PRESETS: RangePreset[] = ['today', 'yesterday', '7d', '30d', 'month', 'lastMonth'];
+/** Feeds that are useful without a date (inbox, activity): "All time" first and the default. */
+export const FEED_PRESETS: RangePreset[] = ['all', 'today', 'yesterday', '7d', '30d', 'month', 'lastMonth'];
 /** Promises also look ahead. */
 export const PROMISE_PRESETS: RangePreset[] = ['today', 'next7', 'next15', 'yesterday', '7d', 'month', 'lastMonth'];
 
@@ -28,10 +30,15 @@ export function isIsoDay(v: string | null | undefined): v is string {
   return !!v && ISO_DAY.test(v) && DateTime.fromISO(v, { zone: DHAKA }).isValid;
 }
 
-/** The days a preset covers, seen from `today` (Asia/Dhaka). "Last 7 days" ends today; "Next 7 days" starts tomorrow. */
+/**
+ * The days a preset covers, seen from `today` (Asia/Dhaka). "Last 7 days" ends today; "Next 7 days" starts tomorrow.
+ * "All time" has empty ends: the list is asked without dates.
+ */
 export function presetRange(p: RangePreset, today: string): DayRange {
   const d = DateTime.fromISO(today, { zone: DHAKA });
   switch (p) {
+    case 'all':
+      return { from: '', to: '' };
     case 'today':
       return { from: today, to: today };
     case 'yesterday':
@@ -56,6 +63,7 @@ export function presetRange(p: RangePreset, today: string): DayRange {
 /** The preset among `presets` that covers exactly these days, if any. */
 export function matchPreset(r: DayRange, today: string, presets: readonly RangePreset[]): RangePreset | null {
   return presets.find((p) => {
+    if (p === 'all') return false;
     const x = presetRange(p, today);
     return x.from === r.from && x.to === r.to;
   }) ?? null;

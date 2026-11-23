@@ -68,6 +68,7 @@ export default function StackedBars({ data, series, axisFormat, valueFormat, hei
               strokeWidth={1}
               radius={i === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
               maxBarSize={36}
+              isAnimationActive={false}
               cursor={onBarClick ? 'pointer' : undefined}
               onClick={(d) => onBarClick?.(d as unknown as StackRow)}
             />

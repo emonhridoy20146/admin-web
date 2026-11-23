@@ -15,6 +15,9 @@ import { Badge } from '@/shared/ui/badge';
 import { FilterChip } from '@/shared/ui/primitives';
 import { useActivity, useMarkActivitySeen, type ActivityItem, type ActivityType } from '../api/activity';
 import { byDay, hrefOf, sentenceKey } from '../model/activity';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
+import { StaffSelect } from '@/shared/ui/staff-select';
+import { FEED_PRESETS } from '@/shared/lib/date-range';
 
 const TYPES = ['collection', 'visit', 'promise', 'pin', 'collection_withdrawn', 'collection_edited', 'deposit_deleted'] as const satisfies readonly ActivityType[];
 const ICON = { collection: Banknote, visit: Footprints, promise: Handshake, pin: MapPin, collection_withdrawn: Ban, collection_edited: Pencil, deposit_deleted: Trash2 } as const;
@@ -39,7 +42,8 @@ export function ActivityPage() {
   const url = useUrlState();
   const type = oneOf(url.get('type'), ['', ...TYPES] as const, '') || undefined;
   const userId = url.get('userId') || undefined;
-  const q = useActivity(type, userId);
+  const range = useDateRange({ presets: FEED_PRESETS, fallback: 'all', reset: [] });
+  const q = useActivity(type, userId, range);
   const items = useMemo(() => q.data?.pages.flatMap((p) => p.items) ?? [], [q.data]);
   const groups = useMemo(() => byDay(items), [items]);
   const seen = useMarkActivitySeen();
@@ -65,11 +69,10 @@ export function ActivityPage() {
             <FilterChip key={x} selected={type === x} onClick={() => url.set({ type: type === x ? null : x })}>{t(`type.${x}`)}</FilterChip>
           ))}
         </div>
-        {userId && (
-          <Button variant="ghost" size="sm" onClick={() => url.set({ userId: null })}>
-            {t('onlyPerson', { name: pickText(actor?.name, locale) || actor?.employeeCode || '…' })} ✕
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 lg:ms-auto">
+          <DateRangeFilter value={range} onChange={range.set} />
+          <StaffSelect value={userId ?? ''} onChange={(id) => url.set({ userId: id })} knownName={pickText(actor?.name, locale) || actor?.employeeCode} />
+        </div>
       </div>
 
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} className="mb-4" /> : null}

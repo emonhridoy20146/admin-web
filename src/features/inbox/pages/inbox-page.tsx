@@ -12,6 +12,8 @@ import { formatNumber } from '@/shared/lib/format';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { useInbox, useResolveInbox, useSnooze, type InboxItem } from '../api/inbox';
 import { InboxRow } from '../components/inbox-item';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
+import { FEED_PRESETS } from '@/shared/lib/date-range';
 
 const SEV = ['critical', 'high', 'medium', 'low'] as const;
 const STATUSES = ['open', 'snoozed', 'resolved'] as const;
@@ -22,7 +24,8 @@ export function InboxPage() {
   const url = useUrlState();
   const status = oneOf(url.get('status'), STATUSES, 'open');
   const sev = url.get('severity');
-  const q = useInbox(status, 100);
+  const range = useDateRange({ presets: FEED_PRESETS, fallback: 'all', reset: [] });
+  const q = useInbox(status, 100, range);
   const snooze = useSnooze();
   const resolve = useResolveInbox();
   const [resolving, setResolving] = useState<InboxItem | null>(null);
@@ -35,6 +38,7 @@ export function InboxPage() {
         <span>{t('subtitle')}</span>
       </PageHeader>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex w-fit rounded-md border border-line bg-surface p-0.5 shadow-e1" role="tablist">
           {STATUSES.map((s) => (
             <button
@@ -48,6 +52,8 @@ export function InboxPage() {
               {s === 'open' && counts.open != null && <span className="tabular ms-1.5 text-xs">{formatNumber(counts.open)}</span>}
             </button>
           ))}
+        </div>
+        <DateRangeFilter value={range} onChange={range.set} label={t('raised')} />
         </div>
         {status === 'open' && (
           <div className="scrollbar-thin -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">

@@ -8,12 +8,15 @@ import type { components } from '@/shared/api/schema';
 export type InboxItem = components['schemas']['InboxItem'];
 type Status = 'open' | 'snoozed' | 'resolved';
 
-export function useInbox(status: Status, limit = 50) {
+/** 1.45.0: `from`/`to` narrow the items (and counts) to the days they were raised (FR-W-063). */
+export function useInbox(status: Status, limit = 50, range: { from?: string; to?: string } = {}) {
   const branchId = useBranchId();
+  const from = range.from || undefined;
+  const to = range.to || undefined;
   useInvalidateOn([EV.collectionResolved, EV.customerTagged], [['inbox']]);
   return useQuery({
-    queryKey: ['inbox', 'list', { branchId, status, limit }],
-    queryFn: () => unwrap(api.GET('/inbox', { params: { query: { branchId, status, limit } } })),
+    queryKey: ['inbox', 'list', { branchId, status, limit, from, to }],
+    queryFn: () => unwrap(api.GET('/inbox', { params: { query: { branchId, status, limit, from, to } } })),
     staleTime: 0,
     refetchInterval: 60_000,
   });

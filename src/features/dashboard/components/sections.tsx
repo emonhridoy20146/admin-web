@@ -336,7 +336,7 @@ export function PromiseCard({ dueToday, brokenYesterday, keptToday, className }:
           <Link href="/promises/?range=month&status=kept" className="flex items-center gap-4 rounded-md hover:bg-surface-hover">
             <svg viewBox="0 0 88 88" className="size-24 shrink-0 -rotate-90" role="img" aria-label={r.rate == null ? t('prom.noneDue') : t('prom.rate', { pct: formatPercent(pct) })}>
               <circle cx="44" cy="44" r={R} fill="none" strokeWidth="9" className="stroke-surface-hover" />
-              <circle cx="44" cy="44" r={R} fill="none" strokeWidth="9" strokeLinecap="round" className="stroke-success" strokeDasharray={`${C * pct} ${C}`} />
+              {pct > 0 && <circle cx="44" cy="44" r={R} fill="none" strokeWidth="9" strokeLinecap="round" className="stroke-success" strokeDasharray={`${C * pct} ${C}`} />}
             </svg>
             <span>
               <span className="tabular block text-3xl font-semibold tracking-tight text-fg">{r.rate == null ? '—' : formatPercent(pct)}</span>

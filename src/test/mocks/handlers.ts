@@ -1111,7 +1111,11 @@ export const handlers = [
     const seen = db.activitySeen.get(ctx.user.id!) ?? null;
     const limit = Math.min(100, Number(url.searchParams.get('limit') ?? 30) || 30);
     const cursor = url.searchParams.get('cursor');
-    const all = mine.filter((a) => (!type || a.type === type) && (!userId || a.actor?.id === userId));
+    const dayOf = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    if (from && to && from > to) return problem(400, 'VALIDATION_FAILED', 'from is after to');
+    const all = mine.filter((a) => (!type || a.type === type) && (!userId || a.actor?.id === userId) && (!from || dayOf(a.at) >= from) && (!to || dayOf(a.at) <= to));
     const start = cursor ? all.findIndex((a) => a.id === cursor) + 1 : 0;
     const page = all.slice(start, start + limit).map((a) => ({ ...a, unseen: !seen || a.at > seen }));
     // as the server: the count covers the caller's whole scope, whatever the filters
@@ -1426,7 +1430,12 @@ export const handlers = [
     const sc = scope(ctx, url);
     const st = url.searchParams.get('status') ?? 'open';
     const type = url.searchParams.get('type');
-    const inScope = db.inbox.filter((i) => !i.branchId || sc.includes(i.branchId));
+    // 1.45.0: from/to = Asia/Dhaka days the item was raised; counts follow the same days
+    const dayOf = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    if (from && to && from > to) return problem(400, 'VALIDATION_FAILED', 'from is after to');
+    const inScope = db.inbox.filter((i) => (!i.branchId || sc.includes(i.branchId)) && (!from || dayOf(i.createdAt!) >= from) && (!to || dayOf(i.createdAt!) <= to));
     const sev = { critical: 0, high: 1, medium: 2, low: 3 } as const;
     const all = inScope.filter((i) => i.status === st).filter((i) => !type || i.type?.startsWith(type)).sort((a, b) => sev[a.severity!] - sev[b.severity!] || (a.createdAt! < b.createdAt! ? -1 : 1));
     const counts: Record<string, number> = { open: 0, critical: 0, high: 0, medium: 0, low: 0 };

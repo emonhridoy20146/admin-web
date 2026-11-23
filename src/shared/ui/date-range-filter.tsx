@@ -46,6 +46,7 @@ export function useDateRange(opts: { presets?: readonly RangePreset[]; fallback?
 
 /** A short label for a range: "Today", "17 Nov – 23 Nov", "23 Nov". */
 export function rangeLabel(r: DayRange): string {
+  if (!r.from) return '';
   if (r.from === r.to) return formatDate(r.from);
   const sameYear = r.from.slice(0, 4) === r.to.slice(0, 4);
   return `${formatDate(r.from, { withYear: !sameYear })} – ${formatDate(r.to)}`;
@@ -65,14 +66,14 @@ export function DateRangeFilter({ value, onChange, className, label }: {
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [from, setFrom] = useState(value.from);
-  const [to, setTo] = useState(value.to);
+  const [from, setFrom] = useState(value.from || value.today);
+  const [to, setTo] = useState(value.to || value.today);
   useEffect(() => {
     if (open) {
-      setFrom(value.from);
-      setTo(value.to);
+      setFrom(value.from || value.today);
+      setTo(value.to || value.today);
     }
-  }, [open, value.from, value.to]);
+  }, [open, value.from, value.to, value.today]);
   const valid = isIsoDay(from) && isIsoDay(to);
   const draft = valid ? normalizeRange({ from, to }) : null;
   const name = value.choice === 'custom' ? t('range.custom') : t(`range.${value.choice}`);
@@ -83,7 +84,7 @@ export function DateRangeFilter({ value, onChange, className, label }: {
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`${label ?? t('range.label')}: ${name}, ${span}`}
+          aria-label={`${label ?? t('range.label')}: ${name}${span ? `, ${span}` : ''}`}
           data-testid="date-range"
           className={cn(
             'inline-flex h-9 max-w-full items-center gap-2 rounded-md border border-line-strong bg-surface px-3 text-sm shadow-e1 transition-colors duration-[var(--dur-fast)] hover:bg-surface-hover data-[state=open]:border-primary data-[state=open]:ring-2 data-[state=open]:ring-primary/20 [@media(pointer:coarse)]:h-11 print:border-0 print:p-0 print:shadow-none',
@@ -92,7 +93,7 @@ export function DateRangeFilter({ value, onChange, className, label }: {
         >
           <CalendarDays className="size-4 shrink-0 text-primary print:hidden" aria-hidden />
           <span className="font-medium whitespace-nowrap text-fg">{name}</span>
-          <span className="tabular truncate text-fg-tertiary">{span}</span>
+          {span && <span className="tabular truncate text-fg-tertiary">{span}</span>}
           <ChevronDown className="size-4 shrink-0 text-fg-tertiary print:hidden" aria-hidden />
         </button>
       </PopoverTrigger>
@@ -115,7 +116,7 @@ export function DateRangeFilter({ value, onChange, className, label }: {
                   >
                     <span className="flex-1">
                       <span className="block">{t(`range.${p}`)}</span>
-                      <span className={cn('tabular block text-xs font-normal', on ? 'text-primary-subtle-fg/80' : 'text-fg-tertiary')}>{rangeLabel(r)}</span>
+                      {r.from && <span className={cn('tabular block text-xs font-normal', on ? 'text-primary-subtle-fg/80' : 'text-fg-tertiary')}>{rangeLabel(r)}</span>}
                     </span>
                     {on && <Check className="size-4 shrink-0" aria-hidden />}
                   </button>

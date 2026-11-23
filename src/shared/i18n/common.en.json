@@ -269,6 +269,7 @@
   "range": {
     "label": "Date range",
     "presets": "Quick ranges",
+    "all": "All time",
     "today": "Today",
     "yesterday": "Yesterday",
     "7d": "Last 7 days",
