@@ -52,7 +52,7 @@ export function CustomersPage() {
     return () => clearTimeout(id);
   }, [q, qParam, url]);
 
-  const params: Omit<CustomerQuery, 'branchId' | 'cursor' | 'limit'> = {
+  const params: Omit<CustomerQuery, 'branchId' | 'cursor' | 'limit' | 'offset'> = {
     filter: filters.length ? filters : undefined,
     payState: pay.length ? pay : undefined,
     invoiceKind: kind === 'all' ? undefined : kind,
@@ -62,7 +62,7 @@ export function CustomersPage() {
   };
   const query = useCustomerPage(params, page, size);
   const total = query.data?.total;
-  const pageCount = total != null ? pageCountOf(Math.min(total, 10_000), size) : undefined;
+  const pageCount = total != null ? pageCountOf(total, size) : undefined;
   const goPage = (n: number) => {
     url.set({ page: n > 1 ? String(n) : null }, { push: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -214,7 +214,7 @@ export function CustomersPage() {
       >
         {query.data?.total != null && (
           <span className="tabular font-medium text-fg-secondary" data-testid="customer-total">
-            {query.data.total >= 10_000 ? t('totalCapped', { n: formatNumber(10_000) }) : t('total', { n: formatNumber(query.data.total) })}
+            {t('total', { n: formatNumber(query.data.total) })}
           </span>
         )}
         {query.data?.invoiceTotals && (

@@ -10,8 +10,6 @@ export type CustomerDetail = components['schemas']['CustomerDetail'];
 export type ContactAttempt = components['schemas']['ContactAttempt'];
 export type CustomerQuery = NonNullable<operations['listCustomers']['parameters']['query']>;
 
-/** The server serves at most this many rows per request (contract `Limit`, maximum 100). */
-export const CHUNK = 100;
 /** Page sizes of the customers list (owner 2026-11-23): 100 by default, 500 and 1000 for working through a list. */
 export const CUSTOMER_PAGE_SIZES = [100, 500, 1000] as const;
 export type CustomerPageSize = (typeof CUSTOMER_PAGE_SIZES)[number];
@@ -25,45 +23,18 @@ export interface CustomerPageView {
 }
 
 /**
- * FR-W-060: page `page` (1-based) of `size` rows. The contract pages by opaque cursor with at most 100 rows per call, so
- * a page is put together from 100-row chunks; chunk i is fetched with the cursor chunk i−1 returned. Chunks are cached
- * per filter set, so Next, Previous and a page seen before cost nothing more; a jump to a page not seen yet walks the
- * cursor chain once. (Asked of field-api: an `offset` parameter and a larger `limit`, so a jump becomes one request.)
+ * FR-W-060: page `page` (1-based) of `size` rows in one request: `offset=(page-1)*size`, `limit` up to 1000
+ * (contract 1.46.0), with the exact `total` for the numbered pager.
  */
-export function useCustomerPage(params: Omit<CustomerQuery, 'branchId' | 'cursor' | 'limit'>, page: number, size: CustomerPageSize) {
+export function useCustomerPage(params: Omit<CustomerQuery, 'branchId' | 'cursor' | 'limit' | 'offset'>, page: number, size: CustomerPageSize) {
   const branchId = useBranchId();
-  const qc = useQueryClient();
   useInvalidateOn([EV.customerTagged, EV.collectionResolved, EV.assignmentChanged], [['customers']]);
-  // includeTotal: the "total customers" number in the header and the pager (field-api caps it at 10,000)
-  const base: CustomerQuery = { ...params, branchId, includeTotal: true, limit: CHUNK };
+  const query: CustomerQuery = { ...params, branchId, includeTotal: true, limit: size, offset: (Math.max(1, page) - 1) * size };
   return useQuery({
-    queryKey: ['customers', 'list', base, { page, size }],
+    queryKey: ['customers', 'list', query],
     queryFn: async (): Promise<CustomerPageView> => {
-      const chunk = (i: number): Promise<CustomerPage> =>
-        qc.fetchQuery({
-          queryKey: ['customers', 'chunk', base, i],
-          staleTime: 30_000,
-          queryFn: async () => {
-            const cursor = i === 0 ? undefined : (await chunk(i - 1)).nextCursor;
-            if (i > 0 && !cursor) return { items: [], nextCursor: null } as CustomerPage;
-            return unwrap(api.GET('/customers', { params: { query: { ...base, cursor: cursor || undefined } } }));
-          },
-        });
-      const first = ((page - 1) * size) / CHUNK;
-      const pages: CustomerPage[] = [];
-      for (let i = first; i < first + size / CHUNK; i++) {
-        const p = await chunk(i);
-        pages.push(p);
-        if (!p.nextCursor) break;
-      }
-      const head = pages[0];
-      const lastChunk = pages[pages.length - 1];
-      return {
-        items: pages.flatMap((p) => p.items ?? []),
-        total: head?.total ?? (await chunk(0)).total,
-        invoiceTotals: head?.invoiceTotals ?? undefined,
-        hasNext: !!lastChunk?.nextCursor && pages.length === size / CHUNK,
-      };
+      const r = await unwrap(api.GET('/customers', { params: { query } }));
+      return { items: r.items ?? [], total: r.total, invoiceTotals: r.invoiceTotals ?? undefined, hasNext: !!r.nextCursor };
     },
     placeholderData: keepPreviousData,
     staleTime: 30_000,

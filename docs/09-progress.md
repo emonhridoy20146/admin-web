@@ -42,8 +42,8 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 
 Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/attendance/leave`), holidays and shifts (`/attendance/calendar`, shift in the user form) and notices with read tracking (`/notices`) are done on contract 1.12.0 with journeys and axe. Left: day-sheet planner, SMS logs.
 
-## Status notes (2026-11-23, batch 1123, contract 1.45.0)
-- ☑ Customers pager 100/500/1000 with numbered pages (FR-W-060; jumps walk the cursor chain until field-api adds `offset`), map full screen (FR-W-061), pin approvals paged (FR-W-062), shared date filter on eight pages (FR-W-063), management dashboard (FR-W-064), promise follow-ups (FR-W-065), possible customers (FR-W-066). Settings: nothing new in 1.45.0.
+## Status notes (2026-11-23, batch 1123, contracts 1.45.0 and 1.46.0)
+- ☑ Customers pager 100/500/1000 with numbered pages (FR-W-060; one request per page with contract 1.46.0 `offset`), map full screen (FR-W-061), pin approvals paged (FR-W-062), shared date filter on eight pages (FR-W-063), management dashboard (FR-W-064), promise follow-ups (FR-W-065), possible customers (FR-W-066). Settings: nothing new in 1.45.0.
 - Header fits 390 px (was 407 px wide).
 - Live: the dashboard needs `module.dashboard` ON and possible customers `module.prospects` ON in Feature flags.
 

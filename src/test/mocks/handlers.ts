@@ -1325,7 +1325,13 @@ export const handlers = [
     };
     const k = key[sort] ?? key['-daysOverdue']!;
     all = [...all].sort((a, b) => (k(a) < k(b) ? -1 : k(a) > k(b) ? 1 : 0));
-    const p = page(all.map((c) => ({ ...c.item, ...mockActivity(c) })), url);
+    // 1.46.0: limit up to 1000 and a 0-based `offset` that wins over the cursor
+    const off = url.searchParams.get('offset');
+    const lim = Math.min(1000, Math.max(1, Number(url.searchParams.get('limit') ?? 50) || 50));
+    const rows = all.map((c) => ({ ...c.item, ...mockActivity(c) }));
+    const p = off != null
+      ? { items: rows.slice(Number(off), Number(off) + lim), nextCursor: Number(off) + lim < rows.length ? btoa(`o:${Number(off) + lim}`) : null, total: rows.length }
+      : page(rows, url);
     // like field-api: `total` (and since 1.24.0 `invoiceTotals`) only when asked for (includeTotal=true)
     if (url.searchParams.get('includeTotal') === 'true') {
       const counts = all.map((c) => ({ ...mockActivity(c).invoiceCount, inst: c.item.openInvoices?.installment ?? 0, credit: c.item.openInvoices?.credit ?? 0 }));
