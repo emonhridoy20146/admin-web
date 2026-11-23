@@ -25,7 +25,9 @@ export interface CustomerRowVM {
   nextDue: string | null;
   statuses: string[];
   lastVisitAt: string | null;
-  openPromise: { date: string; amountPoisha: number } | null;
+  /** who made the visit at `lastVisitAt` (contract 1.44.0); null when unknown */
+  lastVisitByName: string | null;
+  openPromise: { date: string; amountPoisha: number; byName: string | null } | null;
   hasLocation: boolean;
   asOf: string | null;
   /** 0 (calm) … 3 (most urgent), drives row emphasis */
@@ -78,7 +80,8 @@ export function toCustomerRow(c: CustomerListItem, locale: Locale): CustomerRowV
     nextDue: c.nextDueDate ?? null,
     statuses,
     lastVisitAt: c.lastVisitAt ?? null,
-    openPromise: c.openPromise ? { date: c.openPromise.promisedDate, amountPoisha: c.openPromise.promisedAmountPoisha } : null,
+    lastVisitByName: c.lastVisitByName ?? null,
+    openPromise: c.openPromise ? { date: c.openPromise.promisedDate, amountPoisha: c.openPromise.promisedAmountPoisha, byName: c.openPromise.createdByName ?? null } : null,
     hasLocation: (c.location?.status === 'ok' || c.location?.status === 'overridden') && c.location.lat != null,
     asOf: c.erpFetchedAt ?? null,
     urgency,

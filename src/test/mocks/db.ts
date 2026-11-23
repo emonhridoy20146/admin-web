@@ -532,6 +532,7 @@ export const settings: Record<string, unknown> = {
   'promises.graceDays': 1, 'attendance.selfieRequired': true, 'attendance.selfieEvents': ['work_in', 'break_start', 'break_end', 'work_out'], 'cowork.visitCredit': 1, 'cowork.maxMembers': 5, 'app.minVersion': '1.0.0',
   'reports.leaderboardVisibleToStaff': false, 'reports.leaderboardScope': 'all', 'reports.leaderboardMinPresentDays': 1, 'reports.dataQualityMaxBranchKm': 30,
   'customers.staffVisibility': 'branch', 'customers.staffPinApproval': 'when_missing',
+  'erp.customerScope': 'all',
 };
 /** Values a branch has of its own (branchId → key → value); everything else falls back to `settings`. */
 export const settingOverrides: Record<string, Record<string, unknown>> = {};
@@ -1117,6 +1118,8 @@ branches.forEach((b, bi) => {
 // ---------- real ERP shape (contract 1.13.0) ----------
 // Derived from what is already generated, without random draws, so the seeded data above stays the same.
 branches.forEach((b) => (b.kind = 'branch'));
+/** ERP employee recorded as referrer on office payments (1.44.0); a third of office payments have none (shown as "Office"). */
+export const OFFICE_REFERRER = 'Shahid Ullah';
 const METHOD_LABEL: Record<string, string> = { cash: 'Cash-01', bkash: 'bKash merchant', nagad: 'Nagad merchant' };
 const receiptOf = (date: string, n: number) => `PAY-${date.replace(/-/g, '')}-${String(n).padStart(5, '0')}`;
 let payNo = 1200;
@@ -1163,7 +1166,7 @@ customers.forEach((c, ci) => {
     payNo += 1;
     Object.assign(pay, {
       erpPaymentId: String(payNo), receiptNo: receiptOf(pay.date!, payNo), erpPlanId: d.plans?.[0]?.erpPlanId, methodLabel: METHOD_LABEL[pay.method ?? ''] ?? pay.method,
-      ...(pay.source === 'field' ? { collectorName: c.item.assignee?.name } : {}),
+      ...(pay.source === 'field' ? { collectorName: c.item.assignee?.name, referrerName: c.item.assignee?.name } : { referrerName: ci % 3 === 0 ? null : OFFICE_REFERRER }),
     });
   });
   // the office removed a payment in the ERP: field-api shows it as reversed (not in the totals)
@@ -1187,7 +1190,9 @@ customers.forEach((c, ci) => {
 type PayState = S['PayState'];
 const PAY_ORDER: PayState[] = ['bad', 'missed_many', 'missed_one', 'due_today', 'on_track', 'paid_off'];
 const dayDiff = (a: string, b: string) => Math.round(dDate(a).diff(dDate(b), 'days').days);
-const collectable = (p: S['Plan']) => p.status !== 'closed' && p.status !== 'cancelled';
+/** cash sales (1.44.0) and unknown kinds are never due, open or collectable (field-api ADR-057) */
+const cashLike = (p: S['Plan']) => p.kind != null && p.kind !== 'installment' && p.kind !== 'credit';
+const collectable = (p: S['Plan']) => p.status !== 'closed' && p.status !== 'cancelled' && !cashLike(p);
 /** fills line extras, plan pay state and the plan money fields of one plan */
 export function derivePlan(p: S['Plan'], branchId: string | undefined, today = T) {
   const lines = p.schedule ?? [];
@@ -1218,10 +1223,10 @@ export function derivePlan(p: S['Plan'], branchId: string | undefined, today = T
     discountPoisha: discount,
     taxPoisha: 0,
     settlementDiscountPoisha: 0,
-    refundedPoisha: p.status === 'closed' ? 200_000 : 0,
-    invoiceStatus: p.status === 'closed' ? 'returned' : p.status === 'cancelled' ? 'cancelled' : 'posted',
+    refundedPoisha: p.status === 'closed' && !cashLike(p) ? 200_000 : 0,
+    invoiceStatus: p.status === 'closed' && !cashLike(p) ? 'returned' : p.status === 'cancelled' ? 'cancelled' : 'posted',
     paymentStatus: (p.outstandingPoisha ?? 0) <= 0 ? 'paid' : (p.paidPoisha ?? 0) > 0 ? 'partial' : 'unpaid',
-    ...(p.kind === 'credit' ? { creditDueDate: p.finalDueDate } : { financedPoisha: total - (p.downPaymentPoisha ?? 0), penalty: { enabled: true, rate: '0.0200' } }),
+    ...(cashLike(p) ? {} : p.kind === 'credit' ? { creditDueDate: p.finalDueDate } : { financedPoisha: total - (p.downPaymentPoisha ?? 0), penalty: { enabled: true, rate: '0.0200' } }),
   } satisfies Partial<S['Plan']>);
   p.items?.forEach((it) => {
     const qty = it.qty ?? 1;
@@ -1236,7 +1241,7 @@ export function deriveCustomer(c: MockCustomer, today = T) {
   const tagBad = c.item.tag?.state === 'tagged' && c.item.tag.severity !== 'watch';
   const worst = PAY_ORDER.find((s) => open.some((p) => p.payState === s));
   const payState: PayState = tagBad ? 'bad' : (c.item.totalOutstandingPoisha ?? 0) <= 0 || !worst ? 'paid_off' : worst;
-  const openInvoices = { installment: open.filter((p) => p.kind !== 'credit').length, credit: open.filter((p) => p.kind === 'credit').length };
+  const openInvoices = { installment: open.filter((p) => p.kind === 'installment' || p.kind == null).length, credit: open.filter((p) => p.kind === 'credit').length };
   for (const x of [c.item, d]) Object.assign(x, { payState, missedCount, openInvoices });
 }
 customers.forEach((c, ci) => {
@@ -1277,6 +1282,28 @@ customers.forEach((c, ci) => {
       if (!late && !x.badges.length) x.badges.push('current');
     }
   }
+  // cash sales (1.44.0, ADR-057): no schedule, `completed` when paid, `closed` with money left; never due or open
+  // the open-credit customers have both kinds too, so the journeys reach them through the credit filter
+  const credit = ci % 17 === 4 || ci % 29 === 9;
+  if (ci % 6 === 1 || credit) {
+    const sale = now().minus({ days: 10 + (ci % 40) }).toISODate()!;
+    d.plans?.push({
+      erpPlanId: `P-${93000 + ci}`, kind: 'cash', invoiceNo: `INV-S${93000 + ci}`, product: 'Ceiling fan 56"', saleDate: sale, startDate: sale, finalDueDate: sale,
+      installmentCount: 0, totalPayablePoisha: 380_000, downPaymentPoisha: 0, paidPoisha: 380_000, outstandingPoisha: 0, status: 'completed', badSuggested: false,
+      items: [{ name: 'Ceiling fan', model: '56"', qty: 1, serials: [] }], schedule: [],
+    });
+  }
+  if (ci % 12 === 7 || credit) {
+    const sale = now().minus({ days: 30 }).toISODate()!;
+    d.plans?.push({
+      erpPlanId: `P-${94000 + ci}`, kind: 'cash', invoiceNo: `INV-S${94000 + ci}`, product: 'Electric kettle 1.8 L', saleDate: sale, startDate: sale, finalDueDate: sale,
+      installmentCount: 0, totalPayablePoisha: 250_000, downPaymentPoisha: 0, paidPoisha: 200_000, outstandingPoisha: 50_000, status: 'closed', badSuggested: false,
+      items: [{ name: 'Electric kettle', model: '1.8 L', qty: 1, serials: [] }], schedule: [],
+    });
+  }
+  // open promises and the list's last visit carry who made them (1.44.0)
+  if (c.item.openPromise) Object.assign(c.item.openPromise, { createdByName: c.item.assignee?.name ?? '', ownerName: c.item.assignee?.name ?? '' });
+  c.item.lastVisitByName = c.item.lastVisitAt ? (c.item.assignee?.name ?? null) : null;
   deriveCustomer(c);
 });
 

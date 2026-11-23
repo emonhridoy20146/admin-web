@@ -182,6 +182,12 @@ export interface paths {
          *     (the next call continues where the last one stopped). Never changes money; the ERP stays the truth.
          *     `429 RATE_LIMITED` (`details.reason: SYNC_RUNNING`) while another run is in progress; `503 ERP_UNAVAILABLE`
          *     when the ERP cannot be reached.
+         *     1.44.0: which ERP customers and invoices are pulled is the setting `erp.customerScope` (`PATCH /settings`):
+         *     `all` (default, owner decision 2026-11-23: every customer and every invoice, cash sales included; cash-only
+         *     customers show with nothing due) or `receivables` (only customers with an installment or credit invoice, the
+         *     pull before 1.44.0). After a change, and on the first run after upgrading to 1.44.0, the pull starts over for
+         *     every branch, so press until `partial` is false. An ERP without the `invoices` parameter is detected (422) and
+         *     pulled without cash invoices, then with the old query.
          */
         post: operations["erpSync"];
         delete?: never;
@@ -1617,7 +1623,7 @@ export interface paths {
         /**
          * @description Change name, icon or note (1.38.0, FR-PLC-003). Permission place.create: a field staff member edits only the places they created; other places
          *     and `location` (a direct move) need place.manage (403 otherwise). 1.42.0 (ADR-054): place.manage works on the places of every branch. A direct move closes an open move request as rejected ("moved by the office").
-         *     `If-Match: W/"<version>"` is optional; a stale version is 412. Offline phones use the sync mutation `place_edit`.
+         *     `If-Match: W/"<version>"` is optional; a stale version is 412. Offline phones use the sync mutation `place_edit`, which since 1.43.0 (ADR-055) also carries `location` with the same rules.
          *     409 INVALID_STATE: PLACE_DELETED. 422 BUSINESS_RULE: OUTSIDE_BANGLADESH.
          */
         patch: operations["editPlace"];
@@ -3200,9 +3206,12 @@ export interface components {
             daysOverdue?: number;
             badges?: components["schemas"]["CustomerStatus"][];
             tag?: components["schemas"]["Tag"];
+            /** @description The open promise with the earliest date. Since 1.44.0 it carries `createdByName` / `ownerName` here too, so the home list can say "promised by <name>" */
             openPromise?: components["schemas"]["Promise"] | null;
             /** Format: date-time */
             lastVisitAt?: string | null;
+            /** @description Added in 1.44.0 (FR-CUS-021). Display name of who made the visit at `lastVisitAt` (any month); null when there is none */
+            lastVisitByName?: string | null;
             /** @description Field collections not yet posted to ERP */
             pendingFieldPoisha?: number;
             /** @description Amount of the next unpaid schedule line across active plans (ERP cache). Added in 1.2.0 */
@@ -3277,6 +3286,55 @@ export interface components {
             promisesKept: number;
             /** @description Promises due this month that were broken */
             promisesBroken: number;
+            /** @description Added in 1.44.0 (FR-CUS-021). Who made this month's visits: one entry per staff member, newest visit first. `count` adds up to `visitCount`. Empty when nobody visited */
+            visitedBy?: components["schemas"]["ActivityPerson"][];
+            /**
+             * @description Added in 1.44.0 (FR-CUS-021). Who took this month's money, newest first, one entry per person and kind.
+             *     ERP payments (`pending: false`) are the same payments as `paidPoisha` and add up to it; field money not in the
+             *     ERP yet (`pending: true`) is the same money as `pendingPoisha` and adds up to that. Never add the two kinds
+             *     together. The name: the FOS staff member who collected it (`source: staff`, with `userId`), else the ERP
+             *     employee recorded as referrer on an office/ERP payment (`erp_referrer`), else the collector name the payment
+             *     was posted with when there was no ERP employee (`collector_name`), else `unknown` with an empty name (an
+             *     office payment the ERP has no name for).
+             */
+            paidBy?: components["schemas"]["ActivityPayer"][];
+            /** @description Added in 1.44.0 (FR-CUS-021). Who made this month's promises (cancelled ones left out): one entry per staff member, newest first. `count` adds up to `promisesMade`. For the open promise on the home list use `openPromise.createdByName` */
+            promisedBy?: components["schemas"]["ActivityPerson"][];
+            /** @description Added in 1.44.0 (FR-CUS-021). Who made this month's last visit (`visitedBy[0].name`); null when nobody visited this month */
+            lastVisitByName?: string | null;
+            /** @description Added in 1.44.0 (FR-CUS-021). Who took this month's newest money (`paidBy[0].name`: the staff collector, else the ERP referrer, else the posted collector name; an ERP payment comes before field money of the same day); null when nothing was paid this month or the ERP has no name */
+            lastPaidByName?: string | null;
+        };
+        /** @description Added in 1.44.0 (FR-CUS-021). One staff member's part of a customer's month (visits or promises) */
+        ActivityPerson: {
+            userId: string;
+            /** @description Display name of the staff member (empty if the user no longer exists) */
+            name: string;
+            count: number;
+            /**
+             * Format: date-time
+             * @description The newest visit check-in / promise creation of this person this month
+             */
+            lastAt: string;
+        };
+        /** @description Added in 1.44.0 (FR-CUS-021). Who took part of a customer's money this month; see `CustomerActivity.paidBy` */
+        ActivityPayer: {
+            name: string;
+            /**
+             * @description Where `name` comes from; unknown values are possible later
+             * @enum {string}
+             */
+            source: "staff" | "erp_referrer" | "collector_name" | "unknown";
+            /** @description The FOS staff user, only when `source` is `staff` */
+            userId?: string;
+            amountPoisha: number;
+            /**
+             * Format: date
+             * @description Newest payment date (ERP) or business date (field) of this entry
+             */
+            lastDate: string;
+            /** @description true = field money recorded in FOS and not in the ERP yet */
+            pending: boolean;
         };
         CustomerPage: {
             items?: components["schemas"]["CustomerListItem"][];
@@ -3350,10 +3408,10 @@ export interface components {
                 }[];
             }[];
             /**
-             * @description Added in 1.13.0. Credit = pay-later sale with one due date
+             * @description Added in 1.13.0. Credit = pay-later sale with one due date. `cash` (1.44.0, ADR-057) = a cash sale, pulled when `erp.customerScope` is `all`: no schedule, `completed` when paid, otherwise `closed`; never due, overdue, open or collectable. Treat unknown values like `cash`
              * @enum {string}
              */
-            kind?: "installment" | "credit";
+            kind?: "installment" | "credit" | "cash";
             /** @description Added in 1.13.0. ERP invoice number */
             invoiceNo?: string;
             /**
@@ -3451,6 +3509,8 @@ export interface components {
             methodLabel?: string;
             /** @description Added in 1.13.0. ERP employee recorded as collector */
             collectorName?: string;
+            /** @description Added in 1.44.0. Name of the ERP referrer employee of the payment; null when the payment has no ERP employee (posted by name, ADR-049, or an office payment without a referrer) */
+            referrerName?: string | null;
             /** @description Added in 1.13.0. Down-payment advance */
             advance?: boolean;
             /** @description Added in 1.13.0. Settlement discount given with the payment */
@@ -4277,6 +4337,10 @@ export interface components {
             branches: number;
             /** @description true = stopped for time; call again to continue */
             partial: boolean;
+            /** @description Added in 1.44.0. ERP customer rows this call could not read and left out (the server log names them); 0 normally */
+            skipped?: number;
+            /** @description Added in 1.44.0. ERP branches whose pull failed in this call (the next call tries them again); 0 normally */
+            failedBranches?: number;
             durationMs?: number;
             /** Format: date-time */
             finishedAt: string;
@@ -4586,7 +4650,11 @@ export interface components {
              *     1.12.0: broadcast_ack → { broadcastId, at? } (when the staff tapped "read"; kept between sending and now).
              *     1.20.0: task_resolve_request → { taskId, note?, requestedAt? } (the staff member says the task is done; idempotent, a repeat is a replay). Needs permission task.work.
              *     1.38.0: place → PlaceCreate (same as POST /places; needs place.create; the result entityId is the server id) ·
-             *     place_edit → { placeId | placeClientId, name?, icon?, note? } (same as PATCH /places/{id} without location; placeClientId = the clientId of a place this user created, for edits made before the create was synced) ·
+             *     place_edit → { placeId | placeClientId, name?, icon?, note?, location? } (same as PATCH /places/{id} without If-Match; placeClientId = the clientId of a place this user created, for edits made before the create was synced).
+             *     1.43.0 (ADR-055): `location` { lat, lng } is a direct move by the office, applied only for place.manage with the PATCH rules: outside Bangladesh → rejected BUSINESS_RULE OUTSIDE_BANGLADESH;
+             *     deleted place → INVALID_STATE PLACE_DELETED; an open move request is closed as rejected ("Moved by the office"). Without place.manage an item with `location` is rejected
+             *     as a whole with FORBIDDEN (details.reason MOVE_NEEDS_MANAGE) and nothing in it is applied; send word edits as a separate item. Unknown payload fields are VALIDATION_FAILED.
+             *     The same point again changes nothing (no version bump). The device's capture time is the mutation's `createdAt`, as for every kind; the server does not use it for places ·
              *     place_move_request → { placeId | placeClientId, clientId, location, reason? } (same as POST /places/{id}/move-request). Both need place.create.
              *     Every mutation is idempotent by mutationId; the same id with a different payload is rejected with IDEMPOTENCY_MISMATCH.
              */
@@ -5197,7 +5265,7 @@ export interface components {
         BranchId: string;
         /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
         PayStateFilter: components["schemas"]["PayState"][];
-        /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
+        /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
         InvoiceKind: "installment" | "credit";
         /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
         PaidThisMonth: "yes" | "no";
@@ -6294,7 +6362,7 @@ export interface operations {
                 includeTotal?: boolean;
                 /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
                 payState?: components["parameters"]["PayStateFilter"];
-                /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
+                /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
                 invoiceKind?: components["parameters"]["InvoiceKind"];
                 /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
                 paidThisMonth?: components["parameters"]["PaidThisMonth"];
@@ -6326,7 +6394,7 @@ export interface operations {
                 branchId?: components["parameters"]["BranchId"];
                 /** @description Added in 1.14.0 (FR-CUS-012). Pin colours, combined with OR; other parameters narrow with AND */
                 payState?: components["parameters"]["PayStateFilter"];
-                /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind */
+                /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
                 invoiceKind?: components["parameters"]["InvoiceKind"];
                 /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
                 paidThisMonth?: components["parameters"]["PaidThisMonth"];

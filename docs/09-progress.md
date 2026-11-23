@@ -81,6 +81,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - Voided and edited collections in the drawer and list, three new activity lines (contract 1.33.0, FR-W-050) done 2026-11-22.
 - Delete a deposit (reason, "Deleted" tab, audit labels for withdrawn/edited collections) done 2026-11-22 on contract 1.32.0 (FR-W-049).
 - Deposit detail (collections one deposit covered) and the promise behind every cash line done 2026-11-21 on contract 1.30.0 (FR-W-048).
+- Contract 1.44.0 done 2026-11-23 (owner decision: every ERP customer and invoice shows): cash sales with nothing due and unknown kinds treated like cash, who visited / paid / promised on the customer (Office for unknown, field money labelled not in ERP yet), Sync from ERP until done with skipped rows and failed branches, `erp.customerScope` in settings (FR-W-057, FR-W-058, ADR-W26).
 - Next: mobile pass, lazy-load map bundles; Phase 2 scrubber and showing visit/collection events on the route map (`events.data`, `Stop.visitId`, field-api 1.7.1); remaining Phase 3 reports.
 
 ## Contract gaps reported to field-api

@@ -65,6 +65,7 @@ export function PaymentsTab({ c }: { c: CustomerDetail }) {
                       {p.advance && <Badge tone="info" icon={false} className="ms-1">{t('payments.advance')}</Badge>}
                       {p.reversed && <Badge tone="danger" className="ms-1">{t('payments.reversed')}</Badge>}
                       {p.collectorName && <span className="mt-0.5 block text-xs text-fg-tertiary">{t('payments.collector', { name: p.collectorName })}</span>}
+                      {p.referrerName && p.referrerName !== p.collectorName && <span className="mt-0.5 block text-xs text-fg-tertiary">{t('payments.referrer', { name: p.referrerName })}</span>}
                     </td>
                     <td className="px-4 py-2 text-end">
                       <MoneyText poisha={p.amountPoisha ?? 0} className={p.reversed ? 'font-medium text-fg-tertiary line-through' : 'font-medium'} />

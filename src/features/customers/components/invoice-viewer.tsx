@@ -1,6 +1,6 @@
 'use client';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, CalendarClock, CloudUpload, Receipt, UserRound } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CircleCheck, CloudUpload, Receipt, UserRound } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { formatDate, formatMoney, formatNumber, pickText, formatDaySpan } from '@/shared/lib/format';
@@ -33,7 +33,9 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
   useUi((s) => s.bnDigits);
   const branches = useBranches();
   const today = todayDhaka();
-  const credit = kindOf(plan) === 'credit';
+  const kind = kindOf(plan);
+  const credit = kind === 'credit';
+  const cash = kind === 'cash';
   const state = stateOf(plan);
   const pay = planPayState(plan, today);
   const rows = lineRows(plan, today);
@@ -57,13 +59,14 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
       <Card className="p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-fg-tertiary">{credit ? t('invoice.creditTitle') : t('invoice.installmentTitle')}</p>
+            <p className="text-xs font-medium text-fg-tertiary">{cash ? t('invoice.cashTitle') : credit ? t('invoice.creditTitle') : t('invoice.installmentTitle')}</p>
             <h2 id="invoice-title" className="font-mono text-xl font-semibold tracking-tight text-fg">{no}</h2>
             <p className="mt-0.5 text-base text-fg">{plan.product}</p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+            {cash && <span data-testid="cash-sale-badge"><Badge tone="neutral">{t('invoice.kindCash')}</Badge></span>}
             {pay && <PayStateBadge state={pay} missed={missedOf(plan, today)} />}
-            {state === 'closed' && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
+            {state === 'closed' && !cash && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
             {plan.badSuggested && <StatusBadge status="bad_suggested" />}
             {plan.status === 'defaulted' && <Badge tone="danger">{t('planStatus.defaulted')}</Badge>}
           </div>
@@ -83,11 +86,21 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
           <Figure label={t('invoice.total')}><MoneyText poisha={plan.totalPayablePoisha ?? 0} className="text-lg font-semibold" /></Figure>
           <Figure label={t('invoice.paidSoFar')}><MoneyText poisha={plan.paidPoisha ?? 0} className="text-lg font-semibold" /></Figure>
           <Figure label={t('invoice.left')}>
-            <MoneyText poisha={plan.outstandingPoisha ?? 0} className={cn('text-lg font-semibold', state === 'open' && (plan.missedCount ?? 0) > 0 && 'text-st-overdue')} />
+            {cash ? (
+              <span className="text-lg font-semibold text-fg-secondary">{t('invoice.nothingDue')}</span>
+            ) : (
+              <MoneyText poisha={plan.outstandingPoisha ?? 0} className={cn('text-lg font-semibold', state === 'open' && (plan.missedCount ?? 0) > 0 && 'text-st-overdue')} />
+            )}
           </Figure>
         </dl>
 
-        {next && !credit && (
+        {cash && (
+          <p className="mt-3 flex items-center gap-2 text-sm text-fg-secondary" data-testid="cash-sale-note">
+            <CircleCheck className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
+            {t('invoice.cashNote')}
+          </p>
+        )}
+        {next && kind === 'installment' && (
           <p className="mt-3 flex items-center gap-2 text-sm text-fg">
             <CalendarClock className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
             {t('invoice.nextDue', { date: formatDate(next.date), amount: formatMoney(next.amountPoisha) })}
@@ -104,13 +117,13 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] print:grid-cols-1">
         <div className="min-w-0 space-y-4">
-          {!credit && <ScheduleCard plan={plan} rows={rows} />}
+          {kind === 'installment' && <ScheduleCard plan={plan} rows={rows} />}
           <ItemsCard plan={plan} />
           <PaymentsCard c={c} plan={plan} rows={rows} />
         </div>
         <div className="space-y-4">
-          <MoneyCard plan={plan} credit={credit} pendingPoisha={pendingPoisha} />
-          {!credit && <TermsCard plan={plan} today={today} />}
+          <MoneyCard plan={plan} credit={kind !== 'installment'} cash={cash} pendingPoisha={pendingPoisha} />
+          {kind === 'installment' && <TermsCard plan={plan} today={today} />}
           <GuarantorCard plan={plan} />
         </div>
       </div>
@@ -298,7 +311,7 @@ function ItemsCard({ plan }: { plan: Plan }) {
 }
 
 /** The invoice's money as the ERP keeps it, line by line, like a receipt. Nothing here is added up by the browser. */
-function MoneyCard({ plan, credit, pendingPoisha }: { plan: Plan; credit: boolean; pendingPoisha: number }) {
+function MoneyCard({ plan, credit, cash, pendingPoisha }: { plan: Plan; credit: boolean; cash: boolean; pendingPoisha: number }) {
   const { t } = useTranslation('customers');
   const rows: { label: string; poisha: number; strong?: boolean; sub?: boolean; minus?: boolean; tone?: string }[] = [];
   if (plan.subtotalPoisha != null) rows.push({ label: t('invoice.subtotal'), poisha: plan.subtotalPoisha });
@@ -313,7 +326,7 @@ function MoneyCard({ plan, credit, pendingPoisha }: { plan: Plan; credit: boolea
   if ((plan.writtenOffPoisha ?? 0) > 0) rows.push({ label: t('invoice.ofWhichWrittenOff'), poisha: plan.writtenOffPoisha!, sub: true });
   if ((plan.settlementDiscountPoisha ?? 0) > 0) rows.push({ label: t('invoice.ofWhichSettlement'), poisha: plan.settlementDiscountPoisha!, sub: true });
   if ((plan.refundedPoisha ?? 0) > 0) rows.push({ label: t('invoice.refunded'), poisha: plan.refundedPoisha! });
-  rows.push({ label: t('invoice.leftErp'), poisha: plan.outstandingPoisha ?? 0, strong: true, tone: (plan.outstandingPoisha ?? 0) > 0 ? 'text-st-overdue' : undefined });
+  rows.push({ label: t('invoice.leftErp'), poisha: plan.outstandingPoisha ?? 0, strong: true, tone: !cash && (plan.outstandingPoisha ?? 0) > 0 ? 'text-st-overdue' : undefined });
   return (
     <Card className="overflow-hidden">
       <CardHeader title={t('invoice.money')} />
@@ -411,6 +424,7 @@ function PaymentsCard({ c, plan, rows }: { c: CustomerDetail; plan: Plan; rows: 
                     <td className="px-3 py-2">
                       {tc(`method.${p.method}`, { defaultValue: p.method })}
                       {p.collectorName && <span className="block text-xs text-fg-tertiary">{t('payments.collector', { name: p.collectorName })}</span>}
+                      {p.referrerName && p.referrerName !== p.collectorName && <span className="block text-xs text-fg-tertiary">{t('payments.referrer', { name: p.referrerName })}</span>}
                     </td>
                     <td className="px-3 py-2 text-fg-secondary">{seqs.length ? t('invoice.lineList', { list: seqs.map((n) => formatNumber(n)).join(', ') }) : '—'}</td>
                     <td className="px-4 py-2 text-end">

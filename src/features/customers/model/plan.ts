@@ -16,9 +16,15 @@ export function rolledCount(plan: Plan): number {
   return (plan.schedule ?? []).filter((s) => s.rolled).length;
 }
 
-/** Returned (closed) and cancelled invoices are not collectable and are not in the totals. */
+/** A cash sale (contract 1.44.0) or a kind this build does not know: no schedule, never due (field-api ADR-057). */
+export function isCashLike(plan: Pick<Plan, 'kind'>): boolean {
+  const k = plan.kind as string | undefined | null;
+  return k != null && k !== 'installment' && k !== 'credit';
+}
+
+/** Returned (closed) and cancelled invoices and cash sales are not collectable and are not in the totals. */
 export function isCollectable(plan: Plan): boolean {
-  return plan.status !== 'closed' && plan.status !== 'cancelled';
+  return plan.status !== 'closed' && plan.status !== 'cancelled' && !isCashLike(plan);
 }
 
 /** Collectable plans first (newest final due first), then closed and cancelled ones. */
@@ -28,7 +34,8 @@ export function sortPlans(plans: Plan[]): Plan[] {
 
 /** i18n key (namespace customers) and count for how often installments fall due. */
 export function frequencyLabel(plan: Plan): { key: string; n?: number } | null {
-  if (plan.kind === 'credit' || !plan.frequency) return null;
+  if (plan.kind !== 'installment' && plan.kind != null) return null;
+  if (!plan.frequency) return null;
   if (plan.frequency === 'custom') return plan.customDays ? { key: 'frequency.everyNDays', n: plan.customDays } : { key: 'frequency.custom' };
   return { key: `frequency.${plan.frequency}` };
 }

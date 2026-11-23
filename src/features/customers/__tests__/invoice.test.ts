@@ -76,6 +76,6 @@ describe('invoice viewer model (FR-W-028)', () => {
     expect(sortInvoices(plans, T).map((p) => p.erpPlanId)).toEqual(['open', 'cr', 'paid', 'ret']);
     expect(filterInvoices(plans, 'credit', 'all').map((p) => p.erpPlanId)).toEqual(['cr']);
     expect(filterInvoices(plans, 'installment', 'open').map((p) => p.erpPlanId)).toEqual(['open']);
-    expect(invoiceCounts(plans)).toEqual({ kinds: { all: 4, installment: 3, credit: 1 }, states: { all: 4, open: 2, paid: 1, closed: 1 } });
+    expect(invoiceCounts(plans)).toEqual({ kinds: { all: 4, installment: 3, credit: 1, cash: 0 }, states: { all: 4, open: 2, paid: 1, closed: 1 } });
   });
 });

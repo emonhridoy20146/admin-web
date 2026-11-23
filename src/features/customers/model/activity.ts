@@ -37,3 +37,46 @@ export function workMarks(c: Pick<Item, 'activity' | 'openPromise' | 'location'>
 
 /** Nothing done with the customer this month: not visited, nothing paid or pending, no promise. */
 export const untouched = (m: WorkMarks): boolean => m.known && !m.visit && !m.paid && !m.promise;
+
+type Person = components['schemas']['ActivityPerson'];
+type Payer = components['schemas']['ActivityPayer'];
+
+/** One name on a "who did it" line. `office` = an office payment the ERP has no name for (FR-CUS-021). */
+export interface WhoVM {
+  name: string;
+  /** true: show the "Office" label instead of `name` */
+  office: boolean;
+  /** true: a staff member who no longer exists (empty name on a visit or promise) */
+  removed: boolean;
+  count?: number;
+  amountPoisha?: number;
+}
+
+/**
+ * FR-W-037 / master FR-CUS-021 (contract 1.44.0): who did this month's work on a customer. ERP money (`paid`) and
+ * field money not in the ERP yet (`pending`) are kept apart, never added together (CLAUDE.md §2.6). A payer with
+ * `source: unknown` (or no name) is the office. Missing lists (server before 1.44.0) give empty lists.
+ */
+export function monthPeople(a: Activity | undefined | null): { visits: WhoVM[]; promises: WhoVM[]; paid: WhoVM[]; pending: WhoVM[] } {
+  const person = (p: Person): WhoVM => ({ name: p.name ?? '', office: false, removed: !p.name, count: p.count });
+  const payer = (p: Payer): WhoVM => {
+    const office = p.source === 'unknown' || !p.name;
+    return { name: office ? '' : p.name, office, removed: false, amountPoisha: p.amountPoisha };
+  };
+  const payers = a?.paidBy ?? [];
+  return {
+    visits: (a?.visitedBy ?? []).map(person),
+    promises: (a?.promisedBy ?? []).map(person),
+    paid: payers.filter((p) => !p.pending).map(payer),
+    pending: payers.filter((p) => p.pending).map(payer),
+  };
+}
+
+/** The display name of the newest payer this month: `lastPaidByName`, else the office when something was paid. */
+export function lastPaidBy(a: Activity | undefined | null): WhoVM | null {
+  if (!a) return null;
+  if (a.lastPaidByName) return { name: a.lastPaidByName, office: false, removed: false };
+  const first = a.paidBy?.[0];
+  if (first) return monthPeople({ ...a, paidBy: [first] })[first.pending ? 'pending' : 'paid'][0] ?? null;
+  return null;
+}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
+import type { components } from '@/shared/api/schema';
 import { useCan, useSession } from '@/shared/auth/session';
 import { useBranchId } from '@/shared/lib/ui-store';
 import { EV, useInvalidateOn } from '@/shared/feature/events';
@@ -66,8 +67,10 @@ export function useSearch(q: string) {
 
 /**
  * FR-ERP-007 "Sync from ERP" (contract 1.17.0, ADR-W19): pulls what changed in the ERP now. One call stops after about
- * 40 s with `partial: true`; this calls again until it is done (at most 30 rounds), reporting how many customers came.
- * Everything on screen is refetched afterwards. Never optimistic: it only reads from the ERP.
+ * 40 s with `partial: true`; this calls again until `partial` is false (contract 1.44.0: after a change of
+ * `erp.customerScope` the pull starts over for every branch and can take many rounds), reporting how many customers
+ * came. `skipped` (ERP rows left out) is added up over the rounds; `failedBranches` is the last round's (a failed
+ * branch is tried again by the next call). Everything on screen is refetched afterwards. Never optimistic.
  */
 const ERP_AUTO_SYNC_INTERVAL = 2 * 60_000;
 const ERP_SYNC_KEY = ['shell', 'erp-sync'];
@@ -87,22 +90,43 @@ export function useAutoErpSync() {
   }, [allowed]);
 }
 
+/** Safety stop only (about 3 h of 40 s rounds): the loop otherwise runs until the server says `partial: false`. */
+export const ERP_SYNC_MAX_ROUNDS = 300;
+
+export interface ErpSyncSummary {
+  customers: number;
+  partial: boolean;
+  finishedAt: string;
+  /** ERP customer rows the server could not read and left out, over all rounds (1.44.0) */
+  skipped: number;
+  /** ERP branches whose pull failed in the last round (1.44.0) */
+  failedBranches: number;
+  rounds: number;
+}
+
+type ErpSyncResult = components['schemas']['ErpSyncResult'];
+
+/** Calls `call` until the server says the pull is done; adds up customers and skipped rows. */
+export async function runErpSync(call: () => Promise<ErpSyncResult>, onProgress?: (customers: number) => void, maxRounds = ERP_SYNC_MAX_ROUNDS): Promise<ErpSyncSummary> {
+  let customers = 0;
+  let skipped = 0;
+  let rounds = 0;
+  let last: ErpSyncResult;
+  do {
+    last = await call();
+    customers += last.customers ?? 0;
+    skipped += last.skipped ?? 0;
+    rounds += 1;
+    onProgress?.(customers);
+  } while (last.partial && rounds < maxRounds);
+  return { customers, partial: !!last.partial, finishedAt: last.finishedAt ?? '', skipped, failedBranches: last.failedBranches ?? 0, rounds };
+}
+
 export function useErpSync() {
   const qc = useQueryClient();
   return useMutation({
     mutationKey: ERP_SYNC_KEY,
-    mutationFn: async (onProgress?: (customers: number) => void) => {
-      let customers = 0;
-      let rounds = 0;
-      let last: { partial: boolean; finishedAt: string };
-      do {
-        last = await unwrap(api.POST('/system/erp-sync'));
-        customers += (last as { customers?: number }).customers ?? 0;
-        rounds += 1;
-        onProgress?.(customers);
-      } while (last.partial && rounds < 30);
-      return { customers, partial: last.partial, finishedAt: last.finishedAt };
-    },
+    mutationFn: (onProgress?: (customers: number) => void) => runErpSync(() => unwrap(api.POST('/system/erp-sync')), onProgress),
     onSettled: () => void qc.invalidateQueries(),
   });
 }

@@ -83,6 +83,14 @@ export const SECTIONS: SectionDef[] = [
       { key: 'customers.staffPinApproval', type: 'enum', options: ['when_missing', 'always'], branch: true },
     ],
   },
+  {
+    id: 'erp',
+    fields: [
+      // FR-ERP-008 (contract 1.44.0, owner decision 2026-11-23): every ERP customer and invoice (cash sales included),
+      // or only customers with an installment or credit invoice. A change makes the next pull start over.
+      { key: 'erp.customerScope', type: 'enum', options: ['all', 'receivables'], labels: { all: 'erpScopeAll', receivables: 'erpScopeReceivables' } },
+    ],
+  },
   { id: 'tags', fields: [{ key: 'tags.requireApproval', type: 'bool', branch: true }] },
   { id: 'promises', fields: [{ key: 'promises.graceDays', type: 'int', min: 0, max: 14, unit: 'days', branch: true }] },
   {

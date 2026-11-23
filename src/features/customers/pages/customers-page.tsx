@@ -153,7 +153,15 @@ export function CustomersPage() {
       id: 'promise',
       header: t('col.promise'),
       priority: 4,
-      cell: (r) => (r.openPromise ? <span className="tabular text-st-promised">{t('promiseOn', { date: formatDate(r.openPromise.date, { withYear: false }), amount: formatMoney(r.openPromise.amountPoisha) })}</span> : <span className="text-fg-tertiary">—</span>),
+      cell: (r) =>
+        r.openPromise ? (
+          <span className="tabular text-st-promised">
+            {t('promiseOn', { date: formatDate(r.openPromise.date, { withYear: false }), amount: formatMoney(r.openPromise.amountPoisha) })}
+            {r.openPromise.byName && <span className="block text-xs text-fg-tertiary">{t('who.promisedBy', { name: r.openPromise.byName })}</span>}
+          </span>
+        ) : (
+          <span className="text-fg-tertiary">—</span>
+        ),
     },
     { id: 'assignee', header: t('col.assignee'), priority: 3, mobile: 'meta', cell: (r) => r.assigneeName ?? <span className="text-fg-tertiary">—</span> },
     {
@@ -163,7 +171,10 @@ export function CustomersPage() {
       cell: (r) =>
         r.lastVisitAt ? (
           <Tooltip content={formatDate(r.lastVisitAt)}>
-            <span tabIndex={0}>{formatRelative(r.lastVisitAt)}</span>
+            <span tabIndex={0}>
+              {formatRelative(r.lastVisitAt)}
+              {r.lastVisitByName && <span className="block text-xs text-fg-tertiary">{t('who.by', { name: r.lastVisitByName })}</span>}
+            </span>
           </Tooltip>
         ) : (
           <span className="text-fg-tertiary">{t('never')}</span>

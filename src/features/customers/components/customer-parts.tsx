@@ -14,7 +14,7 @@ import { EmptyState } from '@/shared/ui/feedback';
 import type { components } from '@/shared/api/schema';
 import { sortStatuses } from '../model/customer-row';
 import { currentPin } from '../model/pin';
-import { frequencyLabel, guarantorPhones, isCollectable, itemLabel, rolledCount, visibleLines } from '../model/plan';
+import { frequencyLabel, guarantorPhones, isCashLike, isCollectable, itemLabel, rolledCount, visibleLines } from '../model/plan';
 import type { CustomerDetail } from '../api/customers';
 import { CustomerPhones } from './customer-phones';
 import { SetPinDialog } from './set-pin-dialog';
@@ -240,6 +240,7 @@ export function PlanCard({ plan, showSchedule, onOpen }: { plan: Plan; showSched
   const sched = visibleLines(plan);
   const rolled = rolledCount(plan);
   const credit = plan.kind === 'credit';
+  const cash = isCashLike(plan);
   const collectable = isCollectable(plan);
   const freq = frequencyLabel(plan);
   const written = plan.writtenOffPoisha ?? 0;
@@ -251,14 +252,17 @@ export function PlanCard({ plan, showSchedule, onOpen }: { plan: Plan; showSched
           <div className="flex flex-wrap items-center gap-2">
             <span className={cn('text-base font-semibold', collectable ? 'text-fg' : 'text-fg-secondary')}>{plan.product}</span>
             {credit && <Badge tone="info" icon={false}>{t('kind.credit')}</Badge>}
+            {cash && <Badge tone="neutral" icon={false}>{t('kind.cash')}</Badge>}
             {plan.badSuggested && <StatusBadge status="bad_suggested" />}
             {plan.status === 'completed' && <StatusBadge status="paid_up" />}
             {plan.status === 'defaulted' && <Badge tone="danger">{t('planStatus.defaulted')}</Badge>}
-            {!collectable && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
+            {!collectable && !cash && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
           </div>
           <div className="mt-0.5 text-sm text-fg-tertiary">
             <span className="font-mono text-xs">{plan.invoiceNo ?? plan.erpPlanId}</span>
-            {credit ? (
+            {cash ? (
+              <>{(plan.saleDate ?? plan.startDate) && <> · {t('invoice.soldOn', { date: formatDate((plan.saleDate ?? plan.startDate)!) })}</>} · {t('invoice.nothingDue')}</>
+            ) : credit ? (
               <> · {t('creditDue', { date: formatDate(plan.finalDueDate!) })}</>
             ) : (
               <>
@@ -267,11 +271,11 @@ export function PlanCard({ plan, showSchedule, onOpen }: { plan: Plan; showSched
               </>
             )}
           </div>
-          {!collectable && <p className="mt-1 text-xs text-fg-secondary">{t('notCollectable')}</p>}
+          {!collectable && !cash && <p className="mt-1 text-xs text-fg-secondary">{t('notCollectable')}</p>}
         </div>
         <div className="text-end">
           <div className="text-xs text-fg-tertiary">{t('outstanding')}</div>
-          <MoneyText poisha={plan.outstandingPoisha ?? 0} className="text-md font-semibold" />
+          {cash ? <span className="text-md font-semibold text-fg-secondary">{t('invoice.nothingDue')}</span> : <MoneyText poisha={plan.outstandingPoisha ?? 0} className="text-md font-semibold" />}
           {onOpen && (
             <button type="button" onClick={onOpen} className="mt-1 flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline sm:min-h-8">
               <FileText className="size-4" aria-hidden />

@@ -95,3 +95,19 @@ describe('settings schema', () => {
     expect(parse(field('reports.leaderboardVisibleToStaff'), true)).toEqual({ value: true });
   });
 });
+
+describe('erp.customerScope (contract 1.44.0, FR-ERP-008)', () => {
+  it('is an editable org-wide choice with a label in both languages', async () => {
+    const f = field('erp.customerScope');
+    expect(f).toMatchObject({ type: 'enum', options: ['all', 'receivables'] });
+    expect(f.branch).toBeFalsy();
+    expect(KNOWN.has('erp.customerScope')).toBe(true);
+    for (const lng of ['en', 'bn']) {
+      const m = (await import(`../i18n/${lng}.json`)).default as { sections: Record<string, { title: string }>; fields: Record<string, { label: string; help: string }>; enum: Record<string, string> };
+      expect(m.sections.erp?.title, lng).toBeTruthy();
+      expect(m.fields['erp.customerScope']?.label, lng).toBeTruthy();
+      expect(m.fields['erp.customerScope']?.help, lng).toBeTruthy();
+      for (const o of ['all', 'receivables']) expect(m.enum[(f as { labels: Record<string, string> }).labels[o]!], `${lng} ${o}`).toBeTruthy();
+    }
+  });
+});

@@ -77,7 +77,8 @@
     "none": "No payments yet.",
     "advance": "Advance",
     "collector": "Collector: {{name}}",
-    "discount": "discount {{amount}}"
+    "discount": "discount {{amount}}",
+    "referrer": "Referrer: {{name}}"
   },
   "notes": {
     "empty": "No notes yet. Staff add notes from the app."
@@ -230,7 +231,8 @@
     "change": "Change staff"
   },
   "kind": {
-    "credit": "Credit sale"
+    "credit": "Credit sale",
+    "cash": "Cash sale"
   },
   "planStatus": {
     "defaulted": "Defaulted",
@@ -268,7 +270,8 @@
     "label": "Invoice type",
     "all": "All",
     "installment": "Installment invoices",
-    "credit": "Credit invoices"
+    "credit": "Credit invoices",
+    "cash": "Cash sales"
   },
   "paidMonth": {
     "label": "This month",
@@ -406,7 +409,11 @@
     "kindInstallment": "Installment",
     "soldOn": "Sold {{date}}",
     "open": "Open invoice",
-    "openFull": "Open full invoice"
+    "openFull": "Open full invoice",
+    "cashTitle": "Cash sale",
+    "kindCash": "Cash sale",
+    "nothingDue": "Nothing due",
+    "cashNote": "Cash sale: nothing is due on this invoice and it is not in any open total."
   },
   "action": {
     "collectCash": "Collect cash",
@@ -486,5 +493,12 @@
     "invoices": "Invoices: {{total}} · with a balance: {{open}}"
   },
   "invoiceTotals": "Invoices: {{total}} · with a balance: {{open}}",
-  "invTotal": "{{n}} in all"
+  "invTotal": "{{n}} in all",
+  "who": {
+    "by": "by {{name}}",
+    "promisedBy": "promised by {{name}}",
+    "office": "Office",
+    "removed": "Former user",
+    "notInErp": "not in ERP yet"
+  }
 }
