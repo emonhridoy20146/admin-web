@@ -1,46 +1,42 @@
 'use client';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { AlarmClock, Banknote, Flag, GitMerge, Handshake, Trophy, Wallet } from 'lucide-react';
+import { AlarmClock, Banknote, CalendarRange, CloudUpload, Flag, Handshake, Trophy, UserCheck, Wallet } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { cn } from '@/shared/lib/cn';
 import { useSession } from '@/shared/auth/session';
 import { useGate } from '@/shared/feature/useGate';
 import { dashboardWidgets } from '@/shared/feature/registry';
 import { useUi } from '@/shared/lib/ui-store';
-import { formatDate, formatMoney, formatMoneyCompact, formatNumber, formatPercent, formatTime, formatWeekday, pickText } from '@/shared/lib/format';
+import { formatDate, formatMoneyCompact, formatNumber, formatPercent, formatTime, formatWeekday, pickText } from '@/shared/lib/format';
 import { DHAKA } from '@/shared/lib/time';
 import { PageHeader } from '@/shared/ui/page';
 import { KpiCard } from '@/shared/ui/kpi-card';
-import { ChartCard } from '@/shared/ui/chart-card';
 import { Card, CardHeader } from '@/shared/ui/card';
 import { ErrorBanner, Skeleton, EmptyState } from '@/shared/ui/feedback';
 import { MoneyText } from '@/shared/ui/money';
 import { Avatar } from '@/shared/ui/primitives';
-import { useOverview, useStaffToday } from '../api/dashboard';
+import { useCollectionDays, useOverview, useStaffToday } from '../api/dashboard';
+import { fillDays, monthCompare } from '../model/overview';
+import { todayDhaka } from '@/shared/lib/time';
+import { useMemo } from 'react';
+import { AlertsCard, AttendanceCard, BranchesCard, LeadersCard, ModulesOffCard, MonthCard, PayStateCard, PromiseCard, TrendCard } from '../components/sections';
 
-const BarTrend = dynamic(() => import('@/shared/ui/charts/bar-trend'), { ssr: false, loading: () => <Skeleton className="h-[220px] w-full" /> });
 
 const METHOD_TOKEN: Record<string, string> = { cash: 'bg-pay-cash', bkash: 'bg-pay-bkash', nagad: 'bg-pay-nagad', rocket: 'bg-pay-rocket', bank_transfer: 'bg-pay-bank', other_mobile: 'bg-pay-other' };
 
 export function OverviewPage() {
   const { t } = useTranslation('dashboard');
-  const { t: tc } = useTranslation();
   const user = useSession((s) => s.user);
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const gate = useGate();
-  const router = useRouter();
   const q = useOverview();
   const d = q.data;
   const hour = DateTime.now().setZone(DHAKA).hour;
   const greet = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
   const firstName = pickText(user?.name, locale).split(' ').slice(0, locale === 'bn' ? 2 : 1).join(' ');
   const trend = d?.trend7d ?? [];
-  const today = trend[trend.length - 1];
-  const yesterday = trend[trend.length - 2];
   const target = d?.collected?.targetPoisha ?? 0;
   const progress = target ? (d?.collected?.totalPoisha ?? 0) / target : null;
   // FR-COL-015: visit targets are measured in visit credit (joint visits weighted)
@@ -50,6 +46,12 @@ export function OverviewPage() {
   const widgets = dashboardWidgets(gate);
   const conflicts = (d?.exceptions?.conflicts ?? 0) + (d?.exceptions?.postingFailed ?? 0);
   const todayIso = d?.date ?? '';
+  const daysQ = useCollectionDays();
+  const today = todayDhaka();
+  const days = useMemo(() => (daysQ.data ? fillDays(daysQ.data.collection, daysQ.data.from ?? today, today) : []), [daysQ.data, today]);
+  const month = useMemo(() => (daysQ.data ? monthCompare(days, today) : null), [daysQ.data, days, today]);
+  const att = d?.attendance;
+  const attAll = (att?.present ?? 0) + (att?.absent ?? 0);
 
   return (
     <>
@@ -59,7 +61,9 @@ export function OverviewPage() {
 
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} className="mb-4" /> : null}
 
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6">
+      <ModulesOffCard />
+
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 lg:grid-cols-4" data-testid="kpi-strip">
         <KpiCard
           loading={q.isLoading}
           label={t('collectedToday')}
@@ -76,6 +80,27 @@ export function OverviewPage() {
           }
         />
         <KpiCard
+          loading={daysQ.isLoading}
+          label={t('monthToDate')}
+          icon={CalendarRange}
+          href="/collections/?range=month"
+          value={<MoneyText poisha={month?.monthToDate ?? 0} />}
+          sub={month ? t('vsLastMonth', { amount: formatMoneyCompact(month.lastMonthSameDays) }) : undefined}
+          delta={month?.delta ?? null}
+          deltaLabel={t('sameDaysLastMonth')}
+          trend={days.slice(-14).map((x) => x.total)}
+        />
+        <KpiCard
+          loading={q.isLoading}
+          label={t('pendingErp')}
+          icon={CloudUpload}
+          href="/collections/?status=received&range=30d"
+          value={formatNumber(d?.erp?.outboxPending ?? 0)}
+          sub={t('pendingErpSub')}
+          tone={(d?.erp?.outboxFailed ?? 0) > 0 ? 'attention' : 'default'}
+          footer={(d?.erp?.outboxFailed ?? 0) > 0 ? <span className="font-medium text-danger">{t('failedN', { n: formatNumber(d?.erp?.outboxFailed ?? 0) })}</span> : <AsOfText at={d?.erp?.lastSuccessAt} />}
+        />
+        <KpiCard
           loading={q.isLoading}
           label={t('cashOnHand')}
           icon={Banknote}
@@ -87,20 +112,12 @@ export function OverviewPage() {
         />
         <KpiCard
           loading={q.isLoading}
-          label={t('conflicts')}
-          icon={GitMerge}
-          href="/collections/conflicts/"
-          value={formatNumber(conflicts)}
-          sub={t('conflictsSub')}
-          tone={conflicts > 0 ? 'attention' : 'default'}
-        />
-        <KpiCard
-          loading={q.isLoading}
           label={t('overdue')}
           icon={AlarmClock}
           href="/customers/?filter=overdue"
           value={formatNumber(d?.overdue?.customers ?? 0)}
           sub={t('overdueAmount', { amount: formatMoneyCompact(d?.overdue?.amountPoisha ?? 0) })}
+          footer={<AsOfText at={d?.erp?.lastSuccessAt} />}
         />
         <KpiCard
           loading={q.isLoading}
@@ -109,6 +126,16 @@ export function OverviewPage() {
           href="/customers/?filter=promised_today"
           value={formatNumber(d?.promises?.dueToday ?? 0)}
           sub={t('promisedSub', { n: formatNumber(d?.promises?.brokenYesterday ?? 0) })}
+        />
+        <KpiCard
+          loading={q.isLoading}
+          label={t('attendance')}
+          icon={UserCheck}
+          href="/attendance/"
+          value={attAll ? `${formatNumber(att?.present ?? 0)}/${formatNumber(attAll)}` : formatNumber(att?.present ?? 0)}
+          sub={t('attendanceSub', { late: formatNumber(att?.late ?? 0), absent: formatNumber(att?.absent ?? 0) })}
+          progress={attAll ? (att?.present ?? 0) / attAll : null}
+          tone={(att?.absent ?? 0) > 0 && attAll && (att?.absent ?? 0) / attAll > 0.2 ? 'attention' : 'default'}
         />
         <KpiCard
           loading={q.isLoading}
@@ -121,69 +148,44 @@ export function OverviewPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <ChartCard
-          className="xl:col-span-8"
-          title={t('trendTitle')}
-          subtitle={t('trendSub')}
-          chart={
-            q.isLoading ? (
-              <Skeleton className="h-[220px] w-full" />
-            ) : (
-              <BarTrend
-                data={trend.map((p, i) => ({
-                  key: p.date!,
-                  label: i === trend.length - 1 ? tc('time.today') : formatWeekday(p.date!),
-                  value: p.collectedPoisha ?? 0,
-                  valueText: formatMoney(p.collectedPoisha ?? 0),
-                  sub: formatDate(p.date!),
-                  highlight: i === trend.length - 1,
-                }))}
-                axisFormat={(v) => formatMoneyCompact(v)}
-                onBarClick={(p) => router.push(`/collections/?from=${p.key}&to=${p.key}`)}
-              />
-            )
-          }
-          table={
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-fg-secondary">
-                  <th scope="col" className="py-2 text-start font-semibold">{t('date')}</th>
-                  <th scope="col" className="py-2 text-end font-semibold">{t('amount')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trend.map((p) => (
-                  <tr key={p.date} className="border-t border-line">
-                    <td className="py-2">
-                      <Link className="hover:text-primary" href={`/collections/?from=${p.date}&to=${p.date}`}>{formatWeekday(p.date!)}, {formatDate(p.date!)}</Link>
-                    </td>
-                    <td className="py-2 text-end"><MoneyText poisha={p.collectedPoisha ?? 0} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          }
-          actions={
-            today && yesterday && (yesterday.collectedPoisha ?? 0) > 0 ? (
-              <span className="hidden text-xs text-fg-tertiary sm:inline">
-                {tc('time.yesterday')}: <MoneyText poisha={yesterday.collectedPoisha ?? 0} compact />
-              </span>
-            ) : null
-          }
-        />
+        <TrendCard className="xl:col-span-8" days={days} loading={daysQ.isLoading} error={daysQ.error} onRetry={() => daysQ.refetch()} />
         <MethodMix loading={q.isLoading} total={d?.collected?.totalPoisha ?? 0} cash={d?.collected?.cashPoisha ?? 0} mobile={d?.collected?.mobilePoisha ?? 0} date={todayIso} erp={d?.erp} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <StaffToday className={widgets.length ? 'xl:col-span-7' : 'xl:col-span-12'} />
-        {widgets.map((w) => (
-          <div key={w.id} className={cn(widgets.length === 1 ? 'xl:col-span-5' : w.span === 12 ? 'xl:col-span-12' : 'xl:col-span-6')}>
-            <w.component />
-          </div>
-        ))}
+        <MonthCard className="xl:col-span-7" m={month} loading={daysQ.isLoading} />
+        <AlertsCard className="xl:col-span-5" conflicts={conflicts} overLimit={d?.cash?.overLimitStaff ?? 0} erpFailed={d?.erp?.outboxFailed ?? 0} erpPending={d?.erp?.outboxPending ?? 0} />
       </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {gate.flag('module.customers') && <PayStateCard asOf={d?.erp?.lastSuccessAt} />}
+        {gate.flag('module.attendance') && <AttendanceCard a={d?.attendance} loading={q.isLoading} />}
+        {gate.flag('module.promises') && <PromiseCard dueToday={d?.promises?.dueToday ?? 0} keptToday={d?.promises?.keptToday ?? 0} brokenYesterday={d?.promises?.brokenYesterday ?? 0} />}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <StaffToday className="xl:col-span-7" />
+        <LeadersCard className="xl:col-span-5" />
+      </div>
+
+      <BranchesCard className="mt-4" />
+
+      {widgets.length > 0 && (
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
+          {widgets.map((w) => (
+            <div key={w.id} className={cn(w.span === 12 ? 'xl:col-span-12' : 'xl:col-span-6')}>
+              <w.component />
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
+}
+
+function AsOfText({ at }: { at?: string | null }) {
+  const { t } = useTranslation('dashboard');
+  return at ? <span>{t('asOf', { time: formatTime(at) })}</span> : null;
 }
 
 function MethodMix({ loading, total, cash, mobile, date, erp }: { loading: boolean; total: number; cash: number; mobile: number; date: string; erp?: { lastSuccessAt?: string; outboxPending?: number; outboxFailed?: number } }) {
