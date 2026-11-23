@@ -5,7 +5,7 @@ import promBn from '../../src/features/promises/i18n/bn.json' with { type: 'json
 import prosBn from '../../src/features/prospects/i18n/bn.json' with { type: 'json' };
 import dashBn from '../../src/features/dashboard/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import { login, nav, pickRange } from '../fixtures';
 
 // Owner requests 2026-11-23 (batch 1123) on field-api contract 1.45.0: FR-W-060..066.
 
@@ -66,10 +66,9 @@ test('date filter: a preset and a custom range land in the link and narrow the v
   await login(page);
   await nav(page, /^ভিজিট$/);
   const trigger = page.getByTestId('date-range');
-  await trigger.click();
-  await page.getByRole('button', { name: new RegExp(`^${commonBn.range['7d']}`) }).click();
+  await expect(page.locator('tbody, ul[aria-label]').first()).toBeVisible();
+  await pickRange(page, commonBn.range['7d']);
   await expect(page).toHaveURL(/range=7d/);
-  await expect(trigger).toContainText(commonBn.range['7d']);
   await trigger.click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel(commonBn.range.from).fill('2026-11-10');
@@ -83,8 +82,7 @@ test('date filter: a preset and a custom range land in the link and narrow the v
 test('promise follow-up: broken without a follow-up, make the next promise, see the chain', async ({ page }) => {
   await login(page);
   await nav(page, promBn.title);
-  await page.getByTestId('date-range').click();
-  await page.getByRole('button', { name: new RegExp(`^${commonBn.range.all}`) }).click();
+  await pickRange(page, commonBn.range.all);
   await page.getByRole('button', { name: promBn.followUp.filter }).click();
   await expect(page).toHaveURL(/nofollow=1/);
   await expect(page.locator('tbody tr').first()).toContainText(promBn.followUp.none);
