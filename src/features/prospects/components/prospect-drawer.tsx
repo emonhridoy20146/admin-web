@@ -51,7 +51,7 @@ export function ProspectDrawer({ id, seed, onClose, onOpen }: { id: string | nul
         headerExtra={p ? <Badge tone={STATUS_TONE[p.status]}>{t(`status.${p.status}`)}</Badge> : undefined}
         footer={
           p && canManage ? (
-            <div className="flex w-full flex-wrap justify-end gap-2" data-testid="prospect-actions">
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end [&>button]:w-full [&>button]:min-w-0 [&>button]:h-auto [&>button]:min-h-11 [&>button]:py-2 [&>button]:whitespace-normal sm:[&>button]:w-auto [&>button:last-child:nth-child(odd)]:col-span-2" data-testid="prospect-actions">
               {acts.includes('dropped') && (
                 <Button onClick={() => setDialog('dropped')}>
                   <Ban className="size-4" aria-hidden />

@@ -20,6 +20,15 @@ export function useFullscreen(ref: React.RefObject<HTMLElement | null>) {
     return () => document.removeEventListener('fullscreenchange', sync);
   }, [ref]);
 
+  // Esc leaves full screen. The browser does that itself for the Fullscreen API, but not when the key goes to the page
+  // (some kiosks, automation), so the page listens too.
+  useEffect(() => {
+    if (!native) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && document.fullscreenElement && void document.exitFullscreen().catch(() => undefined);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [native]);
+
   useEffect(() => {
     if (!fallback) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setFallback(false);

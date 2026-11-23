@@ -148,6 +148,8 @@ test('places move requests at 390 px: cards, ≥ 44 px actions, no sideways scro
 // Batch 1123 (FR-W-060/063/066): the page is never wider than the phone, the pager reads "page n of m", the date filter
 // and the possible-customer drawer actions fit.
 test('390 px: no sideways scroll on the dashboard, customers and possible customers; pager and drawer fit', async ({ page }) => {
+  // the drawer slides in; measure where it rests
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await login(page);
   const noSideways = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await expect(page.getByTestId('kpi-strip')).toBeVisible();

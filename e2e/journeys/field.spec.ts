@@ -15,7 +15,7 @@ import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type:
 import coworkBn from '../../src/features/cowork/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
-import { confirmWithReason, login, nav } from '../fixtures';
+import { confirmWithReason, login, nav, pickRange } from '../fixtures';
 
 async function toggleChip(page: Page, name: string | RegExp) {
   await page.getByRole('button', { name, exact: true, pressed: false }).click();
@@ -183,8 +183,8 @@ test('W-E7 create a temporary handover, see it pending, then cancel it', async (
 test('promises: filter by window, open one and cancel it with a reason', async ({ page }) => {
   await login(page, 'manager');
   await nav(page, promisesBn.title);
-  await page.getByRole('group', { name: promisesBn.when }).getByRole('button', { name: promisesBn.window.next7 }).click();
-  await expect(page).toHaveURL(/when=next7/);
+  await pickRange(page, commonBn.range.next7);
+  await expect(page).toHaveURL(/range=next7/);
   await page.getByLabel(promisesBn.col.status).selectOption('open');
   await expect(page).toHaveURL(/status=open/);
   await page.waitForLoadState('networkidle');
@@ -199,7 +199,7 @@ test('promises: filter by window, open one and cancel it with a reason', async (
 test('visits: filter by outcome, open a visit with photos and view one', async ({ page }) => {
   await login(page);
   await nav(page, visitsBn.title);
-  await page.getByRole('group', { name: visitsBn.range.label }).getByRole('button', { name: visitsBn.range['7d'] }).click();
+  await pickRange(page, commonBn.range['7d']);
   await expect(page).toHaveURL(/range=7d/);
   await page.getByLabel(visitsBn.col.outcome).selectOption('not_home');
   await expect(page).toHaveURL(/outcome=not_home/);
@@ -272,7 +272,8 @@ test('staff: performance list, month view, drawer and jump to the staff member\'
   await expect(drawer.getByText(staffBn.byMethod)).toBeVisible();
   await drawer.getByRole('link', { name: staffBn.link.visits }).click();
   await expect(page).toHaveURL(/\/visits\/\?userId=/);
-  await expect(page.getByRole('button', { name: visitsBn.clearStaff })).toBeVisible();
+  // the staff filter (FR-W-063) shows the person from the link
+  await expect(page.getByTestId('staff-select')).toHaveValue(new URL(page.url()).searchParams.get('userId')!);
 });
 
 test('customer map: pins listed beside the map, filter, open a customer', async ({ page }) => {
@@ -474,7 +475,7 @@ test('attendance photos: open a staff member\'s day, see each event with its pho
 test('co-work: sessions with members and timeline, their joint visits, the visit kind filter and staff credit', async ({ page }) => {
   await login(page);
   await nav(page, coworkBn.title);
-  await page.getByRole('button', { name: coworkBn.range['30d'], exact: true }).click();
+  await pickRange(page, commonBn.range['30d']);
   await page.waitForURL(/range=30d/);
   const withVisits = page.locator('tbody a[href*="/visits/?session="]');
   await expect(withVisits.first()).toBeVisible();
@@ -503,7 +504,7 @@ test('co-work: sessions with members and timeline, their joint visits, the visit
 
   // visits: only joint ones
   await nav(page, visitsBn.title);
-  await page.getByRole('button', { name: visitsBn.range['30d'], exact: true }).click();
+  await pickRange(page, commonBn.range['30d']);
   await page.waitForURL(/range=30d/);
   await page.getByLabel(visitsBn.cowork.kind).selectOption('joint');
   await page.waitForURL(/kind=joint/);

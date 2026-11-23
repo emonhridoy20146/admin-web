@@ -84,7 +84,6 @@ export function DateRangeFilter({ value, onChange, className, label }: {
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`${label ?? t('range.label')}: ${name}${span ? `, ${span}` : ''}`}
           data-testid="date-range"
           className={cn(
             'inline-flex h-9 max-w-full items-center gap-2 rounded-md border border-line-strong bg-surface px-3 text-sm shadow-e1 transition-colors duration-[var(--dur-fast)] hover:bg-surface-hover data-[state=open]:border-primary data-[state=open]:ring-2 data-[state=open]:ring-primary/20 [@media(pointer:coarse)]:h-11 print:border-0 print:p-0 print:shadow-none',
@@ -92,6 +91,8 @@ export function DateRangeFilter({ value, onChange, className, label }: {
           )}
         >
           <CalendarDays className="size-4 shrink-0 text-primary print:hidden" aria-hidden />
+          {/* the visible words are the name, with what it filters read first (label in name, WCAG 2.5.3) */}
+          <span className="sr-only">{label ?? t('range.label')}: </span>
           <span className="font-medium whitespace-nowrap text-fg">{name}</span>
           {span && <span className="tabular truncate text-fg-tertiary">{span}</span>}
           <ChevronDown className="size-4 shrink-0 text-fg-tertiary print:hidden" aria-hidden />
