@@ -1,0 +1,76 @@
+{
+  "title": "Possible customers",
+  "subtitle": "People staff met who may buy; follow them up until they become customers.",
+  "total": "{{n}} possible customers",
+  "search": "Name, phone, address or note",
+  "all": "All",
+  "status": {
+    "new": "New",
+    "contacted": "Contacted",
+    "converted": "Converted",
+    "dropped": "Dropped"
+  },
+  "col": {
+    "name": "Name",
+    "status": "Status",
+    "phones": "Phone",
+    "address": "Address",
+    "note": "Note",
+    "createdBy": "Recorded by",
+    "createdAt": "Recorded on"
+  },
+  "empty": "No possible customers yet.",
+  "emptyBody": "Staff add them from the app when they meet someone who may buy.",
+  "emptyFiltered": "No possible customers match these filters.",
+  "clear": "Clear filters",
+  "createdLine": "Recorded by {{name}}, {{when}}",
+  "location": "Location",
+  "history": "History",
+  "fromOld": "Entered again from an older record",
+  "convertedTo": "Became customer",
+  "openCustomer": "Open customer",
+  "convertedBy": "Marked by {{name}}, {{when}}",
+  "back": "Back",
+  "act": {
+    "contacted": "Mark contacted",
+    "dropped": "Drop",
+    "convert": "Convert to customer",
+    "reopen": "Re-open",
+    "reentry": "Enter again"
+  },
+  "done": {
+    "contacted": "Marked as contacted",
+    "dropped": "Dropped",
+    "reopen": "Re-opened",
+    "reentry": "Entered again as a new possible customer"
+  },
+  "dropTitle": "Drop this possible customer?",
+  "dropDesc": "{{name}} leaves the open list. You can re-open it later.",
+  "reopenTitle": "Re-open this possible customer?",
+  "reopenDesc": "{{name}} goes back to New. A link to a customer is cleared and kept in the history.",
+  "convert": {
+    "title": "Convert to customer",
+    "desc": "Link {{name}} to the customer they became.",
+    "by": "Find the customer by",
+    "bySearch": "Search",
+    "byCode": "ERP code",
+    "customer": "Customer",
+    "customerHelp": "Search by name, code or phone.",
+    "code": "ERP customer code",
+    "codeHelp": "Use this when the customer is not in the panel yet.",
+    "note": "Note",
+    "confirm": "Convert",
+    "confirmTo": "Convert to {{name}}",
+    "done": "Marked as converted"
+  },
+  "create": {
+    "open": "New possible customer",
+    "title": "New possible customer",
+    "desc": "Someone who may buy. Staff see it in the app if you record it for their branch.",
+    "confirm": "Save",
+    "done": "Possible customer saved",
+    "nameRequired": "Write the name.",
+    "phoneHelp": "Bangladesh mobile, e.g. 01712-345678.",
+    "phoneBad": "Check the number: 11 digits starting with 01."
+  }
+}

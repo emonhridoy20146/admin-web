@@ -1131,6 +1131,96 @@ export const handlers = [
     return HttpResponse.json({});
   })),
 
+  // ---------- possible customers (FR-PRO-001, 1.45.0) ----------
+  http.get(`${BASE}/prospects`, authed(({ ctx, url }) => {
+    const view = perms(ctx.user).has('prospect.view');
+    if (!view && !perms(ctx.user).has('prospect.create')) return problem(403, 'FORBIDDEN', 'No access');
+    const sc = scope(ctx, url);
+    const g = (k: string) => url.searchParams.get(k);
+    const from = g('from');
+    const to = g('to');
+    if (from && to && from > to) return problem(400, 'VALIDATION_FAILED', 'from is after to');
+    const q = (g('q') ?? '').trim().toLowerCase();
+    const digits = q.replace(/\D/g, '');
+    const all = db.prospects
+      .filter((p) => sc.includes(p.branchId) && (view || p.createdBy.id === ctx.user.id))
+      .filter((p) => (!from || (p.createdDate ?? '') >= from) && (!to || (p.createdDate ?? '') <= to))
+      .filter((p) => !g('status') || p.status === g('status'))
+      .filter((p) => !g('createdBy') || p.createdBy.id === g('createdBy'))
+      .filter((p) => !q || [p.name, p.address ?? '', p.note ?? ''].some((x) => x.toLowerCase().includes(q)) || (digits.length >= 3 && p.phones.some((ph) => (ph.number ?? '').replace(/\D/g, '').includes(digits))));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor, total: all.length });
+  })),
+  http.get(`${BASE}/prospects/:id`, authed(({ ctx, params }) => {
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p || !scope(ctx, new URL('http://x/')).includes(p.branchId)) return problem(404, 'NOT_FOUND', 'Not found');
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/prospects`, authed(async ({ ctx, request }) => {
+    const deny = need(ctx, 'prospect.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['ProspectCreate'];
+    const again = db.prospects.find((x) => x.clientId === b.clientId);
+    if (again) return HttpResponse.json(again, { status: 200 });
+    if (!b.name?.trim()) return problem(400, 'VALIDATION_FAILED', 'Name is required', undefined, { fields: { name: 'Required' } });
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    const at = new Date().toISOString();
+    const p: S['Prospect'] = {
+      id: `6771${Math.random().toString(16).slice(2, 22).padEnd(20, '0')}`, clientId: b.clientId, name: b.name.trim(), phones: (b.phones ?? []).map((x) => ({ number: x.number, label: x.label ?? null })),
+      address: b.address ?? null, note: b.note ?? null, location: b.location ?? null, branchId: b.branchId ?? ctx.user.branchIds?.[0] ?? db.branches[0]!.id!, createdBy: me, createdAt: at,
+      createdDate: db.today(), status: 'new', statusChangedAt: at, convertedCustomerId: null, convertedErpCustomerId: null, convertedAt: null, convertedBy: null,
+      fromProspectId: b.fromProspectId ?? null, history: [{ status: 'new', at, by: me, reason: b.fromProspectId ? 'Re-entry' : null }], updatedAt: at, version: 1,
+    };
+    db.prospects.unshift(p);
+    return HttpResponse.json(p, { status: 201 });
+  })),
+  http.patch(`${BASE}/prospects/:id`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'prospect.manage');
+    if (deny) return deny;
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Not found');
+    const b = (await request.json()) as S['ProspectUpdate'];
+    if (b.status && p.status === 'converted') return problem(409, 'INVALID_STATE', 'A converted prospect is re-opened first', 'PROSPECT_CONVERTED', { reason: 'PROSPECT_CONVERTED' });
+    const at = new Date().toISOString();
+    Object.assign(p, { ...(b.name ? { name: b.name } : {}), ...(b.address !== undefined ? { address: b.address } : {}), ...(b.note !== undefined ? { note: b.note } : {}) });
+    if (b.status && b.status !== p.status) {
+      p.status = b.status;
+      p.statusChangedAt = at;
+      p.history.push({ status: b.status, at, by: { id: ctx.user.id!, name: ctx.user.name?.en ?? '' }, reason: b.reason ?? null });
+    }
+    p.updatedAt = at;
+    p.version++;
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/prospects/:id/convert`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'prospect.manage');
+    if (deny) return deny;
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Not found');
+    if (p.status === 'converted') return problem(409, 'INVALID_STATE', 'Already converted', 'PROSPECT_CONVERTED', { reason: 'PROSPECT_CONVERTED' });
+    const b = (await request.json()) as { customerId?: string; erpCustomerCode?: string; note?: string };
+    const c = b.customerId ? db.customerById(b.customerId) : b.erpCustomerCode ? db.customers.find((x) => x.item.code === b.erpCustomerCode) : undefined;
+    if (!b.customerId && !b.erpCustomerCode) return problem(400, 'VALIDATION_FAILED', 'customerId or erpCustomerCode is required');
+    if (b.customerId && !c) return problem(404, 'NOT_FOUND', 'Customer not found');
+    const at = new Date().toISOString();
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    Object.assign(p, { status: 'converted', statusChangedAt: at, convertedAt: at, convertedBy: me, convertedCustomerId: c?.item.id ?? null, convertedErpCustomerId: c?.item.code ?? b.erpCustomerCode ?? null, updatedAt: at, version: p.version + 1 });
+    p.history.push({ status: 'converted', at, by: me, reason: b.note ?? null, convertedCustomerId: p.convertedCustomerId, convertedErpCustomerId: p.convertedErpCustomerId });
+    return HttpResponse.json(p);
+  })),
+  http.post(`${BASE}/prospects/:id/reopen`, authed(async ({ ctx, params, request }) => {
+    const deny = need(ctx, 'prospect.manage');
+    if (deny) return deny;
+    const p = db.prospects.find((x) => x.id === params.id);
+    if (!p) return problem(404, 'NOT_FOUND', 'Not found');
+    if (p.status !== 'converted' && p.status !== 'dropped') return problem(409, 'INVALID_STATE', 'Already open', 'PROSPECT_OPEN', { reason: 'PROSPECT_OPEN' });
+    const b = (await request.json()) as { reason: string };
+    const at = new Date().toISOString();
+    Object.assign(p, { status: 'new', statusChangedAt: at, convertedAt: null, convertedBy: null, convertedCustomerId: null, convertedErpCustomerId: null, updatedAt: at, version: p.version + 1 });
+    p.history.push({ status: 'new', at, by: { id: ctx.user.id!, name: ctx.user.name?.en ?? '' }, reason: b.reason ?? null });
+    return HttpResponse.json(p);
+  })),
+
   // ---------- activity (FR-ACT-001, 1.28.0) ----------
   http.get(`${BASE}/activity`, authed(({ ctx, url }) => {
     const deny = need(ctx, 'activity.view');

@@ -215,7 +215,6 @@ export function PromisesPage() {
                   chain={chain}
                   currentId={open.id}
                   hrefOf={(p) => `/promises/?${new URLSearchParams({ ...Object.fromEntries(url.params), drawer: p.id! }).toString()}`}
-                  onFollowUp={canManage ? (p) => setFollow(followOf(p as PromiseItem)) : undefined}
                 />
               </section>
             ) : null}

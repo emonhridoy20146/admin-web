@@ -43,4 +43,5 @@ export const EV = {
   promiseCreated: 'promise.created',
   visitCreated: 'visit.created',
   branchChanged: 'branch.changed',
+  prospectChanged: 'prospect.changed',
 } as const;
