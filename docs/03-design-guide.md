@@ -203,7 +203,8 @@ Items hidden when the user lacks the permission or the module flag is off.
 - Status column: badge (icon + label). Max 2 badges + "+N".
 - Row click opens **drawer** (keeps list context); ⌘/Ctrl-click opens full page in new tab.
 - Selection checkboxes → bulk action bar slides up from bottom (Assign, Export, Tag).
-- Server-side pagination (cursor) with page sizes 25/50/100; infinite scroll **not** used for admin tables (users need stable positions).
+- Server-side pagination (cursor) with page sizes 25/50/100; infinite scroll **not** used for admin tables (users need stable positions). When the total is known the pager is numbered (`PagerBar`: first, previous, pages with gaps `1 … 4 5 6 … 20`, next, last, "Showing 101–200 of 2,430", current page `aria-current="page"`, 36 px buttons, 44 px on touch; below 640 px "Page 3 of 20" with the arrows). The customers list uses 100 / 500 / 1000 (FR-W-060); card lists (pin approvals) use the same bar under the grid.
+- **Date filter (FR-W-063):** every list that filters by day uses `DateRangeFilter`: one 36 px button with a calendar icon, the preset name and the days ("Last 7 days · 17 Nov – 23 Nov"); the panel lists the presets (each with its days) and a custom range (two date fields, the number of days, Apply). Place it first in the filter row; on phones it takes the full width. Staff filters use `StaffSelect` ("All staff").
 - Column visibility, order and density saved per user per table (localStorage) + **Saved views** (named filter sets, stored server-side later, P3).
 - Empty state: illustration-free; icon + one sentence + action ("No overdue customers in Barishal Sadar. 🎉" is not allowed — no emoji in UI copy).
 - Loading: skeleton rows (6), never spinners for tables.
@@ -242,6 +243,7 @@ Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/
 - Picking a point (`MapPicker`): the pin is fixed in the middle (primary fill, lifts 8 px while the map moves, its shadow dot stays on the point) and the map moves under it; a click pans to the clicked spot; the current point is drawn as a hollow `--fg-secondary` circle for comparison. Always show the picked coordinates as text (`font-mono`, 5 decimals, `aria-live`) and offer a paste field next to the map. Height `44dvh` on phones, 360 px from `sm`.
 
 ### 5.8 Charts (Recharts)
+- Dashboard (FR-W-064): stacked bars for money by method per day (`StackedBars`, 2 px surface gap, rounded top), two lines on one axis for this month vs last month (`LineCompare`, last month dashed `--fg-tertiary`), plain HTML bars for shares (pay states, visit outcomes, methods, branches) with the colour dot, label and value as text; payment methods keep their §2.4 colours, visit outcomes a fixed categorical order. Animation off on bars (layout changes must not replay it). Every number is a link; the period section has its own date filter.
 - Gridlines `neutral.200` dashed horizontal only; axis labels 12 px secondary; currency axis in lakh format (৳১.২ লাখ).
 - Tooltip shows exact values and date in Bangla/English per locale.
 - Every chart has a "view as table" toggle (accessibility + export).
