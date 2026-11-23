@@ -2227,7 +2227,7 @@ export const handlers = [
 /** 1.45.0 (FR-DSH-002) dashboard statistics with list links, worked out from the mock data like the server does. */
 function overview145(sc: string[], url: URL, col: S['Collection'][], staffIn: db.MockUser[], cust: db.MockCustomer[], pos: S['CashPosition'][], present: number): Partial<S['DashboardOverview']> {
   const today = db.today();
-  const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+  const day = (iso: string) => (iso ? new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10) : '');
   const from = url.searchParams.get('from') ?? `${today.slice(0, 7)}-01`;
   const to = url.searchParams.get('to') ?? today;
   const next = (d: string, n = 1) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
@@ -2255,7 +2255,7 @@ function overview145(sc: string[], url: URL, col: S['Collection'][], staffIn: db
   for (const v of vis) { const k = v.row.user?.id ?? ''; const r = byUser.get(k) ?? { name: v.row.user?.name ?? '', amount: 0, count: 0, visits: 0 }; r.visits++; byUser.set(k, r); }
   const rows = [...byUser.entries()].filter(([k]) => k);
   const pros = db.prospects.filter((p) => sc.includes(p.branchId));
-  const sess = db.coworkSessions.filter((x) => { const d = day((x as { startedAt?: string }).startedAt ?? ''); return d >= from && d <= to; });
+  const sess = db.coworkSessions.filter((x) => sc.includes(x.branchId ?? '') && (x.businessDate ?? '') >= from && (x.businessDate ?? '') <= to);
   const late = Math.max(1, Math.round(staffIn.length * 0.1));
   const overdue = cust.filter((c) => (c.item.daysOverdue ?? 0) > 0);
   return {
