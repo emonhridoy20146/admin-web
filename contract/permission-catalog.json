@@ -533,6 +533,19 @@
     }
   },
   {
+    "key": "attendance.exempt",
+    "module": "attendance",
+    "description": "Does not do attendance: hidden in the staff app (`attendanceRequired: false`), never counted present, late or absent (1.45.0, FR-ATT-014)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
     "key": "location.view",
     "module": "location",
     "description": "Latest location map",
@@ -575,6 +588,45 @@
     "key": "report.export",
     "module": "reports",
     "description": "Export reports (CSV/XLSX/PDF)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "prospect.create",
+    "module": "prospects",
+    "description": "Record a possible customer (app offline or admin) and see the ones you recorded (1.45.0, FR-PRO-001)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "prospect.view",
+    "module": "prospects",
+    "description": "List and view possible customers in scope (1.45.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "prospect.manage",
+    "module": "prospects",
+    "description": "Edit, change status, mark converted, re-open possible customers (1.45.0)",
     "added": false,
     "reserved": false,
     "defaults": {
