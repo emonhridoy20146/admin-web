@@ -2,12 +2,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Crosshair } from 'lucide-react';
+import { Crosshair, LocateFixed } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { formatNumber } from '@/shared/lib/format';
 import { useUi } from '@/shared/lib/ui-store';
-import { DEFAULT_POINT, formatCoords, haversineM, inBangladesh, type LatLng } from '@/shared/map/geo';
+import { DEFAULT_POINT, formatCoords, haversineM, inBangladesh, parseCoords, type LatLng } from '@/shared/map/geo';
 import { MapPicker } from '@/shared/map/map-picker';
 import type { MapViewState } from '@/shared/map/map-view';
 import { useMapLayers } from '@/shared/feature/map-layers';
@@ -48,6 +48,9 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
   const [form, setForm] = useState<PlaceForm>({ name: '', icon: 'shop', note: '', point: start });
   const [clientId, setClientId] = useState('');
   const [touched, setTouched] = useState(false);
+  // Owner request 2026-11-23: paste coordinates (Google Maps, a shared location) like the customer pin dialog.
+  const [typed, setTyped] = useState('');
+  const [typedError, setTypedError] = useState(false);
   // FR-PLC-001: the places already there, so nobody adds the same one twice (shown only, under the pin)
   const [view, setView] = useState<MapViewState | null>(null);
   const layers = useMapLayers({ view, passive: true });
@@ -57,6 +60,8 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
     setForm(place ? formOf(place) : { name: '', icon: 'shop', note: '', point: start });
     setClientId(crypto.randomUUID());
     setTouched(false);
+    setTyped('');
+    setTypedError(false);
     create.reset();
     edit.reset();
     // a dialog starts from the place (or the branch point) each time it opens
@@ -68,6 +73,11 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
   const showWords = mode !== 'move';
   const moved = place ? haversineM(place.location, form.point) : null;
   const set = <K extends keyof PlaceForm>(k: K, v: PlaceForm[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const goTyped = () => {
+    const p = parseCoords(typed);
+    setTypedError(!p);
+    if (p) set('point', p);
+  };
 
   const submit = async () => {
     setTouched(true);
@@ -94,6 +104,8 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
       open={open}
       onOpenChange={(o) => !busy && onOpenChange(o)}
       wide={showMap}
+      // Owner request 2026-11-23: the map was too small; a wide dialog with the form beside a tall map.
+      className={showMap ? (showWords ? 'sm:max-w-5xl' : 'sm:max-w-4xl') : undefined}
       title={<span lang={locale}>{title}</span>}
       description={mode === 'move' ? t('dialog.moveDesc') : t('dialog.desc')}
       footer={
@@ -105,15 +117,15 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
         </>
       }
     >
-      <div className="space-y-3 py-1">
+      <div className={cn('py-1', showWords && showMap ? 'grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'space-y-3')}>
         {showWords && (
-          <>
+          <div className="space-y-3">
             <Field label={t('form.name')} required counter={`${formatNumber(form.name.trim().length)}/${formatNumber(NAME_MAX)}`} error={touched && errors.name ? t(`form.error.${errors.name}`) : undefined}>
               {(id, d) => <Input id={id} aria-describedby={d} value={form.name} maxLength={NAME_MAX + 10} onChange={(e) => set('name', e.target.value)} placeholder={t('form.namePlaceholder')} autoComplete="off" />}
             </Field>
             <fieldset>
               <legend className="mb-1.5 text-base font-medium text-fg">{t('form.icon')}</legend>
-              <div role="radiogroup" aria-label={t('form.icon')} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div role="radiogroup" aria-label={t('form.icon')} className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-3">
                 {PLACE_ICONS.map((ic) => (
                   <button
                     key={ic}
@@ -132,10 +144,10 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
             <Field label={t('form.note')} counter={`${formatNumber(form.note.trim().length)}/${formatNumber(NOTE_MAX)}`} error={touched && errors.note ? t(`form.error.${errors.note}`) : undefined}>
               {(id, d) => <Textarea id={id} aria-describedby={d} rows={2} value={form.note} onChange={(e) => set('note', e.target.value)} placeholder={t('form.notePlaceholder')} />}
             </Field>
-          </>
+          </div>
         )}
         {showMap && (
-          <>
+          <div className="space-y-3">
             <MapPicker
               value={form.point}
               onChange={(p) => set('point', p)}
@@ -145,7 +157,7 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
               markers={layers.markers}
               onView={setView}
               label={t('dialog.mapLabel')}
-              className={mode === 'move' ? 'h-[50dvh] min-h-56 sm:h-[400px]' : 'h-[34dvh] min-h-48 sm:h-[280px]'}
+              className={mode === 'move' ? 'h-[60dvh] min-h-72 sm:h-[560px]' : 'h-[50dvh] min-h-72 sm:h-[460px] lg:h-[540px]'}
             />
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm" aria-live="polite">
               <span className="inline-flex items-center gap-1.5 text-fg">
@@ -156,7 +168,34 @@ export function PlaceDialog({ open, onOpenChange, place, mode = place ? 'edit' :
               {moved != null && <span className="text-fg-secondary">{t('dialog.moved', { n: formatNumber(Math.round(moved)) })}</span>}
             </div>
             {errors.point ? <p role="alert" className="text-sm text-danger">{t('form.error.outside')}</p> : null}
-          </>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                goTyped();
+              }}
+            >
+              <Field label={t('dialog.paste')} help={t('dialog.pasteHelp')} error={typedError ? t('dialog.pasteError') : undefined}>
+                {(id, d) => (
+                  <div className="flex gap-2">
+                    <Input
+                      id={id}
+                      aria-describedby={d}
+                      autoComplete="off"
+                      value={typed}
+                      onChange={(e) => (setTyped(e.target.value), setTypedError(false))}
+                      placeholder="22.16420, 90.42610"
+                      className="min-w-0 flex-1"
+                    />
+                    <Button type="submit" className="shrink-0" disabled={!typed.trim()}>
+                      <LocateFixed className="size-4" aria-hidden />
+                      {t('dialog.go')}
+                    </Button>
+                  </div>
+                )}
+              </Field>
+            </form>
+          </div>
         )}
         {create.error || edit.error ? <ErrorBanner error={create.error ?? edit.error} /> : null}
       </div>

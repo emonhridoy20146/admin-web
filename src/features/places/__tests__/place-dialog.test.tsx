@@ -52,3 +52,23 @@ describe('New place dialog (FR-PLC-002, owner decision 2026-11-22: places need n
     expect(onDone).toHaveBeenCalled();
   });
 });
+
+describe('Coordinates pasted into the place dialog (owner request 2026-11-23)', () => {
+  it('a pasted "lat, lng" moves the pin there and is what is saved; bad text says so', async () => {
+    created.length = 0;
+    render(<PlaceDialog open onOpenChange={() => undefined} canMove />);
+    fireEvent.change(screen.getByLabelText(new RegExp(en.form.name)), { target: { value: 'Ghat' } });
+    const paste = screen.getByLabelText(en.dialog.paste);
+
+    fireEvent.change(paste, { target: { value: 'not a place' } });
+    fireEvent.click(screen.getByRole('button', { name: en.dialog.go }));
+    expect(await screen.findByText(en.dialog.pasteError)).toBeInTheDocument();
+
+    fireEvent.change(paste, { target: { value: '22.16420, 90.42610' } });
+    fireEvent.click(screen.getByRole('button', { name: en.dialog.go }));
+    expect(screen.queryByText(en.dialog.pasteError)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: en.dialog.create }));
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect(created[0]).toMatchObject({ name: 'Ghat', location: { lat: 22.1642, lng: 90.4261 } });
+  });
+});
