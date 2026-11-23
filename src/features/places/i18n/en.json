@@ -74,7 +74,11 @@
     "currentPoint": "Where it is now",
     "mapLabel": "Map: move it so the pin sits on the place",
     "pointAt": "The pin is at",
-    "moved": "{{n}} m from where it is now"
+    "moved": "{{n}} m from where it is now",
+    "paste": "Or paste coordinates",
+    "pasteHelp": "From Google Maps or a shared location, e.g. 22.16420, 90.42610",
+    "pasteError": "Could not read two numbers (latitude, longitude)",
+    "go": "Go"
   },
   "toast": {
     "created": "{{name}} is on the map",
