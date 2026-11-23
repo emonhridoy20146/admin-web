@@ -2,10 +2,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type RowSelectionState } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, Rows3, Inbox } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Columns3, Rows3, Inbox } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { readStore, writeStore, useUi } from '../lib/ui-store';
 import { formatNumber } from '../lib/format';
+import { pageList, rowRange } from '../lib/pages';
 import { Button } from './button';
 import { Checkbox, DropdownContent, DropdownMenu, DropdownTrigger, DropdownLabel } from './primitives';
 import { EmptyState, ErrorBanner, Skeleton } from './feedback';
@@ -34,6 +35,15 @@ export interface Pager {
   pageSize: number;
   onPageSize: (n: number) => void;
   total?: number;
+  /** page sizes offered (default 25, 50, 100) */
+  pageSizes?: number[];
+  /** with `pageCount` and `onPage` the pager shows numbered pages (1 … 4 5 6 … 20), first and last (FR-W-060) */
+  pageCount?: number;
+  onPage?: (n: number) => void;
+  /** rows on this page, for "Showing 101–200 of 2,430" */
+  rowsOnPage?: number;
+  /** a page is being fetched (the buttons stay usable, the range shows a hint) */
+  busy?: boolean;
 }
 
 const prioClass: Record<number, string> = {
@@ -306,31 +316,7 @@ export function DataTable<T>({
 
         {showEmpty && (empty ?? <EmptyState icon={Inbox} title={t('table.empty')} />)}
 
-        {pager && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2 text-sm text-fg-secondary print:hidden">
-            <label className="hidden items-center gap-2 sm:flex">
-              {t('table.perPage')}
-              <select
-                className="h-8 rounded-sm border border-line-strong bg-surface px-2 text-sm"
-                value={pager.pageSize}
-                onChange={(e) => pager.onPageSize(Number(e.target.value))}
-              >
-                {[25, 50, 100].map((n) => <option key={n} value={n}>{formatNumber(n)}</option>)}
-              </select>
-            </label>
-            <span className="tabular">{t('table.page', { n: formatNumber(pager.page) })}</span>
-            <div className="flex gap-1">
-              <Button size="sm" variant="secondary" disabled={!pager.hasPrev} onClick={pager.onPrev} aria-label={t('table.prev')}>
-                <ChevronLeft className="size-4" aria-hidden />
-                <span className="hidden sm:inline">{t('table.prev')}</span>
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!pager.hasNext} onClick={pager.onNext} aria-label={t('table.next')}>
-                <span className="hidden sm:inline">{t('table.next')}</span>
-                <ChevronRight className="size-4" aria-hidden />
-              </Button>
-            </div>
-          </div>
-        )}
+        {pager && <PagerBar pager={pager} />}
       </div>
       {selectable && selection && selection.size > 0 && bulkBar && (
         <div className="fixed inset-x-0 bottom-4 z-30 mx-auto flex w-fit max-w-[calc(100vw-32px)] items-center gap-3 rounded-lg border border-line bg-surface-raised px-4 py-2 shadow-e3 animate-pop">
@@ -341,6 +327,96 @@ export function DataTable<T>({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The pager under a table. Numbered when the page count is known (`pageCount` + `onPage`): first, previous, pages with
+ * gaps, next, last; otherwise previous / next. Every button has a name for screen readers; the current page carries
+ * `aria-current="page"`. Below 640 px the numbers shrink to "Page 3 of 20" so the bar never scrolls sideways.
+ */
+export function PagerBar({ pager }: { pager: Pager }) {
+  const { t } = useTranslation();
+  const sizes = pager.pageSizes ?? [25, 50, 100];
+  const numbered = pager.pageCount != null && !!pager.onPage;
+  const count = Math.max(1, pager.pageCount ?? 1);
+  const range = pager.rowsOnPage != null ? rowRange(pager.page, pager.pageSize, pager.rowsOnPage) : null;
+  const navBtn = 'h-9 min-w-9 px-2 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11';
+  return (
+    <nav aria-label={t('table.pagination')} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line px-3 py-2 text-sm text-fg-secondary print:hidden" data-testid="pager">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+        {sizes.length > 1 && (
+          <label className="flex items-center gap-2">
+            {t('table.perPage')}
+            <select
+              className="h-9 rounded-sm border border-line-strong bg-surface px-2 text-sm text-fg [@media(pointer:coarse)]:h-11"
+              value={pager.pageSize}
+              onChange={(e) => pager.onPageSize(Number(e.target.value))}
+            >
+              {sizes.map((n) => <option key={n} value={n}>{formatNumber(n)}</option>)}
+            </select>
+          </label>
+        )}
+        <span className="tabular" aria-live="polite" data-testid="pager-range">
+          {pager.busy
+            ? t('table.loadingPage')
+            : range && range.last > 0
+              ? pager.total != null
+                ? t('table.showing', { first: formatNumber(range.first), last: formatNumber(range.last), total: formatNumber(pager.total) })
+                : t('table.showingNoTotal', { first: formatNumber(range.first), last: formatNumber(range.last) })
+              : numbered
+                ? t('table.pageOf', { n: formatNumber(pager.page), pages: formatNumber(count) })
+                : t('table.page', { n: formatNumber(pager.page) })}
+        </span>
+      </div>
+      <div className="flex items-center gap-1">
+        {numbered && (
+          <Button size="sm" variant="ghost" className={navBtn} disabled={pager.page <= 1} onClick={() => pager.onPage!(1)} aria-label={t('table.first')} title={t('table.first')}>
+            <ChevronsLeft className="size-4 rtl:rotate-180" aria-hidden />
+          </Button>
+        )}
+        <Button size="sm" variant="secondary" className={navBtn} disabled={!pager.hasPrev} onClick={pager.onPrev} aria-label={t('table.prev')}>
+          <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
+          <span className={cn('hidden', !numbered && 'sm:inline')}>{t('table.prev')}</span>
+        </Button>
+        {numbered && (
+          <>
+            <ul className="hidden items-center gap-1 sm:flex">
+              {pageList(pager.page, count).map((p, i) =>
+                p === 'gap' ? (
+                  <li key={`gap-${i}`} className="px-1 text-fg-tertiary" aria-hidden>…</li>
+                ) : (
+                  <li key={p}>
+                    <button
+                      type="button"
+                      onClick={() => p !== pager.page && pager.onPage!(p)}
+                      aria-current={p === pager.page ? 'page' : undefined}
+                      aria-label={p === pager.page ? t('table.current', { n: formatNumber(p) }) : t('table.goTo', { n: formatNumber(p) })}
+                      className={cn(
+                        'tabular inline-flex h-9 min-w-9 items-center justify-center rounded-sm px-2 text-sm font-medium transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11',
+                        p === pager.page ? 'bg-primary text-primary-fg shadow-e1' : 'text-fg hover:bg-surface-hover',
+                      )}
+                    >
+                      {formatNumber(p)}
+                    </button>
+                  </li>
+                ),
+              )}
+            </ul>
+            <span className="tabular px-2 text-fg sm:hidden">{t('table.pageOf', { n: formatNumber(pager.page), pages: formatNumber(count) })}</span>
+          </>
+        )}
+        <Button size="sm" variant="secondary" className={navBtn} disabled={!pager.hasNext} onClick={pager.onNext} aria-label={t('table.next')}>
+          <span className={cn('hidden', !numbered && 'sm:inline')}>{t('table.next')}</span>
+          <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
+        </Button>
+        {numbered && (
+          <Button size="sm" variant="ghost" className={navBtn} disabled={pager.page >= count} onClick={() => pager.onPage!(count)} aria-label={t('table.last')} title={t('table.last')}>
+            <ChevronsRight className="size-4 rtl:rotate-180" aria-hidden />
+          </Button>
+        )}
+      </div>
+    </nav>
   );
 }
 

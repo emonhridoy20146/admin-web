@@ -11,6 +11,7 @@ import { formatNumber } from '@/shared/lib/format';
 import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
 import { bboxParam, boxAround, branchPoint, centerOf, DEFAULT_VIEW, parseViewpoint, viewpointParam, type Bounds, type MapViewpoint } from '@/shared/map/geo';
 import { MapView, type MapCluster, type MapMarker, type MapViewState } from '@/shared/map/map-view';
+import { FULLSCREEN_FALLBACK, FullscreenButton, useFullscreen } from '@/shared/map/fullscreen';
 import { branchMarkers, isBranchMarker } from '@/shared/map/branch-markers';
 import { PinIcon } from '@/shared/map/pin-icon';
 import { PageHeader } from '@/shared/ui/page';
@@ -50,6 +51,9 @@ export function CustomerMapPage() {
   const kind = oneOf(url.get('kind'), KINDS, 'all');
   const [view, setView] = useState<MapViewState | null>(null);
   const [fit, setFit] = useState<Bounds | MapViewpoint | null>(null);
+  const mapBox = useRef<HTMLDivElement>(null);
+  const full = useFullscreen(mapBox);
+  const exitFull = full.exit;
   const q = useCustomerMap(view ? bboxParam(view.bounds) : null, view?.zoom ?? PIN_ZOOM, { filter: filters, payState: pay, invoiceKind: kind === 'all' ? undefined : kind });
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('customer:') ? drawer.slice(9) : null;
@@ -121,10 +125,12 @@ export function CustomerMapPage() {
   const open = useCallback(
     (id: string) => {
       if (isBranchMarker(id)) return;
+      // the drawer lives outside the map box, so full screen gives way to it
+      exitFull();
       // a layer marker carries its layer id (`place:6752…`); a customer pin is a bare id
       if (!openLayer(id)) url.set({ drawer: `customer:${id}` }, { push: true });
     },
-    [url, openLayer],
+    [url, openLayer, exitFull],
   );
   const zoomTo = useCallback((c: { lat: number; lng: number }) => setFit({ minLat: c.lat - 0.012, maxLat: c.lat + 0.012, minLng: c.lng - 0.016, maxLng: c.lng + 0.016 }), []);
   const sorted = useMemo(() => [...pins].sort((a, b) => payRank(payStateOf(a)) - payRank(payStateOf(b)) || (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
@@ -169,7 +175,12 @@ export function CustomerMapPage() {
       {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="h-[52vh] min-h-80 lg:h-[calc(100vh-17rem)]">
+        <div
+          ref={mapBox}
+          className={cn('relative h-[52vh] min-h-80 lg:h-[calc(100vh-17rem)]', full.active && 'h-full min-h-0 bg-bg lg:h-full', full.fallback && FULLSCREEN_FALLBACK)}
+          data-testid="map-box"
+          data-fullscreen={full.active || undefined}
+        >
           {start ? (
             <MapView
               label={t('map.title')}
@@ -182,10 +193,20 @@ export function CustomerMapPage() {
               onMarkerClick={open}
               onClusterClick={zoomTo}
               locate
+              className={full.active ? 'rounded-none border-0' : undefined}
             />
           ) : (
             <Skeleton className="h-full w-full" />
           )}
+          {/* bottom left, clear of the zoom buttons (top left), my location (top right) and the attribution (bottom right) */}
+          <div className="absolute bottom-3 start-3 z-[1000] flex items-center gap-2">
+            <FullscreenButton active={full.active} onClick={full.toggle} />
+            {full.active && (
+              <span className="tabular hidden rounded-md bg-surface/95 px-3 py-2 text-sm font-medium text-fg shadow-e2 sm:inline" aria-live="polite">
+                {q.isLoading || !view ? '' : t('map.nCustomers', { n: formatNumber(clusters.length ? total : pins.length) })}
+              </span>
+            )}
+          </div>
         </div>
 
         <section aria-label={t('map.inView')} className="flex min-h-0 flex-col overflow-hidden rounded-md border border-line bg-surface shadow-e1 lg:h-[calc(100vh-17rem)]">

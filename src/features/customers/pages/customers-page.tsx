@@ -10,14 +10,15 @@ import { useUi } from '@/shared/lib/ui-store';
 import { formatDate, formatMoney, formatNumber, formatRelative, formatDaySpan } from '@/shared/lib/format';
 import { listOf, oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader } from '@/shared/ui/page';
-import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
+import { DataTable, type Column } from '@/shared/ui/data-table';
+import { pageCountOf, parsePage } from '@/shared/lib/pages';
 import { EmptyState } from '@/shared/ui/feedback';
 import { FilterChip, Segmented, Tooltip } from '@/shared/ui/primitives';
 import { SearchInput, Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
 import { StatusBadges } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { useCustomers, type CustomerQuery } from '../api/customers';
+import { CUSTOMER_PAGE_SIZES, useCustomerPage, type CustomerPageSize, type CustomerQuery } from '../api/customers';
 import { extraStatuses, toCustomerRow, type CustomerRowVM } from '../model/customer-row';
 import { PAY_STATES, PS_CLASS } from '../model/pay-state';
 import { CustomerDrawer } from '../components/customer-drawer';
@@ -41,27 +42,31 @@ export function CustomersPage() {
   const paidMonth = oneOf(url.get('paid'), PAID_MONTH, 'all');
   const sort = oneOf(url.get('sort'), SORTS, '-daysOverdue');
   const qParam = url.get('q');
-  const cursor = url.get('cursor');
-  const [limit, setLimit] = useState(25);
+  // FR-W-060: page and page size live in the link (a shared link opens on the same page)
+  const page = parsePage(url.get('page'));
+  const size = Number(oneOf(url.get('size'), CUSTOMER_PAGE_SIZES.map(String), '100')) as CustomerPageSize;
   const [q, setQ] = useState(qParam);
   useEffect(() => setQ(qParam), [qParam]);
   useEffect(() => {
-    const id = setTimeout(() => q !== qParam && url.set({ q: q || null, cursor: null }), 300);
+    const id = setTimeout(() => q !== qParam && url.set({ q: q || null, page: null }), 300);
     return () => clearTimeout(id);
   }, [q, qParam, url]);
 
-  const params: Omit<CustomerQuery, 'branchId'> = {
+  const params: Omit<CustomerQuery, 'branchId' | 'cursor' | 'limit'> = {
     filter: filters.length ? filters : undefined,
     payState: pay.length ? pay : undefined,
     invoiceKind: kind === 'all' ? undefined : kind,
     paidThisMonth: paidMonth === 'all' ? undefined : paidMonth,
     sort,
     q: qParam || undefined,
-    cursor: cursor || undefined,
-    limit,
   };
-  const query = useCustomers(params);
-  const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
+  const query = useCustomerPage(params, page, size);
+  const total = query.data?.total;
+  const pageCount = total != null ? pageCountOf(Math.min(total, 10_000), size) : undefined;
+  const goPage = (n: number) => {
+    url.set({ page: n > 1 ? String(n) : null }, { push: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const rows = useMemo(() => query.data?.items?.map((c) => toCustomerRow(c, locale)), [query.data, locale]);
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('customer:') ? drawer.slice(9) : null;
@@ -72,8 +77,7 @@ export function CustomersPage() {
   const { t: ta } = useTranslation('assignments');
 
   const toggleFilter = (f: string) => {
-    pager.reset();
-    url.set({ filter: filters.includes(f as never) ? filters.filter((x) => x !== f) : [...filters, f], cursor: null });
+    url.set({ filter: filters.includes(f as never) ? filters.filter((x) => x !== f) : [...filters, f], page: null });
   };
 
   const columns: Column<CustomerRowVM>[] = [
@@ -229,36 +233,37 @@ export function CustomersPage() {
             className="shrink-0"
             label={t('invoiceKind.label')}
             value={kind}
-            onChange={(v) => (pager.reset(), url.set({ kind: v === 'all' ? null : v, cursor: null }))}
+            onChange={(v) => (url.set({ kind: v === 'all' ? null : v, page: null }))}
             options={KINDS.map((k) => ({ value: k, label: t(`invoiceKind.${k}`) }))}
           />
           <Segmented
             className="shrink-0"
             label={t('paidMonth.label')}
             value={paidMonth}
-            onChange={(v) => (pager.reset(), url.set({ paid: v === 'all' ? null : v, cursor: null }))}
+            onChange={(v) => (url.set({ paid: v === 'all' ? null : v, page: null }))}
             options={PAID_MONTH.map((k) => ({ value: k, label: t(`paidMonth.${k}`) }))}
           />
-          <label className="flex shrink-0 items-center gap-2 text-sm text-fg-secondary lg:ms-auto">
-            <span className="whitespace-nowrap">{t('sort.label')}</span>
-            <Select value={sort} onChange={(e) => (pager.reset(), url.set({ sort: e.target.value === '-daysOverdue' ? null : e.target.value, cursor: null }))} className="h-9 w-56">
-              {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
-            </Select>
-          </label>
         </div>
-        <div className="flex flex-wrap gap-2 border-t border-line px-3 py-2.5 print:border-0 print:p-0">
+        {/* chips and the sort share one row: the sort sits at the end and wraps under the chips only when they fill it */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2.5 print:border-0 print:p-0">
           {FILTERS.map((f) => (
             <FilterChip key={f} selected={filters.includes(f)} onClick={() => toggleFilter(f)}>
               {t(`filters.${f}`)}
             </FilterChip>
           ))}
+          <label className="ms-auto flex shrink-0 items-center gap-2 text-sm text-fg-secondary" data-testid="customer-sort">
+            <span className="whitespace-nowrap">{t('sort.label')}</span>
+            <Select value={sort} onChange={(e) => url.set({ sort: e.target.value === '-daysOverdue' ? null : e.target.value, page: null })} className="h-8 w-auto max-w-52 rounded-full py-0 pe-8 text-sm">
+              {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}`)}</option>)}
+            </Select>
+          </label>
         </div>
         <div className="space-y-2 border-t border-line bg-surface-subtle/60 px-3 py-2.5 [&>div]:mb-0 print:border-0 print:bg-transparent print:p-0">
           <PayLegend
             selected={pay}
             counts={null}
-            onToggle={(s) => (pager.reset(), url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s], cursor: null }))}
-            onClear={() => (pager.reset(), url.set({ pay: null, cursor: null }))}
+            onToggle={(s) => (url.set({ pay: pay.includes(s) ? pay.filter((x) => x !== s) : [...pay, s], page: null }))}
+            onClear={() => (url.set({ pay: null, page: null }))}
           />
           <WorkMarksLegend />
         </div>
@@ -287,26 +292,30 @@ export function CustomersPage() {
         onSortChange={(s) => {
           const allowed = SORTS as readonly string[];
           const next = allowed.includes(s) ? s : allowed.includes(`-${s.replace('-', '')}`) ? `-${s.replace('-', '')}` : s.replace('-', '');
-          pager.reset();
-          url.set({ sort: allowed.includes(next) ? next : null, cursor: null });
+                url.set({ sort: allowed.includes(next) ? next : null, page: null });
         }}
         onRowClick={(r) => url.set({ drawer: `customer:${r.id}` }, { push: true })}
         pager={{
-          page: pager.page,
-          hasPrev: pager.hasPrev,
-          hasNext: !!query.data?.nextCursor,
-          onPrev: pager.prev,
-          onNext: () => pager.next(query.data?.nextCursor),
-          pageSize: limit,
-          onPageSize: (n) => (pager.reset(), setLimit(n), url.set({ cursor: null })),
-          total: query.data?.total,
+          page,
+          hasPrev: page > 1,
+          hasNext: !!query.data?.hasNext,
+          onPrev: () => goPage(page - 1),
+          onNext: () => goPage(page + 1),
+          onPage: goPage,
+          pageCount,
+          pageSize: size,
+          pageSizes: [...CUSTOMER_PAGE_SIZES],
+          onPageSize: (n) => url.set({ size: n === 100 ? null : String(n), page: null }),
+          total,
+          rowsOnPage: query.isPlaceholderData ? undefined : rows?.length,
+          busy: query.isFetching && query.isPlaceholderData,
         }}
         empty={
           <EmptyState
             icon={filters.length || pay.length || kind !== 'all' || paidMonth !== 'all' || qParam ? SearchX : Users}
             title={t('emptyTitle')}
             body={t('emptyBody')}
-            action={(filters.length > 0 || pay.length > 0 || kind !== 'all' || paidMonth !== 'all' || !!qParam) && <Button size="sm" onClick={() => (setQ(''), url.set({ filter: null, pay: null, kind: null, paid: null, q: null, cursor: null }))}>{t('clearFilters')}</Button>}
+            action={(filters.length > 0 || pay.length > 0 || kind !== 'all' || paidMonth !== 'all' || !!qParam) && <Button size="sm" onClick={() => (setQ(''), url.set({ filter: null, pay: null, kind: null, paid: null, q: null, page: null }))}>{t('clearFilters')}</Button>}
           />
         }
       />

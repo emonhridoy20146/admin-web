@@ -16,6 +16,8 @@ import { PageHeader } from '@/shared/ui/page';
 import { Card } from '@/shared/ui/card';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { Segmented } from '@/shared/ui/primitives';
+import { PagerBar } from '@/shared/ui/data-table';
+import { pageCountOf, parsePage } from '@/shared/lib/pages';
 import { Badge, StatusBadge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Dialog } from '@/shared/ui/overlay';
@@ -24,6 +26,8 @@ import { useDecideProposal, useProposals, type LocationProposal } from '../api/c
 import { proposalVM } from '../model/map';
 
 const TABS = ['pending', 'approved', 'rejected'] as const;
+/** FR-W-062: cards per page on every tab (the server sends up to 200, newest first). */
+export const PIN_PAGE = 20;
 
 export function PinApprovalsPage() {
   const { t } = useTranslation('customers');
@@ -36,6 +40,14 @@ export function PinApprovalsPage() {
   const [approve, setApprove] = useState<LocationProposal | null>(null);
   const [reject, setReject] = useState<LocationProposal | null>(null);
   const locale = useUi((s) => s.locale);
+  const all = q.data ?? [];
+  const pages = pageCountOf(all.length, PIN_PAGE);
+  const page = Math.min(parsePage(url.get('page')), pages);
+  const shown = all.slice((page - 1) * PIN_PAGE, page * PIN_PAGE);
+  const goPage = (n: number) => {
+    url.set({ page: n > 1 ? String(n) : null }, { push: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -46,7 +58,7 @@ export function PinApprovalsPage() {
         <Segmented
           label={t('pins.status')}
           value={tab}
-          onChange={(v) => url.set({ status: v === 'pending' ? null : v })}
+          onChange={(v) => url.set({ status: v === 'pending' ? null : v, page: null })}
           options={TABS.map((s) => ({ value: s, label: t(`pins.tab.${s}`), count: s === 'pending' && tab === 'pending' ? q.data?.length : undefined }))}
         />
       </div>
@@ -56,11 +68,33 @@ export function PinApprovalsPage() {
       ) : !q.data?.length ? (
         <Card><EmptyState icon={MapPinned} title={t(`pins.empty.${tab}`)} body={tab === 'pending' ? t('pins.emptyBody') : undefined} /></Card>
       ) : (
-        <ul className="grid gap-4 xl:grid-cols-2">
-          {q.data.map((p) => (
-            <ProposalCard key={p.id} p={p} canDecide={canDecide && tab === 'pending'} onApprove={() => setApprove(p)} onReject={() => setReject(p)} />
-          ))}
-        </ul>
+        <>
+          <ul className="grid gap-4 xl:grid-cols-2">
+            {shown.map((p) => (
+              <ProposalCard key={p.id} p={p} canDecide={canDecide && tab === 'pending'} onApprove={() => setApprove(p)} onReject={() => setReject(p)} />
+            ))}
+          </ul>
+          {all.length > PIN_PAGE && (
+            <div className="mt-4 overflow-hidden rounded-md border border-line bg-surface shadow-e1 [&>nav]:border-t-0">
+              <PagerBar
+                pager={{
+                  page,
+                  hasPrev: page > 1,
+                  hasNext: page < pages,
+                  onPrev: () => goPage(page - 1),
+                  onNext: () => goPage(page + 1),
+                  onPage: goPage,
+                  pageCount: pages,
+                  pageSize: PIN_PAGE,
+                  pageSizes: [PIN_PAGE],
+                  onPageSize: () => undefined,
+                  total: all.length,
+                  rowsOnPage: shown.length,
+                }}
+              />
+            </div>
+          )}
+        </>
       )}
 
       <Dialog
