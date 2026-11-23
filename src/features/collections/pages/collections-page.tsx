@@ -13,10 +13,8 @@ import {
   formatNumber,
   formatPercent,
   formatTime,
-  formatDate,
   pickText,
 } from '@/shared/lib/format';
-import { todayDhaka } from '@/shared/lib/time';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
@@ -31,14 +29,12 @@ import { Drawer } from '@/shared/ui/overlay';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useCollection, useCollections, useVoid, type Collection } from '../api/collections';
 import { CollectDialog } from '../components/collect-dialog';
+import { DateRangeFilter, rangeLabel, useDateRange } from '@/shared/ui/date-range-filter';
 import {
   canVoid,
   METHOD_COLOR,
   METHOD_ORDER,
   orderedTotals,
-  presetFor,
-  rangeFor,
-  RANGES,
 } from '../model/collection';
 
 const STATUSES = [
@@ -59,10 +55,9 @@ export function CollectionsPage() {
   const canRecord = useCan('collection.record');
   const [collectOpen, setCollectOpen] = useState(false);
   const url = useUrlState();
-  const today = todayDhaka();
-  const from = url.get('from') || today;
-  const to = url.get('to') || from;
-  const preset = presetFor(from, to, today);
+  // FR-W-063: the shared range filter; links with only from/to (dashboard, staff pages) still work
+  const range = useDateRange({ reset: ['cursor'] });
+  const { from, to } = range;
   const method = oneOf(url.get('method'), ['', ...METHOD_ORDER] as const, '');
   const status = oneOf(url.get('status'), ['', ...STATUSES] as const, '');
   const flag = url.get('flag');
@@ -194,30 +189,7 @@ export function CollectionsPage() {
       </PageHeader>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div
-          className="inline-flex w-fit overflow-x-auto rounded-md border border-line bg-surface p-0.5 shadow-e1"
-          role="group"
-        >
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              aria-pressed={preset === r}
-              onClick={() => (reset(), url.set({ ...rangeFor(r, today), cursor: null }))}
-              className={cn(
-                'h-8 rounded-sm px-3 text-sm font-medium whitespace-nowrap [@media(pointer:coarse)]:h-10',
-                preset === r ? 'bg-primary-subtle text-primary-subtle-fg' : 'text-fg-secondary hover:text-fg',
-              )}
-            >
-              {t(`range.${r}`)}
-            </button>
-          ))}
-        </div>
-        {!preset && (
-          <span className="text-sm text-fg-secondary">
-            {formatDate(from)} – {formatDate(to)}
-          </span>
-        )}
+        <DateRangeFilter value={range} onChange={(c, r) => (reset(), range.set(c, r))} label={t('col.recordedAt')} />
         <div className="flex flex-wrap items-center gap-2 lg:ms-auto">
           <Select
             aria-label={t('col.method')}
@@ -272,7 +244,7 @@ export function CollectionsPage() {
             )}
           </div>
           <div className="text-sm text-fg-tertiary">
-            {preset ? t(`range.${preset}`) : `${formatDate(from)} – ${formatDate(to)}`}
+            {range.choice !== 'custom' ? tc(`range.${range.choice}`) : rangeLabel(range)}
           </div>
         </div>
         {sum > 0 && (

@@ -285,5 +285,10 @@
     "days_one": "{{n}} day · {{span}}",
     "days_other": "{{n}} days · {{span}}",
     "pickBoth": "Pick both days."
+  },
+  "staffFilter": {
+    "label": "Staff",
+    "all": "All staff",
+    "one": "Chosen staff member"
   }
 }

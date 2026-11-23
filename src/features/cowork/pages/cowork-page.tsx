@@ -9,21 +9,21 @@ import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
 import { useCan } from '@/shared/auth/session';
 import { formatDate, formatDuration, formatNumber, formatTime, pickText } from '@/shared/lib/format';
-import { todayDhaka } from '@/shared/lib/time';
-import { oneOf, useUrlState } from '@/shared/lib/url-state';
+import { useUrlState } from '@/shared/lib/url-state';
 import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
 import type { Tone } from '@/shared/ui/status';
-import { Avatar, Segmented } from '@/shared/ui/primitives';
+import { Avatar } from '@/shared/ui/primitives';
 import { Select } from '@/shared/ui/form';
 import { Drawer } from '@/shared/ui/overlay';
 import { Button } from '@/shared/ui/button';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { VisitOutcomeBadge } from '@/features/visits';
 import { useEndSession, useFieldStaff, useSession, useSessions, useSessionVisits, type Member, type Session } from '../api/cowork';
-import { nameOf, openMinutes, rangeFor, RANGES, sortedMembers, timeline, workedTogether } from '../model/session';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
+import { nameOf, openMinutes, sortedMembers, timeline, workedTogether } from '../model/session';
 
 const MEMBER_TONE: Record<string, Tone> = { accepted: 'success', left: 'neutral', invited: 'warning', rejected: 'danger' };
 const SHOWN = 3;
@@ -33,13 +33,12 @@ export function CoworkPage() {
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const url = useUrlState();
-  const today = todayDhaka();
-  const range = oneOf(url.get('range'), RANGES, '7d');
+  const range = useDateRange({ fallback: '7d', reset: ['cursor'] });
   const userId = url.get('userId');
   const cursor = url.get('cursor');
   const [limit, setLimit] = useState(25);
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
-  const q = useSessions({ ...rangeFor(range, today), userId: userId || undefined, cursor: cursor || undefined, limit });
+  const q = useSessions({ from: range.from, to: range.to, userId: userId || undefined, cursor: cursor || undefined, limit });
   const staff = useFieldStaff();
   const gate = useGate();
   const canVisits = gate.can('visit.view') && gate.flag('module.visits');
@@ -109,12 +108,7 @@ export function CoworkPage() {
       </PageHeader>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Segmented
-          label={t('range.label')}
-          value={range}
-          onChange={(v) => (pager.reset(), url.set({ range: v === '7d' ? null : v, cursor: null }))}
-          options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))}
-        />
+        <DateRangeFilter value={range} onChange={(c, r) => (pager.reset(), range.set(c, r))} label={t('range.label')} />
         <Select aria-label={t('staff')} value={userId} onChange={(e) => (pager.reset(), url.set({ userId: e.target.value || null, cursor: null }))} className="h-9 sm:w-60">
           <option value="">{t('allStaff')}</option>
           {(staff.data ?? []).map((u) => (

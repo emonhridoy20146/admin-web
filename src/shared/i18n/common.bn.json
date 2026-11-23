@@ -285,5 +285,10 @@
     "days_one": "{{n}} দিন · {{span}}",
     "days_other": "{{n}} দিন · {{span}}",
     "pickBoth": "দুটো দিনই বাছুন।"
+  },
+  "staffFilter": {
+    "label": "কর্মী",
+    "all": "সব কর্মী",
+    "one": "বাছাই করা কর্মী"
   }
 }

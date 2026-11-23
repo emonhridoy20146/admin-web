@@ -15,14 +15,16 @@ import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
 import type { Tone } from '@/shared/ui/status';
-import { Segmented } from '@/shared/ui/primitives';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
+import { StaffSelect } from '@/shared/ui/staff-select';
+import { PROMISE_PRESETS } from '@/shared/lib/date-range';
 import { Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
 import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useCancelPromise, usePromises, type PromiseItem } from '../api/promises';
-import { canCancel, daysTo, isLate, paidRatio, STATUSES, windowFor, WINDOWS } from '../model/promise';
+import { canCancel, daysTo, isLate, paidRatio, STATUSES } from '../model/promise';
 import { CreatePromiseDialog } from '../components/create-promise-dialog';
 
 const TONE: Record<string, Tone> = { open: 'promised', kept: 'paid', partially_kept: 'dueToday', broken: 'danger', superseded: 'neutral', cancelled: 'neutral' };
@@ -34,12 +36,13 @@ export function PromisesPage() {
   const canManage = useCan('promise.create');
   const url = useUrlState();
   const today = todayDhaka();
-  const win = oneOf(url.get('when'), WINDOWS, 'today');
+  const range = useDateRange({ presets: PROMISE_PRESETS, reset: ['cursor'] });
+  const ownerId = url.get('ownerId');
   const status = oneOf(url.get('status'), ['', ...STATUSES] as const, '');
   const cursor = url.get('cursor');
   const [limit, setLimit] = useState(25);
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
-  const q = usePromises({ ...windowFor(win, today), status: status || undefined, cursor: cursor || undefined, limit });
+  const q = usePromises({ from: range.from, to: range.to, ownerId: ownerId || undefined, status: status || undefined, cursor: cursor || undefined, limit });
   const openId = url.get('drawer');
   const open = q.data?.items.find((p) => p.id === openId) ?? null;
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -110,16 +113,14 @@ export function PromisesPage() {
       </PageHeader>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Segmented
-          label={t('when')}
-          value={win}
-          onChange={(v) => (pager.reset(), url.set({ when: v === 'today' ? null : v, cursor: null }))}
-          options={WINDOWS.map((w) => ({ value: w, label: t(`window.${w}`) }))}
-        />
-        <Select aria-label={t('col.status')} value={status} onChange={(e) => (pager.reset(), url.set({ status: e.target.value || null, cursor: null }))} className="h-9 sm:w-52">
-          <option value="">{t('allStatus')}</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
-        </Select>
+        <DateRangeFilter value={range} onChange={(c, r) => (pager.reset(), range.set(c, r))} label={t('when')} />
+        <div className="flex flex-wrap items-center gap-2">
+          <StaffSelect value={ownerId} onChange={(id) => (pager.reset(), url.set({ ownerId: id, cursor: null }))} />
+          <Select aria-label={t('col.status')} value={status} onChange={(e) => (pager.reset(), url.set({ status: e.target.value || null, cursor: null }))} className="h-9 sm:w-52">
+            <option value="">{t('allStatus')}</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}`)}</option>)}
+          </Select>
+        </div>
       </div>
 
       <DataTable

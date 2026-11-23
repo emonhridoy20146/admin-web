@@ -7,20 +7,20 @@ import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { useGate } from '@/shared/feature/useGate';
 import { formatDate, formatDateTime, formatDuration, formatNumber, formatTime, pickText } from '@/shared/lib/format';
-import { todayDhaka } from '@/shared/lib/time';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
-import { Segmented } from '@/shared/ui/primitives';
 import { Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
 import { useCan } from '@/shared/auth/session';
 import { useVisits, type Visit } from '../api/visits';
 import { CreateVisitDialog } from '../components/create-visit-dialog';
-import { coWorkState, durationMin, geoState, KINDS, OUTCOMES, rangeFor, RANGES, type GeoState } from '../model/visit';
+import { coWorkState, durationMin, geoState, KINDS, OUTCOMES, type GeoState } from '../model/visit';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
+import { StaffSelect } from '@/shared/ui/staff-select';
 import { PhotoLightbox } from '../components/photo-lightbox';
 import { VisitOutcomeBadge } from '../components/outcome-badge';
 const GEO: Record<GeoState, { icon: LucideIcon; cls: string }> = {
@@ -35,8 +35,7 @@ export function VisitsPage() {
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const url = useUrlState();
-  const today = todayDhaka();
-  const range = oneOf(url.get('range'), RANGES, 'today');
+  const range = useDateRange({ reset: ['cursor'] });
   const outcome = oneOf(url.get('outcome'), ['', ...OUTCOMES] as const, '');
   const userId = url.get('userId');
   const cursor = url.get('cursor');
@@ -49,7 +48,7 @@ export function VisitsPage() {
   const [limit, setLimit] = useState(25);
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
   const q = useVisits({
-    ...(session ? { coWorkSessionId: session } : rangeFor(range, today)),
+    ...(session ? { coWorkSessionId: session } : { from: range.from, to: range.to }),
     outcome: outcome || undefined,
     userId: userId || undefined,
     coWork: kind === 'joint' ? 'true' : kind === 'single' ? 'false' : undefined,
@@ -61,7 +60,6 @@ export function VisitsPage() {
   const [photo, setPhoto] = useState<number | null>(null);
   const canRecord = useCan('visit.record');
   const [createOpen, setCreateOpen] = useState(false);
-  const multiDay = !!session || range === '7d' || range === '30d';
 
   const geoCell = (v: Visit) => {
     const s = geoState(v);
@@ -90,7 +88,7 @@ export function VisitsPage() {
     { id: 'outcome', header: t('col.outcome'), priority: 1, mobile: 'badges', cell: (v) => <VisitOutcomeBadge outcome={v.outcome} /> },
     { id: 'user', header: t('col.user'), priority: 2, mobile: 'subtitle', cell: (v) => v.user?.name ?? <span className="text-fg-tertiary">—</span> },
     ...(coworkOn ? [{ id: 'with', header: t('col.with'), priority: 2 as const, mobile: 'badges' as const, cell: (v: Visit) => <CoWorkCell v={v} /> }] : []),
-    { id: 'time', header: t('col.time'), priority: 1, mobile: 'meta', cell: (v) => <span className="tabular">{multiDay ? formatDateTime(v.checkInAt) : formatTime(v.checkInAt)}</span> },
+    { id: 'time', header: t('col.time'), priority: 1, mobile: 'meta', cell: (v) => <span className="tabular whitespace-nowrap"><span className="text-fg">{formatDate(v.checkInAt, { withYear: false })}</span> <span className="text-fg-secondary">{formatTime(v.checkInAt)}</span></span> },
     {
       id: 'duration',
       header: t('col.duration'),
@@ -150,17 +148,10 @@ export function VisitsPage() {
             </Button>
           </div>
         ) : (
-          <Segmented
-            label={t('range.label')}
-            value={range}
-            onChange={(v) => (pager.reset(), url.set({ range: v === 'today' ? null : v, cursor: null }))}
-            options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))}
-          />
+          <DateRangeFilter value={range} onChange={(c, r) => (pager.reset(), range.set(c, r))} label={t('range.label')} />
         )}
         <div className="flex flex-wrap items-center gap-2">
-          {userId && (
-            <Button size="sm" variant="ghost" onClick={() => (pager.reset(), url.set({ userId: null, cursor: null }))}>{t('clearStaff')}</Button>
-          )}
+          <StaffSelect value={userId} onChange={(id) => (pager.reset(), url.set({ userId: id, cursor: null }))} knownName={q.data?.items.find((v) => (v.user?.id ?? v.userId) === userId)?.user?.name} />
           {coworkOn && !session && (
             <Select aria-label={t('cowork.kind')} value={kind} onChange={(e) => (pager.reset(), url.set({ kind: e.target.value || null, cursor: null }))} className="h-9 sm:w-44">
               <option value="">{t('cowork.allKinds')}</option>
