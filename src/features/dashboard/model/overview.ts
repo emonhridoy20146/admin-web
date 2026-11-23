@@ -103,3 +103,46 @@ export function shares<K extends string>(parts: Record<K, number>): { key: K; n:
   const total = keys.reduce((s, k) => s + Math.max(0, parts[k]), 0);
   return keys.map((k) => ({ key: k, n: parts[k], share: total ? Math.max(0, parts[k]) / total : 0 }));
 }
+
+export interface ApiLink {
+  path: string;
+  query?: Record<string, string>;
+}
+
+/** API query keys → the admin page's own link keys, per list (FR-DSH-002 links, 1.45.0). */
+const PAGES: Record<string, { page: string; keys: Record<string, string | null> }> = {
+  '/collections': { page: '/collections/', keys: { from: 'from', to: 'to', method: 'method', status: 'status', collectorId: 'collectorId', flag: 'flag', branchId: 'branch' } },
+  '/visits': { page: '/visits/', keys: { from: 'from', to: 'to', date: null, outcome: 'outcome', userId: 'userId', coWork: null, branchId: 'branch' } },
+  '/promises': { page: '/promises/', keys: { from: 'from', to: 'to', status: 'status', createdBy: 'staff', brokenWithoutFollowUp: 'nofollow', branchId: 'branch' } },
+  '/customers': { page: '/customers/', keys: { filter: 'filter', payState: 'pay', invoiceKind: 'kind', paidThisMonth: 'paid', branchId: 'branch' } },
+  '/prospects': { page: '/prospects/', keys: { from: 'from', to: 'to', status: 'status', createdBy: 'staff', branchId: 'branch' } },
+  '/location-proposals': { page: '/pin-approvals/', keys: { status: 'status', branchId: 'branch' } },
+  '/cowork/sessions': { page: '/cowork/', keys: { from: 'from', to: 'to', userId: 'userId', branchId: 'branch' } },
+  '/attendance/days': { page: '/attendance/', keys: { branchId: 'branch' } },
+  '/cash/positions': { page: '/cash/', keys: { branchId: 'branch' } },
+};
+
+/**
+ * Turns the list link the server gives with a dashboard number into the admin page that shows those rows, with the
+ * page's filters set (a key the page does not know is dropped; `brokenWithoutFollowUp=true` becomes `nofollow=1`).
+ * Unknown lists fall back to `fallback`.
+ */
+export function pageHref(link: ApiLink | null | undefined, fallback: string): string {
+  if (!link?.path) return fallback;
+  const path = link.path.replace(/^\/api\/v1/, '').replace(/\/$/, '');
+  const m = PAGES[path];
+  if (!m) return fallback;
+  const out = new URLSearchParams();
+  for (const [k, v] of Object.entries(link.query ?? {})) {
+    const key = m.keys[k];
+    if (!key || v === '' || v == null) continue;
+    if (k === 'brokenWithoutFollowUp') {
+      if (v === 'true') out.set(key, '1');
+      continue;
+    }
+    if (k === 'status' && path === '/location-proposals' && v === 'pending') continue;
+    out.set(key, v);
+  }
+  const qs = out.toString();
+  return qs ? `${m.page}?${qs}` : m.page;
+}

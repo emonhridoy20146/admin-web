@@ -126,5 +126,60 @@
   "modulesOff": {
     "title": "{{n}} modules are turned off",
     "action": "Open feature flags"
+  },
+  "open": "Open",
+  "outcome": {
+    "paid": "Paid",
+    "partial_paid": "Paid in part",
+    "promised": "Promised",
+    "not_home": "Not at home",
+    "refused": "Refused to pay",
+    "shifted_address": "Moved address",
+    "customer_dead": "Customer deceased",
+    "product_returned_request": "Wants to return product",
+    "runaway": "Runaway",
+    "other": "Other"
+  },
+  "period": {
+    "title": "For the period",
+    "sub": "Collections, visits and promises in the days you choose; click any number to see the list.",
+    "collections": "Collected in the period",
+    "collectionsSub": "Field collections by payment method",
+    "noCollections": "No collections in this period.",
+    "inErp": "In the ERP",
+    "notInErp": "Not in the ERP yet",
+    "visits": "Visits by outcome",
+    "visitsSub": "{{n}} visits to {{c}} customers",
+    "noVisits": "No visits in this period.",
+    "promSub": "How the promises due in the period ended",
+    "noneDecided": "No promise came due in this period",
+    "keptOf": "kept, of {{n}} decided",
+    "kept": "Kept",
+    "partial": "Partly kept",
+    "broken": "Broken",
+    "noFollowUp": "{{n}} broken without a follow-up promise",
+    "ahead": "Open promises coming up",
+    "dueToday": "Due today",
+    "next7": "Next 7 days",
+    "next15": "Next 15 days"
+  },
+  "top": {
+    "title": "Top staff in the period",
+    "sub": "Click a person to see their collections or visits",
+    "by": "Rank by",
+    "money": "Money",
+    "visits": "Visits",
+    "none": "Nothing recorded in this period."
+  },
+  "pros": {
+    "title": "Possible customers",
+    "sub": "Recorded and converted in the period",
+    "created": "Recorded",
+    "converted": "Became customers",
+    "openNow": "Still open now",
+    "rate": "{{pct}} of those recorded became customers",
+    "noneYet": "None recorded in this period.",
+    "cowork": "Co-work",
+    "coworkSessions": "Co-work sessions in the period"
   }
 }

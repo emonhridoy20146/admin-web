@@ -175,14 +175,14 @@ export function MonthCard({ m, loading, className }: { m: MonthCompare | null; l
 }
 
 /** Things waiting for a manager, each a link with its count. */
-export function AlertsCard({ conflicts, overLimit, erpFailed, erpPending, className }: { conflicts: number; overLimit: number; erpFailed: number; erpPending: number; className?: string }) {
+export function AlertsCard({ conflicts, overLimit, erpFailed, erpPending, pinsNow, className }: { conflicts: number; overLimit: number; erpFailed: number; erpPending: number; pinsNow?: number; className?: string }) {
   const { t } = useTranslation('dashboard');
   const gate = useGate();
   const pinsOn = gate.can('customer.location.approve') && gate.flag('module.customers');
-  const pins = usePendingPins(pinsOn);
+  const pins = usePendingPins(pinsOn && pinsNow == null);
   const items: { key: string; icon: LucideIcon; n: number | undefined; href: string; show: boolean; danger?: boolean }[] = [
     { key: 'conflicts', icon: GitMerge, n: conflicts, href: '/collections/conflicts/', show: gate.flag('module.collections'), danger: true },
-    { key: 'pins', icon: MapPinned, n: pins.data, href: '/pin-approvals/', show: pinsOn },
+    { key: 'pins', icon: MapPinned, n: pinsNow ?? pins.data, href: '/pin-approvals/', show: pinsOn },
     { key: 'cash', icon: Banknote, n: overLimit, href: '/cash/', show: gate.flag('module.cash'), danger: true },
     { key: 'erpFailed', icon: CircleAlert, n: erpFailed, href: '/collections/?status=posting_failed&range=30d', show: gate.flag('module.collections'), danger: true },
     { key: 'erpPending', icon: CircleAlert, n: erpPending, href: '/collections/?status=received&range=30d', show: gate.flag('module.collections') },
@@ -226,19 +226,21 @@ const PS_TOKEN: Record<(typeof PAY_STATES)[number], string> = {
 };
 
 /** Customers by pay state (the pin colours), as horizontal bars; each opens the customer list filtered to it. */
-export function PayStateCard({ asOf, className }: { asOf?: string | null; className?: string }) {
+export function PayStateCard({ asOf, fromOverview, className }: { asOf?: string | null; fromOverview?: { payState: string; count: number }[] | null; className?: string }) {
   const { t } = useTranslation('dashboard');
-  const q = usePayStateCounts(PAY_STATES);
-  const rows = q.data ? shares(Object.fromEntries(PAY_STATES.map((s) => [s, q.data![s] ?? 0])) as Record<(typeof PAY_STATES)[number], number>) : [];
+  // 1.45.0 sends the counts with the overview; an older server is asked once per state
+  const q = usePayStateCounts(PAY_STATES, !fromOverview);
+  const counts = fromOverview ? Object.fromEntries(fromOverview.map((x) => [x.payState, x.count])) : q.data;
+  const rows = counts ? shares(Object.fromEntries(PAY_STATES.map((s) => [s, counts[s] ?? 0])) as Record<(typeof PAY_STATES)[number], number>) : [];
   const total = rows.reduce((s, r) => s + r.n, 0);
   const max = Math.max(1, ...rows.map((r) => r.n));
   return (
     <Card className={cn('flex flex-col', className)}>
       <CardHeader title={t('pay.title')} subtitle={t('pay.sub', { n: formatNumber(total) })} actions={<AsOf at={asOf} />} />
       <div className="flex-1 p-4">
-        {q.error ? (
+        {!fromOverview && q.error ? (
           <ErrorBanner error={q.error} onRetry={() => q.refetch()} />
-        ) : q.isLoading ? (
+        ) : !counts ? (
           <div className="space-y-3">{PAY_STATES.map((s) => <Skeleton key={s} className="h-7" />)}</div>
         ) : (
           <>

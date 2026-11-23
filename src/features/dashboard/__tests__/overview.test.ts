@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillDays, monthCompare, promiseRate, shares } from '../model/overview';
+import { fillDays, monthCompare, pageHref, promiseRate, shares } from '../model/overview';
 
 describe('dashboard model (FR-W-064)', () => {
   it('fills missing days with zero', () => {
@@ -43,5 +43,19 @@ describe('dashboard model (FR-W-064)', () => {
     expect(promiseRate([{ promisesDue: 4, promisesKept: 3 }, { promisesDue: 6, promisesKept: 2 }])).toEqual({ due: 10, kept: 5, rate: 0.5 });
     expect(promiseRate([]).rate).toBeNull();
     expect(shares({ a: 1, b: 3, c: 0 })).toEqual([{ key: 'a', n: 1, share: 0.25 }, { key: 'b', n: 3, share: 0.75 }, { key: 'c', n: 0, share: 0 }]);
+  });
+});
+
+describe('pageHref (1.45.0 dashboard links)', () => {
+  it('maps list links to admin pages and their filter keys', () => {
+    expect(pageHref({ path: '/collections', query: { from: '2026-11-01', to: '2026-11-23', method: 'cash' } }, '/')).toBe('/collections/?from=2026-11-01&to=2026-11-23&method=cash');
+    expect(pageHref({ path: '/promises', query: { brokenWithoutFollowUp: 'true', createdBy: 'u1' } }, '/')).toBe('/promises/?nofollow=1&staff=u1');
+    expect(pageHref({ path: '/customers', query: { payState: 'missed_one' } }, '/')).toBe('/customers/?pay=missed_one');
+    expect(pageHref({ path: '/location-proposals', query: { status: 'pending' } }, '/')).toBe('/pin-approvals/');
+  });
+  it('drops unknown keys and falls back for unknown lists', () => {
+    expect(pageHref({ path: '/visits', query: { from: '2026-11-01', limit: '25' } }, '/')).toBe('/visits/?from=2026-11-01');
+    expect(pageHref({ path: '/somewhere' }, '/x/')).toBe('/x/');
+    expect(pageHref(null, '/y/')).toBe('/y/');
   });
 });

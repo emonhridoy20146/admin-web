@@ -1613,6 +1613,7 @@ export const handlers = [
       overdue: { customers: cust.filter((c) => (c.item.daysOverdue ?? 0) > 0).length, amountPoisha: cust.filter((c) => (c.item.daysOverdue ?? 0) > 0).reduce((s, c) => s + c.item.totalOutstandingPoisha!, 0), badSuggested: cust.filter((c) => c.item.badges?.includes('bad_suggested')).length, tagged: cust.filter((c) => c.item.tag?.state === 'tagged').length },
       erp: { ...db.erpStatus, lastSuccessAt: new Date(Date.now() - 3 * 60_000).toISOString() },
       trend7d,
+      ...overview145(sc, url, inScopeCol, staffIn, cust, pos, present),
     };
     return HttpResponse.json(out);
   })),
@@ -2222,3 +2223,78 @@ export const handlers = [
   })),
   http.get(`${BASE}/notifications`, authed(() => HttpResponse.json({ items: [], nextCursor: null }))),
 ];
+
+/** 1.45.0 (FR-DSH-002) dashboard statistics with list links, worked out from the mock data like the server does. */
+function overview145(sc: string[], url: URL, col: S['Collection'][], staffIn: db.MockUser[], cust: db.MockCustomer[], pos: S['CashPosition'][], present: number): Partial<S['DashboardOverview']> {
+  const today = db.today();
+  const day = (iso: string) => new Date(Date.parse(iso) + 6 * 3600_000).toISOString().slice(0, 10);
+  const from = url.searchParams.get('from') ?? `${today.slice(0, 7)}-01`;
+  const to = url.searchParams.get('to') ?? today;
+  const next = (d: string, n = 1) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  const L = (path: string, query: Record<string, string> = {}) => ({ path, query });
+  const amt = (rows: S['Collection'][], link: ReturnType<typeof L>) => ({ amountPoisha: rows.reduce((s, c) => s + (c.amountPoisha ?? 0), 0), count: rows.length, link });
+  const inRange = col.filter((c) => day(c.recordedAt!) >= from && day(c.recordedAt!) <= to);
+  const month = today.slice(0, 7);
+  const prevMonth = (() => { const d = new Date(`${month}-01T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
+  const prevEnd = next(`${month}-01`, -1);
+  const series: { date: string; amountPoisha: number; count: number }[] = [];
+  for (let d = from; d <= to; d = next(d)) { const r = inRange.filter((c) => day(c.recordedAt!) === d); series.push({ date: d, amountPoisha: r.reduce((s, c) => s + c.amountPoisha!, 0), count: r.length }); }
+  const methods = [...new Set(inRange.map((c) => c.method!))].map((m) => ({ method: m, ...amt(inRange.filter((c) => c.method === m), L('/collections', { from, to, method: m })) })).sort((a, b) => b.amountPoisha - a.amountPoisha);
+  const vis = db.visits.filter((v) => sc.includes(v.branchId) && day(v.row.checkInAt) >= from && day(v.row.checkInAt) <= to);
+  const outcomes = [...new Set(vis.map((v) => v.row.outcome!))].map((o) => ({ outcome: o, count: vis.filter((v) => v.row.outcome === o).length, link: L('/visits', { from, to, outcome: o }) })).sort((a, b) => b.count - a.count);
+  const vSeries: { date: string; count: number }[] = [];
+  for (let d = from; d <= to; d = next(d)) vSeries.push({ date: d, count: vis.filter((v) => day(v.row.checkInAt) === d).length });
+  const prom = db.promises.filter((p) => sc.includes(p.branchId)).map((p) => p.row);
+  const due = prom.filter((p) => p.promisedDate >= from && p.promisedDate <= to);
+  const cnt = (st: string) => due.filter((p) => p.status === st).length;
+  const decided = cnt('kept') + cnt('partially_kept') + cnt('broken');
+  const openDue = (a: string, b: string) => { const r = prom.filter((p) => p.status === 'open' && p.promisedDate >= a && p.promisedDate <= b); return { amountPoisha: r.reduce((s, p) => s + p.promisedAmountPoisha, 0), count: r.length, link: L('/promises', { from: a, to: b, status: 'open' }) }; };
+  const noFollow = prom.filter((p) => (p.status === 'broken' || p.status === 'partially_kept') && !p.followUpId && p.promisedDate >= from && p.promisedDate <= to);
+  const byUser = new Map<string, { name: string; amount: number; count: number; visits: number }>();
+  for (const c of inRange) { const k = c.collector?.id ?? ''; const r = byUser.get(k) ?? { name: c.collector?.name ?? '', amount: 0, count: 0, visits: 0 }; r.amount += c.amountPoisha!; r.count++; byUser.set(k, r); }
+  for (const v of vis) { const k = v.row.user?.id ?? ''; const r = byUser.get(k) ?? { name: v.row.user?.name ?? '', amount: 0, count: 0, visits: 0 }; r.visits++; byUser.set(k, r); }
+  const rows = [...byUser.entries()].filter(([k]) => k);
+  const pros = db.prospects.filter((p) => sc.includes(p.branchId));
+  const sess = db.coworkSessions.filter((x) => { const d = day((x as { startedAt?: string }).startedAt ?? ''); return d >= from && d <= to; });
+  const late = Math.max(1, Math.round(staffIn.length * 0.1));
+  const overdue = cust.filter((c) => (c.item.daysOverdue ?? 0) > 0);
+  return {
+    range: { from, to, days: series.length },
+    collections: {
+      today: amt(col.filter((c) => day(c.recordedAt!) === today), L('/collections', { from: today, to: today })),
+      thisMonth: amt(col.filter((c) => day(c.recordedAt!).startsWith(month)), L('/collections', { from: `${month}-01`, to: today })),
+      previousMonth: amt(col.filter((c) => day(c.recordedAt!).startsWith(prevMonth)), L('/collections', { from: `${prevMonth}-01`, to: prevEnd })),
+      inRange: amt(inRange, L('/collections', { from, to })),
+      series,
+      byMethod: methods,
+      erpPosted: amt(inRange.filter((c) => ['posted', 'resolved_posted'].includes(c.status!)), L('/collections', { from, to, status: 'posted' })),
+      pendingInField: amt(inRange.filter((c) => ['received', 'posting', 'posting_failed', 'conflict'].includes(c.status!)), L('/collections', { from, to, status: 'received' })),
+    },
+    visitStats: { total: { count: vis.length, link: L('/visits', { from, to }) }, uniqueCustomers: new Set(vis.map((v) => v.row.customer?.id)).size, series: vSeries, byOutcome: outcomes },
+    promiseStats: {
+      dueToday: openDue(today, today), next7Days: openDue(next(today), next(today, 7)), next15Days: openDue(next(today), next(today, 15)),
+      kept: { count: cnt('kept'), link: L('/promises', { from, to, status: 'kept' }) }, partiallyKept: { count: cnt('partially_kept'), link: L('/promises', { from, to, status: 'partially_kept' }) },
+      broken: { count: cnt('broken'), link: L('/promises', { from, to, status: 'broken' }) },
+      keptRate: decided ? Math.round((cnt('kept') / decided) * 100) / 100 : null, brokenRate: decided ? Math.round((cnt('broken') / decided) * 100) / 100 : null,
+      brokenWithoutFollowUp: { count: noFollow.length, link: L('/promises', { from, to, brokenWithoutFollowUp: 'true' }) },
+    },
+    overdueCustomers: { amountPoisha: overdue.reduce((s, c) => s + (c.item.overduePoisha ?? 0), 0), count: overdue.length, link: L('/customers', { filter: 'overdue' }) },
+    payStates: (['bad', 'missed_many', 'missed_one', 'due_today', 'on_track', 'paid_off'] as const).map((ps) => ({ payState: ps, count: cust.filter((c) => (c.item.payState ?? 'on_track') === ps).length, link: L('/customers', { payState: ps }) })),
+    topStaff: {
+      byCollection: rows.filter(([, r]) => r.amount > 0).sort((a, b) => b[1].amount - a[1].amount).slice(0, 5).map(([id, r]) => ({ userId: id, name: r.name, amountPoisha: r.amount, count: r.count, link: L('/collections', { from, to, collectorId: id }) })),
+      byVisits: rows.filter(([, r]) => r.visits > 0).sort((a, b) => b[1].visits - a[1].visits).slice(0, 5).map(([id, r]) => ({ userId: id, name: r.name, count: r.visits, link: L('/visits', { from, to, userId: id }) })),
+    },
+    attendanceToday: {
+      present: { count: present, link: L('/attendance/days', { date: today }) }, late: { count: late, link: L('/attendance/days', { date: today }) },
+      absent: { count: staffIn.length - present, link: L('/attendance/days', { date: today }) }, onLeave: { count: 1, link: L('/attendance/days', { date: today }) }, onDutyNow: { count: present - 1, link: L('/attendance/days', { date: today }) },
+    },
+    pinApprovals: { count: db.proposals.filter((p) => sc.includes(p.branchId) && p.row.status === 'pending').length, link: L('/location-proposals', { status: 'pending' }) },
+    cashInHand: { amountPoisha: pos.reduce((s, p) => s + (p.onHandPoisha ?? 0), 0), count: pos.filter((p) => (p.onHandPoisha ?? 0) > 0).length, link: L('/cash/positions') },
+    coworkStats: { sessions: { count: sess.length, link: L('/cowork/sessions', { from, to }) } },
+    prospectStats: {
+      created: { count: pros.filter((p) => (p.createdDate ?? '') >= from && (p.createdDate ?? '') <= to).length, link: L('/prospects', { from, to }) },
+      converted: { count: pros.filter((p) => p.status === 'converted' && p.convertedAt && day(p.convertedAt) >= from && day(p.convertedAt) <= to).length, link: L('/prospects', { from, to, status: 'converted' }) },
+      openNow: { count: pros.filter((p) => p.status === 'new' || p.status === 'contacted').length, link: L('/prospects', {}) },
+    },
+  };
+}

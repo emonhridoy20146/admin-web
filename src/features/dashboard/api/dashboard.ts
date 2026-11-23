@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api, unwrap } from '@/shared/api/client';
 import { useBranchId } from '@/shared/lib/ui-store';
 import { EV, useInvalidateOn } from '@/shared/feature/events';
@@ -6,13 +6,17 @@ import { DateTime } from 'luxon';
 import { DHAKA, todayDhaka } from '@/shared/lib/time';
 import { listOrItems } from '@/shared/api/list';
 
-export function useOverview() {
+/** 1.45.0: `from`/`to` set the period of the statistics sections (FR-DSH-002); today's figures do not depend on it. */
+export function useOverview(range: { from?: string; to?: string } = {}) {
   const branchId = useBranchId();
   const date = todayDhaka();
-  useInvalidateOn([EV.collectionResolved, EV.customerTagged], [['dashboard']]);
+  const from = range.from || undefined;
+  const to = range.to || undefined;
+  useInvalidateOn([EV.collectionResolved, EV.customerTagged, EV.promiseCreated, EV.prospectChanged], [['dashboard']]);
   return useQuery({
-    queryKey: ['dashboard', 'overview', { branchId, date }],
-    queryFn: () => unwrap(api.GET('/dashboard/overview', { params: { query: { branchId, date } } })),
+    queryKey: ['dashboard', 'overview', { branchId, date, from, to }],
+    queryFn: () => unwrap(api.GET('/dashboard/overview', { params: { query: { branchId, date, from, to } } })),
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });
@@ -56,10 +60,11 @@ export function useStaffMonth() {
 }
 
 /** Customers in each pay state (6 small requests: one row each, the total is what counts). */
-export function usePayStateCounts(states: readonly string[]) {
+export function usePayStateCounts(states: readonly string[], enabled = true) {
   const branchId = useBranchId();
   return useQuery({
     queryKey: ['dashboard', 'pay-states', { branchId }],
+    enabled,
     queryFn: async () => {
       const all = await Promise.all(
         states.map(async (s) => {

@@ -21,6 +21,9 @@ import { fillDays, monthCompare } from '../model/overview';
 import { todayDhaka } from '@/shared/lib/time';
 import { useMemo } from 'react';
 import { AlertsCard, AttendanceCard, BranchesCard, LeadersCard, ModulesOffCard, MonthCard, PayStateCard, PromiseCard, TrendCard } from '../components/sections';
+import { OutcomeCard, PeriodCollectionsCard, ProspectsCard, PromiseOutcomeCard, TopStaffCard } from '../components/period';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
+import { PAST_PRESETS } from '@/shared/lib/date-range';
 
 
 const METHOD_TOKEN: Record<string, string> = { cash: 'bg-pay-cash', bkash: 'bg-pay-bkash', nagad: 'bg-pay-nagad', rocket: 'bg-pay-rocket', bank_transfer: 'bg-pay-bank', other_mobile: 'bg-pay-other' };
@@ -31,7 +34,9 @@ export function OverviewPage() {
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const gate = useGate();
-  const q = useOverview();
+  // FR-W-064: the period of the statistics sections (today's figures and the month charts do not follow it)
+  const range = useDateRange({ presets: PAST_PRESETS, fallback: 'month', reset: [] });
+  const q = useOverview(range);
   const d = q.data;
   const hour = DateTime.now().setZone(DHAKA).hour;
   const greet = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
@@ -51,6 +56,7 @@ export function OverviewPage() {
   const days = useMemo(() => (daysQ.data ? fillDays(daysQ.data.collection, daysQ.data.from ?? today, today) : []), [daysQ.data, today]);
   const month = useMemo(() => (daysQ.data ? monthCompare(days, today) : null), [daysQ.data, days, today]);
   const att = d?.attendance;
+  const v145 = !!d?.collections;
   const attAll = (att?.present ?? 0) + (att?.absent ?? 0);
 
   return (
@@ -154,18 +160,36 @@ export function OverviewPage() {
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
         <MonthCard className="xl:col-span-7" m={month} loading={daysQ.isLoading} />
-        <AlertsCard className="xl:col-span-5" conflicts={conflicts} overLimit={d?.cash?.overLimitStaff ?? 0} erpFailed={d?.erp?.outboxFailed ?? 0} erpPending={d?.erp?.outboxPending ?? 0} />
+        <AlertsCard className="xl:col-span-5" pinsNow={d?.pinApprovals?.count} conflicts={conflicts} overLimit={d?.cash?.overLimitStaff ?? 0} erpFailed={d?.erp?.outboxFailed ?? 0} erpPending={d?.erp?.outboxPending ?? 0} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {gate.flag('module.customers') && <PayStateCard asOf={d?.erp?.lastSuccessAt} />}
+        {gate.flag('module.customers') && <PayStateCard asOf={d?.erp?.lastSuccessAt} fromOverview={d?.payStates?.length ? d.payStates : null} />}
         {gate.flag('module.attendance') && <AttendanceCard a={d?.attendance} loading={q.isLoading} />}
-        {gate.flag('module.promises') && <PromiseCard dueToday={d?.promises?.dueToday ?? 0} keptToday={d?.promises?.keptToday ?? 0} brokenYesterday={d?.promises?.brokenYesterday ?? 0} />}
+        {gate.flag('module.promises') && !v145 && <PromiseCard dueToday={d?.promises?.dueToday ?? 0} keptToday={d?.promises?.keptToday ?? 0} brokenYesterday={d?.promises?.brokenYesterday ?? 0} />}
+        {v145 && <ProspectsCard d={d} loading={q.isLoading} showProspects={gate.flag('module.prospects') && gate.can('prospect.view')} showCowork={gate.flag('module.cowork')} />}
       </div>
+
+      {v145 && (
+        <section className="mt-8" aria-labelledby="period-title" data-testid="period">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-3">
+            <div>
+              <h2 id="period-title" className="text-lg font-semibold text-fg">{t('period.title')}</h2>
+              <p className="text-sm text-fg-tertiary">{t('period.sub')}</p>
+            </div>
+            <DateRangeFilter value={range} onChange={range.set} label={t('period.title')} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {gate.flag('module.collections') && <PeriodCollectionsCard d={d} loading={q.isLoading || q.isPlaceholderData} />}
+            {gate.flag('module.visits') && <OutcomeCard d={d} loading={q.isLoading || q.isPlaceholderData} />}
+            {gate.flag('module.promises') && <PromiseOutcomeCard d={d} loading={q.isLoading || q.isPlaceholderData} />}
+          </div>
+        </section>
+      )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12">
         <StaffToday className="xl:col-span-7" />
-        <LeadersCard className="xl:col-span-5" />
+        {v145 ? <TopStaffCard className="xl:col-span-5" d={d} loading={q.isLoading || q.isPlaceholderData} /> : <LeadersCard className="xl:col-span-5" />}
       </div>
 
       <BranchesCard className="mt-4" />
