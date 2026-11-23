@@ -7,7 +7,7 @@ import { useUi } from '@/shared/lib/ui-store';
 import { Tooltip } from '@/shared/ui/primitives';
 import { toneClass, type Tone } from '@/shared/ui/status';
 import type { CustomerDetail, CustomerListItem } from '../api/customers';
-import { workMarks } from '../model/activity';
+import { lastPaidBy, monthPeople, workMarks, type WhoVM } from '../model/activity';
 
 /**
  * FR-W-037: four small marks on every customer row, in every filter: visited, paid, promised (this month) and
@@ -19,11 +19,16 @@ export function WorkMarks({ c, className }: { c: CustomerListItem; className?: s
   useUi((s) => s.bnDigits);
   const m = workMarks(c);
   const a = c.activity;
-  const visit = m.visit === 'today' ? t('marks.visitToday') : m.visit === 'month' ? t('marks.visitMonth', { n: formatNumber(a?.visitCount ?? 0) }) : t('marks.visitNone');
-  const paid = m.paid === 'paid' ? t('marks.paid', { amount: formatMoney(a?.paidPoisha ?? 0) }) : m.paid === 'pending' ? t('marks.pending', { amount: formatMoney(a?.pendingPoisha ?? 0) }) : t('marks.paidNone');
+  const by = (name: string | null | undefined, s: string) => (name ? `${s} · ${t('who.by', { name })}` : s);
+  const payer = lastPaidBy(a);
+  const visit = by(m.visit ? a?.lastVisitByName : null, m.visit === 'today' ? t('marks.visitToday') : m.visit === 'month' ? t('marks.visitMonth', { n: formatNumber(a?.visitCount ?? 0) }) : t('marks.visitNone'));
+  const paid = by(
+    m.paid && payer ? whoName(payer, t) : null,
+    m.paid === 'paid' ? t('marks.paid', { amount: formatMoney(a?.paidPoisha ?? 0) }) : m.paid === 'pending' ? t('marks.pending', { amount: formatMoney(a?.pendingPoisha ?? 0) }) : t('marks.paidNone'),
+  );
   const promise =
     m.promise === 'open'
-      ? t('marks.promiseOpen', { date: c.openPromise?.promisedDate ? formatDate(c.openPromise.promisedDate, { withYear: false }) : '' })
+      ? by(c.openPromise?.createdByName, t('marks.promiseOpen', { date: c.openPromise?.promisedDate ? formatDate(c.openPromise.promisedDate, { withYear: false }) : '' }))
       : m.promise === 'broken'
         ? t('marks.promiseBroken')
         : m.promise === 'kept'
@@ -90,29 +95,40 @@ export function MonthActivity({ c, className }: { c: CustomerDetail; className?:
   useUi((s) => s.bnDigits);
   const a = c.activity;
   if (!a) return null;
-  const cells: { label: string; value: React.ReactNode; note?: React.ReactNode; tone?: string }[] = [
+  const who = monthPeople(a);
+  const lastVisit = a.lastVisitAt ? t('month.lastOn', { date: formatDate(a.lastVisitAt, { withYear: false }) }) : undefined;
+  const openBy = c.openPromise?.createdByName;
+  const cells: { key: string; label: string; value: React.ReactNode; note?: React.ReactNode; who?: React.ReactNode; tone?: string }[] = [
     {
+      key: 'visits',
       label: t('month.visits'),
       value: a.visitCount > 0 ? t('month.visitsN', { n: formatNumber(a.visitCount) }) : t('month.none'),
-      note: a.visitedToday ? t('month.visitedToday') : a.lastVisitAt ? t('month.lastOn', { date: formatDate(a.lastVisitAt, { withYear: false }) }) : undefined,
+      note: a.visitedToday ? t('month.visitedToday') : lastVisit,
+      who: who.visits.length ? <WhoList people={who.visits} /> : a.lastVisitByName ? t('who.by', { name: a.lastVisitByName }) : undefined,
       tone: a.visitedToday ? 'text-success' : undefined,
     },
     {
+      key: 'paid',
       label: t('month.paid'),
       value: a.paidPoisha > 0 ? formatMoney(a.paidPoisha) : t('month.none'),
       note: a.lastPaidDate ? t('month.lastOn', { date: formatDate(a.lastPaidDate, { withYear: false }) }) : undefined,
+      who: who.paid.length ? <WhoList people={who.paid} /> : undefined,
       tone: a.paidPoisha > 0 ? 'text-st-paid' : undefined,
     },
     {
+      key: 'pending',
       label: t('month.pending'),
       value: a.pendingPoisha > 0 ? formatMoney(a.pendingPoisha) : '—',
       note: a.pendingPoisha > 0 ? t('month.pendingNote') : undefined,
+      who: who.pending.length ? <WhoList people={who.pending} pending /> : undefined,
       tone: a.pendingPoisha > 0 ? 'text-st-pending' : undefined,
     },
     {
+      key: 'promises',
       label: t('month.promises'),
       value: c.openPromise ? t('month.promiseOpen') : a.promisesMade + a.promisesKept + a.promisesBroken > 0 ? t('month.promisesN', { n: formatNumber(a.promisesMade) }) : t('month.none'),
-      note: [a.promisesKept > 0 ? t('month.kept', { n: formatNumber(a.promisesKept) }) : null, a.promisesBroken > 0 ? t('month.broken', { n: formatNumber(a.promisesBroken) }) : null].filter(Boolean).join(' · ') || undefined,
+      note: [openBy ? t('who.promisedBy', { name: openBy }) : null, a.promisesKept > 0 ? t('month.kept', { n: formatNumber(a.promisesKept) }) : null, a.promisesBroken > 0 ? t('month.broken', { n: formatNumber(a.promisesBroken) }) : null].filter(Boolean).join(' · ') || undefined,
+      who: who.promises.length ? <WhoList people={who.promises} /> : undefined,
       tone: a.promisesBroken > 0 && !c.openPromise ? 'text-danger' : undefined,
     },
   ];
@@ -126,13 +142,41 @@ export function MonthActivity({ c, className }: { c: CustomerDetail; className?:
       </div>
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-4 [&>*]:bg-surface">
         {cells.map((x) => (
-          <div key={x.label} className="px-3 py-2.5">
+          <div key={x.key} className="px-3 py-2.5" data-testid={`month-${x.key}`}>
             <dt className="text-xs font-medium text-fg-tertiary">{x.label}</dt>
             <dd className={cn('tabular mt-0.5 text-base font-semibold text-fg', x.tone)}>{x.value}</dd>
             {x.note && <dd className="text-xs text-fg-tertiary">{x.note}</dd>}
+            {x.who && <dd className="mt-1 text-xs text-fg-secondary">{x.who}</dd>}
           </div>
         ))}
       </dl>
     </section>
+  );
+}
+
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+/** The name to show for one person: the office for an office payment without a name (FR-CUS-021). */
+export function whoName(w: WhoVM, t: TFn): string {
+  return w.office ? t('who.office') : w.removed ? t('who.removed') : w.name;
+}
+
+/**
+ * Who did this month's visits, promises or money: "Rakib Hossain ×2", "Office ৳5,000". Field money not in the ERP yet
+ * carries its own "not in ERP yet" label and is never added to the ERP money (CLAUDE.md §2.6).
+ */
+export function WhoList({ people, pending }: { people: WhoVM[]; pending?: boolean }) {
+  const { t } = useTranslation('customers');
+  return (
+    <ul className="space-y-0.5" data-testid="who-list">
+      {people.map((w, i) => (
+        <li key={i} className="flex flex-wrap items-baseline gap-x-1.5">
+          <span className={cn(w.office && 'italic')} data-who={w.office ? 'office' : 'person'}>{whoName(w, t)}</span>
+          {w.count != null && w.count > 1 && <span className="tabular text-fg-tertiary">×{formatNumber(w.count)}</span>}
+          {w.amountPoisha != null && <span className="tabular text-fg-tertiary">{formatMoney(w.amountPoisha)}</span>}
+          {pending && <span className="text-st-pending">{t('who.notInErp')}</span>}
+        </li>
+      ))}
+    </ul>
   );
 }

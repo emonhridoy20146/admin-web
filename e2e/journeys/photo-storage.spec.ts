@@ -62,11 +62,23 @@ test('attendance: an admin deletes the photos of a staff member\'s day and the l
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await login(page, 'admin');
   await nav(page, attendanceBn.title);
-  await page.getByRole('button', { name: attendanceBn.prevDay }).click();
+  // A past working day: yesterday, or the day before when yesterday was Friday (the weekly day off: nobody
+  // worked, no photos). The mock's day status is a hash of staff member and date, so whoever is first in the
+  // list may be absent or on leave that day; only rows with clock times are tried.
+  const prev = page.getByRole('button', { name: attendanceBn.prevDay });
+  const dateInput = page.getByLabel(attendanceBn.date, { exact: true });
+  await prev.click();
+  await expect(page).toHaveURL(/date=\d{4}-\d{2}-\d{2}/);
+  if (new Date(`${await dateInput.inputValue()}T12:00:00Z`).getUTCDay() === 5) {
+    const friday = await dateInput.inputValue();
+    await prev.click();
+    await expect(dateInput).not.toHaveValue(friday);
+  }
   const button = page.getByRole('dialog').getByRole('button', { name: attendanceBn.events.deletePhotos.button });
-  // the first staff member with photos that day
-  const rows = page.locator('tbody tr');
-  await expect(rows.first()).toContainText(/AM|PM/);
+  // the first staff member with photos that day (the drawer reads the page's date, so a row still on screen
+  // from the day before only opens that person's day here)
+  const rows = page.locator('tbody tr').filter({ hasText: /AM|PM/ });
+  await expect(rows.first()).toBeVisible();
   let found = false;
   for (let i = 0; i < Math.min(8, await rows.count()); i++) {
     await rows.nth(i).locator('td').nth(3).click();

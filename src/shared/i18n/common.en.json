@@ -184,7 +184,9 @@
     "syncDone": "Synced from the ERP: {{n}} customers updated.",
     "syncUpToDate": "Synced from the ERP. Nothing new.",
     "syncMore": "The sync is still running. Press Sync again in a moment.",
-    "syncFailed": "The sync did not finish"
+    "syncFailed": "The sync did not finish",
+    "syncSkipped": "ERP customer rows left out (could not be read): {{n}}.",
+    "syncFailedBranches": "Branches that failed (the next sync tries them again): {{n}}."
   },
   "user": {
     "language": "Language",

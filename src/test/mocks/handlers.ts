@@ -230,12 +230,50 @@ function mockActivity(c: db.MockCustomer): Pick<S['CustomerListItem'], 'activity
   const promises = db.promises.filter((p) => p.row.customer?.id === id);
   const due = promises.filter((p) => (p.row.promisedDate ?? '').startsWith(month));
   const plans = (c.detail.plans ?? []).filter((p) => p.status !== 'cancelled');
+  const cashLike = (p: S['Plan']) => p.kind != null && p.kind !== 'installment' && p.kind !== 'credit';
+  // 1.44.0 (FR-CUS-021): who did the month's work, newest first
+  const people = (rows: { userId?: string; name?: string; at: string }[]): S['ActivityPerson'][] => {
+    const by = new Map<string, S['ActivityPerson']>();
+    for (const x of [...rows].sort((a, b) => (a.at < b.at ? 1 : -1))) {
+      const id = x.userId ?? '';
+      const e = by.get(id);
+      if (e) e.count += 1;
+      else by.set(id, { userId: id, name: x.name ?? '', count: 1, lastAt: x.at });
+    }
+    return [...by.values()];
+  };
+  const visitedBy = people(visits.map((v) => ({ userId: v.row.user?.id, name: v.row.user?.name, at: v.row.checkInAt ?? '' })));
+  const promisedRows = promises.filter((p) => db.dhakaDate(p.row.createdAt ?? '').startsWith(month) && p.row.status !== 'cancelled');
+  const promisedBy = people(promisedRows.map((p) => ({ userId: p.row.owner?.id, name: p.row.owner?.name, at: p.row.createdAt ?? '' })));
+  const payers = new Map<string, S['ActivityPayer']>();
+  const addPayer = (x: Omit<S['ActivityPayer'], 'amountPoisha' | 'lastDate'>, amount: number, date: string) => {
+    const k = `${x.pending}|${x.source}|${x.name}`;
+    const e = payers.get(k);
+    if (e) Object.assign(e, { amountPoisha: e.amountPoisha + amount, lastDate: date > e.lastDate ? date : e.lastDate });
+    else payers.set(k, { ...x, amountPoisha: amount, lastDate: date });
+  };
+  for (const p of paid) {
+    const staff = p.source === 'field' && c.item.assignee?.id;
+    const who: Omit<S['ActivityPayer'], 'amountPoisha' | 'lastDate'> = staff
+      ? { name: c.item.assignee?.name ?? '', source: 'staff', userId: c.item.assignee?.id, pending: false }
+      : p.referrerName ? { name: p.referrerName, source: 'erp_referrer', pending: false }
+        : p.collectorName ? { name: p.collectorName, source: 'collector_name', pending: false }
+          : { name: '', source: 'unknown', pending: false };
+    addPayer(who, p.amountPoisha ?? 0, p.date ?? '');
+  }
+  for (const x of pending) addPayer({ name: x.collector?.name ?? '', source: 'staff', userId: x.collector?.id, pending: true }, x.amountPoisha ?? 0, db.dhakaDate(x.recordedAt ?? ''));
+  const paidBy = [...payers.values()].sort((a, b) => (a.lastDate < b.lastDate ? 1 : a.lastDate > b.lastDate ? -1 : Number(a.pending) - Number(b.pending)));
   return {
     activity: {
       month,
       visitCount: visits.length,
       visitedToday: visits.some((v) => db.dhakaDate(v.row.checkInAt ?? '') === db.today()),
       lastVisitAt,
+      visitedBy,
+      promisedBy,
+      paidBy,
+      lastVisitByName: visitedBy[0]?.name ?? null,
+      lastPaidByName: paidBy[0]?.name || null,
       paidPoisha: paid.reduce((n, p) => n + (p.amountPoisha ?? 0), 0),
       lastPaidDate: paid.map((p) => p.date ?? '').sort().pop() ?? null,
       pendingPoisha: pending.reduce((n, x) => n + (x.amountPoisha ?? 0), 0),
@@ -243,7 +281,7 @@ function mockActivity(c: db.MockCustomer): Pick<S['CustomerListItem'], 'activity
       promisesKept: due.filter((p) => p.row.status === 'kept' || p.row.status === 'partially_kept').length,
       promisesBroken: due.filter((p) => p.row.status === 'broken').length,
     },
-    invoiceCount: { total: plans.length, open: plans.filter((p) => p.status !== 'closed' && (p.outstandingPoisha ?? 0) > 0).length },
+    invoiceCount: { total: plans.length, open: plans.filter((p) => p.status !== 'closed' && !cashLike(p) && (p.outstandingPoisha ?? 0) > 0).length },
   };
 }
 
@@ -338,7 +376,8 @@ export const handlers = [
     erpSyncCalls += 1;
     const partial = erpSyncCalls % 2 === 1;
     if (!partial) lastErpSyncAt = new Date().toISOString();
-    return HttpResponse.json({ customers: partial ? 120 : 37, branches: 3, partial, durationMs: 250, finishedAt: new Date().toISOString() });
+    // 1.44.0: the cut call also reports one unreadable ERP row and one failed branch, so the header shows them
+    return HttpResponse.json({ customers: partial ? 120 : 37, branches: 3, partial, skipped: partial ? 1 : 0, failedBranches: partial ? 0 : 1, durationMs: 250, finishedAt: new Date().toISOString() });
   })),
   http.get(`${BASE}/system/erp-employees`, authed(({ ctx }) => need(ctx, 'user.manage') ?? HttpResponse.json({ items: db.erpEmployees }))),
   http.get(`${BASE}/system/health`, () => HttpResponse.json({ status: 'ok', version: '1.6.0', mongo: 'ok', erp: 'ok', storage: 'db', cloudStorage: 'cloudinary' })),

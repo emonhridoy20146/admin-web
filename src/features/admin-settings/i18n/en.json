@@ -18,6 +18,10 @@
       "title": "Customers",
       "desc": "Which customers field staff see in the app, and when their map pins need a manager."
     },
+    "erp": {
+      "title": "ERP data",
+      "desc": "Which customers and invoices are pulled from the ERP."
+    },
     "tags": {
       "title": "Bad-customer tags",
       "desc": "Whether a manager must approve a tag set by field staff."
@@ -191,6 +195,10 @@
     "tags.requireApproval": {
       "label": "Manager approval",
       "help": "Tags by staff wait for a manager before they apply."
+    },
+    "erp.customerScope": {
+      "label": "Customers pulled from the ERP",
+      "help": "Every customer: every ERP customer and every invoice, cash sales included (shown with nothing due). With a balance only: only customers with an installment or credit invoice. After a change the next sync starts over for every branch, so press Sync until it finishes."
     }
   },
   "units": {
@@ -217,7 +225,9 @@
     "when_missing": "Apply at once when the customer has no pin",
     "always": "Always wait for a manager",
     "boardAll": "Every branch",
-    "boardBranch": "Own branches only"
+    "boardBranch": "Own branches only",
+    "erpScopeAll": "Every customer and invoice (cash sales too)",
+    "erpScopeReceivables": "Only customers with an installment or credit invoice"
   },
   "weekdays": [
     "Sun",

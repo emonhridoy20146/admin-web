@@ -48,10 +48,11 @@ export function InvoicesTab({ c }: { c: CustomerDetail }) {
       ) : (
         <ul className="space-y-2" aria-label={t('tabs.invoices')}>
           {shown.map((p) => {
-            const credit = kindOf(p) === 'credit';
+            const k = kindOf(p);
+            const credit = k === 'credit';
             const st = stateOf(p);
             const pay = planPayState(p, today);
-            const next = st === 'open' ? (credit ? null : nextDue(p, today)) : null;
+            const next = st === 'open' && k === 'installment' ? nextDue(p, today) : null;
             const term = credit && st === 'open' ? creditTerm(p, today) : null;
             return (
               <li key={p.erpPlanId}>
@@ -63,14 +64,15 @@ export function InvoicesTab({ c }: { c: CustomerDetail }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold text-fg">{p.invoiceNo ?? p.erpPlanId}</span>
-                      <Badge tone={credit ? 'info' : 'neutral'} icon={false}>{credit ? t('invoice.kindCredit') : t('invoice.kindInstallment')}</Badge>
+                      <Badge tone={credit ? 'info' : 'neutral'} icon={false}>{t(`invoice.kind${k === 'cash' ? 'Cash' : credit ? 'Credit' : 'Installment'}`)}</Badge>
                       {pay && <PayStateBadge state={pay} missed={missedOf(p, today)} />}
-                      {st === 'closed' && <Badge tone="neutral">{t(`planStatus.${p.status}`)}</Badge>}
+                      {st === 'closed' && k !== 'cash' && <Badge tone="neutral">{t(`planStatus.${p.status}`)}</Badge>}
+                      {k === 'cash' && <span className="text-xs text-fg-secondary">{t('invoice.nothingDue')}</span>}
                     </span>
                     <span className="mt-1 block truncate text-sm text-fg">{p.product}</span>
                     <span className="mt-0.5 block text-xs text-fg-tertiary">
                       {(p.saleDate ?? p.startDate) && t('invoice.soldOn', { date: formatDate((p.saleDate ?? p.startDate)!) })}
-                      {!credit && p.installmentCount ? ` · ${t('installments', { n: formatNumber(p.installmentCount) })}` : ''}
+                      {k === 'installment' && p.installmentCount ? ` · ${t('installments', { n: formatNumber(p.installmentCount) })}` : ''}
                       {next ? ` · ${t('invoice.nextDue', { date: formatDate(next.date, { withYear: false }), amount: formatMoney(next.amountPoisha) })}` : ''}
                       {term ? ` · ${t('invoice.creditDue', { date: formatDate(term.dueDate) })}` : ''}
                     </span>
@@ -86,7 +88,7 @@ export function InvoicesTab({ c }: { c: CustomerDetail }) {
                     </span>
                     <span>
                       <span className="block text-xs text-fg-tertiary">{t('invoice.left')}</span>
-                      <MoneyText poisha={p.outstandingPoisha ?? 0} className={cn('font-semibold', st === 'open' ? 'text-fg' : 'text-fg-tertiary')} />
+                      {k === 'cash' ? <span className="font-semibold text-fg-tertiary">—</span> : <MoneyText poisha={p.outstandingPoisha ?? 0} className={cn('font-semibold', st === 'open' ? 'text-fg' : 'text-fg-tertiary')} />}
                     </span>
                   </span>
                   <ChevronRight className="hidden size-4 shrink-0 text-fg-tertiary group-hover:text-fg sm:block rtl:rotate-180" aria-hidden />

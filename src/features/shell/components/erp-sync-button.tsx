@@ -8,7 +8,7 @@ import { useCan } from '@/shared/auth/session';
 import { formatNumber } from '@/shared/lib/format';
 import { Popover, PopoverContent, PopoverTrigger, Tooltip } from '@/shared/ui/primitives';
 import { ErrorBanner } from '@/shared/ui/feedback';
-import { useErpSync } from '../api/queries';
+import { useErpSync, type ErpSyncSummary } from '../api/queries';
 
 /**
  * "Sync from ERP" in the top right of the header (FR-ERP-007). Success is a toast; a failure is an inline banner in a
@@ -28,7 +28,9 @@ export function ErpSyncButton() {
     setErrorOpen(false);
     sync.mutate(setProgress, {
       onSuccess: (r) => {
-        if (r.partial) toast.message(t('erp.syncMore'));
+        const problems = syncProblems(r, t);
+        if (r.partial) toast.message(t('erp.syncMore'), problems ? { description: problems } : undefined);
+        else if (problems) toast.warning(r.customers > 0 ? t('erp.syncDone', { n: formatNumber(r.customers) }) : t('erp.syncUpToDate'), { description: problems });
         else toast.success(r.customers > 0 ? t('erp.syncDone', { n: formatNumber(r.customers) }) : t('erp.syncUpToDate'));
       },
       onError: () => setErrorOpen(true),
@@ -64,4 +66,13 @@ export function ErpSyncButton() {
       </PopoverContent>
     </Popover>
   );
+}
+
+/**
+ * Contract 1.44.0: what the sync could not do, shown only when there is something: ERP customer rows left out
+ * (`skipped`) and branches whose pull failed (`failedBranches`, tried again by the next sync). Null when both are 0.
+ */
+export function syncProblems(r: Pick<ErpSyncSummary, 'skipped' | 'failedBranches'>, t: (key: string, opts?: Record<string, unknown>) => string): string | null {
+  const parts = [r.skipped > 0 ? t('erp.syncSkipped', { n: formatNumber(r.skipped) }) : null, r.failedBranches > 0 ? t('erp.syncFailedBranches', { n: formatNumber(r.failedBranches) }) : null].filter(Boolean);
+  return parts.length ? parts.join(' ') : null;
 }
