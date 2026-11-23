@@ -699,7 +699,9 @@ for (const b of branches) {
       const size = Math.min(free.length, r3() < 0.7 ? 2 : 3);
       const picked = [...free].sort(() => r3() - 0.5).slice(0, size);
       picked.forEach((x) => used.add(x.id!));
-      const start = now().startOf('day').minus({ days: d }).plus({ hours: 9, minutes: 30 + i3(0, 90) });
+      const planned = now().startOf('day').minus({ days: d }).plus({ hours: 9, minutes: 30 + i3(0, 90) });
+      // today's sessions started before "now", so an open session exists at any hour (the journeys ran red before 9:30 Dhaka)
+      const start = d === 0 && planned > now() ? DateTime.max(now().minus({ minutes: 20 + g * 5 }), now().startOf('day')) : planned;
       if (start > now()) continue;
       const creator = picked[0]!;
       const members: S['CoworkMember'][] = [{ userId: creator.id, name: creator.name?.en, status: 'accepted', invitedBy: creator.id, invitedAt: isoAt(start), respondedAt: isoAt(start), leftAt: null }];

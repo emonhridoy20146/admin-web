@@ -69,9 +69,13 @@ export function matchPreset(r: DayRange, today: string, presets: readonly RangeP
   }) ?? null;
 }
 
-/** Puts the two ends in order; a range longer than `maxDays` is cut at its start. */
-export function normalizeRange(r: DayRange, maxDays = 366): DayRange {
+/**
+ * Puts the two ends in order. With `maxDays` a longer range is cut at its start (for an API with a limit); links are
+ * never cut, so "everything ever" (`from=2020-01-01&to=2099-12-31`) stays what it says.
+ */
+export function normalizeRange(r: DayRange, maxDays?: number): DayRange {
   const [a, b] = r.from <= r.to ? [r.from, r.to] : [r.to, r.from];
+  if (!maxDays) return { from: a, to: b };
   const min = addDays(b, -(maxDays - 1));
   return { from: a < min ? min : a, to: b };
 }

@@ -31,6 +31,9 @@ describe('readRange', () => {
     expect(readRange({ from: today, to: today }, today, PAST_PRESETS, '7d').choice).toBe('today');
     expect(readRange({ from: '2026-11-05' }, today, PAST_PRESETS, 'today')).toMatchObject({ from: '2026-11-05', to: '2026-11-05' });
   });
+  it('keeps a long range from the link as it is', () => {
+    expect(readRange({ from: '2020-01-01', to: '2099-12-31' }, today, PAST_PRESETS, 'today')).toEqual({ choice: 'custom', from: '2020-01-01', to: '2099-12-31' });
+  });
   it('ignores bad dates', () => {
     expect(readRange({ from: '2026-13-40', to: 'x' }, today, PAST_PRESETS, 'today').choice).toBe('today');
   });
