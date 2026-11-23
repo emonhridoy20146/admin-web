@@ -2140,6 +2140,7 @@ export interface paths {
          *     clientId again answers 200 with the stored prospect (another user's clientId → 409 IDEMPOTENCY_MISMATCH).
          *     The branch is the creator's home branch, or `branchId` (in scope) for office users. `fromProspectId` copies nothing
          *     but records that this is a re-entry of an older prospect (the office "create new from old").
+         *     An unknown or out-of-scope `branchId` or `fromProspectId` is 400 VALIDATION_FAILED.
          */
         post: operations["createProspect"];
         delete?: never;
@@ -2165,7 +2166,8 @@ export interface paths {
         /**
          * @description Added in 1.45.0. prospect.manage. Edits the details and/or moves the status between new, contacted and dropped
          *     (converted only through /convert; a converted prospect is re-opened through /reopen). Every status change is kept
-         *     in `history`. Audited (`prospect.updated`).
+         *     in `history`. Audited (`prospect.updated`). Edit, convert and reopen answer 409 INVALID_STATE (reason PROSPECT_CHANGED)
+         *     when another change landed at the same moment; reload and retry. A repeat with nothing new changes nothing.
          */
         patch: operations["updateProspect"];
         trace?: never;
@@ -4262,7 +4264,7 @@ export interface components {
             promisedAmountPoisha: number;
             note?: string;
             /** @description Added in 1.45.0 (FR-PRM-006). Id of the broken or partially kept promise this one follows up (same customer). Omit for a first promise */
-            followUpOf?: string;
+            followUpOf?: string | null;
         };
         Promise: components["schemas"]["PromiseCreate"] & {
             id?: string;
