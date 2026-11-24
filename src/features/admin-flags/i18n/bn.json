@@ -21,7 +21,6 @@
   "reset": "ফেরান",
   "saved": "ফ্ল্যাগ হালনাগাদ হয়েছে",
   "names": {
-    "module.dashboard": "ওভারভিউ ড্যাশবোর্ড",
     "module.inbox": "মনোযোগ দরকার ইনবক্স",
     "module.customers": "গ্রাহক",
     "module.tags": "খারাপ গ্রাহক ট্যাগ",

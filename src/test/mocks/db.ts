@@ -484,7 +484,7 @@ inbox.sort((a, b) => (a.createdAt! < b.createdAt! ? 1 : -1));
 
 // ---------- flags ----------
 const FLAG_DEFS: [string, string, boolean][] = [
-  ['module.dashboard', 'Overview dashboard and KPIs', true], ['module.inbox', 'Needs-attention exceptions inbox', true],
+  ['module.inbox', 'Needs-attention exceptions inbox', true],
   ['module.customers', 'Customers list, detail and map', true], ['module.tags', 'Bad-customer suggestion and tagging', true],
   ['module.collections', 'Field collections and conflicts', true], ['module.cash', 'Cash on hand and deposits', true],
   ['module.assignments', 'Areas and assignments', true], ['module.handovers', 'Handovers between staff', true],
