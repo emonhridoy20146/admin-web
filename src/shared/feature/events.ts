@@ -44,4 +44,5 @@ export const EV = {
   visitCreated: 'visit.created',
   branchChanged: 'branch.changed',
   prospectChanged: 'prospect.changed',
+  requestChanged: 'request.changed',
 } as const;

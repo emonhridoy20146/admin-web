@@ -89,6 +89,14 @@ function scope(ctx: Ctx, url: URL): string[] {
   const mine = ctx.user.role === 'super_admin' || ctx.user.role === 'area_manager' || ctx.user.role === 'viewer' ? db.branches.map((b) => b.id!) : (ctx.user.branchIds ?? []);
   return req ? mine.filter((b) => b === req) : mine;
 }
+/** 1.48.0: requests a caller sees — request.view: their branches (SA/AM every branch) plus what they sent or hold; else only those. */
+function reqVisible(ctx: Ctx, url: URL, any = false): S['Request'][] {
+  const p = perms(ctx.user);
+  const mine = (r: S['Request']) => r.createdBy.id === ctx.user.id || r.assignee?.id === ctx.user.id;
+  if (!p.has('request.view')) return db.requests.filter(mine);
+  const sc = any ? scope(ctx, new URL(url.origin)) : scope(ctx, url);
+  return db.requests.filter((r) => sc.includes(r.branchId) || mine(r));
+}
 const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -1923,6 +1931,125 @@ export const handlers = [
     const p = page(all, url);
     return HttpResponse.json({ items: p.items, nextCursor: p.nextCursor });
   })),
+  // ---------- requests (1.48.0, FR-REQ-001..006, ADR-066) ----------
+  http.get(`${BASE}/requests`, authed(({ ctx, url }) => {
+    const p = perms(ctx.user);
+    if (!p.has('request.view') && !p.has('request.create')) return problem(403, 'FORBIDDEN', 'No access to requests', 'request.view');
+    const sp = url.searchParams;
+    let all = reqVisible(ctx, url);
+    const from = sp.get('from'); const to = sp.get('to');
+    if (from) all = all.filter((r) => r.createdDate >= from);
+    if (to) all = all.filter((r) => r.createdDate <= to);
+    for (const k of ['priority', 'type'] as const) { const v = sp.get(k); if (v) all = all.filter((r) => r[k] === v); }
+    const queue = sp.get('queue'); if (queue) all = all.filter((r) => r.currentQueue === queue);
+    const assigneeId = sp.get('assigneeId'); if (assigneeId) all = all.filter((r) => r.assignee?.id === (assigneeId === 'me' ? ctx.user.id : assigneeId));
+    const createdBy = sp.get('createdBy'); if (createdBy) all = all.filter((r) => r.createdBy.id === createdBy);
+    const customerId = sp.get('customerId'); if (customerId) all = all.filter((r) => r.customerId === customerId);
+    const text = sp.get('q')?.toLowerCase(); if (text) all = all.filter((r) => `${r.title} ${r.body}`.toLowerCase().includes(text));
+    const counts = { open: 0, in_progress: 0, forwarded: 0, resolved: 0, closed: 0, reopened: 0 };
+    for (const r of all) counts[r.status]++;
+    const st = sp.get('status')?.split(',').filter(Boolean);
+    if (st?.length) all = all.filter((r) => st.includes(r.status));
+    all = [...all].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const pg = page(all, url);
+    return HttpResponse.json({ items: pg.items, nextCursor: pg.nextCursor, total: pg.total, counts });
+  })),
+  http.post(`${BASE}/requests`, authed(async ({ request, ctx, url }) => {
+    const deny = need(ctx, 'request.create');
+    if (deny) return deny;
+    const b = (await request.json()) as S['RequestCreate'];
+    const same = db.requests.find((r) => r.clientId === b.clientId);
+    if (same) return same.createdBy.id === ctx.user.id ? HttpResponse.json(same) : problem(409, 'IDEMPOTENCY_MISMATCH', 'clientId used by someone else');
+    if (!b.title?.trim() || !b.body?.trim()) return problem(400, 'VALIDATION_FAILED', 'title and body are required');
+    const branchId = b.branchId && perms(ctx.user).has('request.view') && scope(ctx, url).includes(b.branchId) ? b.branchId : (ctx.user.branchIds?.[0] ?? db.branches[0]!.id!);
+    const level = b.priority === 'important' ? 'super_admin' : 'area_manager';
+    const at = new Date().toISOString();
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    const r: S['Request'] = {
+      id: db.oid('6791'), clientId: b.clientId, type: b.type, priority: b.priority, title: b.title.trim(), body: b.body.trim(), customerId: b.customerId ?? null, photoMediaIds: b.photoMediaIds ?? [],
+      branchId, createdBy: me, createdAt: at, createdDate: db.today(), status: 'open', currentQueue: level, level, assignee: null, dueAt: b.dueAt ?? null,
+      resolvedAt: null, resolvedBy: null, resolutionNote: null, closedAt: null, updatedAt: at, version: 1,
+      timeline: [{ id: db.oid('6790'), kind: 'created', at, actor: me, note: null, from: null, to: { queue: level, user: null }, status: { from: null, to: 'open' } }],
+    };
+    db.requests.unshift(r);
+    db.addAudit({ actor: actor(ctx.user), action: 'request.created', entity: 'request', entityId: r.id, after: { priority: r.priority, queue: level }, reason: '' });
+    return HttpResponse.json(r, { status: 201 });
+  })),
+  http.get(`${BASE}/requests/:id`, authed(({ ctx, url, params }) => {
+    const r = reqVisible(ctx, url, true).find((x) => x.id === params.id);
+    return r ? HttpResponse.json(r) : problem(404, 'NOT_FOUND', 'Request not found');
+  })),
+  http.post(`${BASE}/requests/:id/:action`, authed(async ({ request, ctx, url, params }) => {
+    const r = reqVisible(ctx, url, true).find((x) => x.id === params.id);
+    if (!r) return problem(404, 'NOT_FOUND', 'Request not found');
+    const action = params.action as 'comment' | 'forward' | 'assign' | 'resolve' | 'reopen' | 'close';
+    const b = (await request.json().catch(() => ({}))) as { note?: string; text?: string; clientId?: string; queue?: 'area_manager' | 'super_admin'; userId?: string };
+    const p = perms(ctx.user);
+    const atLevel = r.level === 'super_admin' ? p.has('request.important.manage') : p.has('request.manage');
+    const me = { id: ctx.user.id!, name: ctx.user.name?.en ?? '' };
+    const creator = r.createdBy.id === me.id;
+    const isAssignee = r.assignee?.id === me.id;
+    const finished = r.status === 'resolved' || r.status === 'closed';
+    const forbid = () => problem(403, 'FORBIDDEN', 'You cannot do this on this request', r.level === 'super_admin' ? 'request.important.manage' : 'request.manage');
+    const now = new Date().toISOString();
+    const entry = (kind: S['RequestTimelineEntry']['kind'], extra: Partial<S['RequestTimelineEntry']> = {}) =>
+      r.timeline.push({ id: db.oid('6790'), kind, at: now, actor: me, note: null, from: null, to: null, status: null, ...extra });
+    const setStatus = (to: S['RequestStatus']) => { const from = r.status; r.status = to; return { from, to }; };
+    const target = (): S['RequestTarget'] => (r.currentQueue === 'assignee' ? { queue: 'assignee', user: r.assignee } : { queue: r.currentQueue, user: null });
+    const userTarget = (id?: string) => { const u = id ? db.userById(id) : undefined; return u && u.active && u.role !== 'viewer' ? u : null; };
+    switch (action) {
+      case 'comment': {
+        if (r.status === 'closed') return problem(409, 'INVALID_STATE', 'Request is closed', 'REQUEST_CLOSED');
+        if (!b.text?.trim()) return problem(400, 'VALIDATION_FAILED', 'text is required');
+        if (!r.timeline.some((e) => e.id === `c-${b.clientId}`)) r.timeline.push({ id: `c-${b.clientId}`, kind: 'comment', at: now, actor: me, note: b.text.trim(), from: null, to: null, status: null });
+        break;
+      }
+      case 'forward':
+      case 'assign': {
+        if (!atLevel) return forbid();
+        if (finished) return problem(409, 'INVALID_STATE', 'Request is finished');
+        const from = target();
+        if (action === 'forward' && b.queue) {
+          r.currentQueue = b.queue; r.level = b.queue; r.assignee = null;
+          entry('forwarded', { note: b.note ?? null, from, to: { queue: b.queue, user: null }, status: setStatus('forwarded') });
+        } else {
+          const u = userTarget(b.userId);
+          if (!u) return problem(422, 'BUSINESS_RULE', 'Unknown target', 'REQUEST_INVALID_TARGET');
+          r.currentQueue = 'assignee'; r.assignee = { id: u.id!, name: u.name?.en ?? '' };
+          entry(action === 'forward' ? 'forwarded' : 'assigned', { note: b.note ?? null, from, to: { queue: 'assignee', user: r.assignee }, status: setStatus(action === 'forward' ? 'forwarded' : 'in_progress') });
+        }
+        break;
+      }
+      case 'resolve': {
+        if (!atLevel && !isAssignee) return forbid();
+        if (finished) return problem(409, 'INVALID_STATE', 'Request is finished');
+        if (!b.note?.trim()) return problem(400, 'VALIDATION_FAILED', 'note is required');
+        r.resolvedAt = now; r.resolvedBy = me; r.resolutionNote = b.note.trim();
+        entry('resolved', { note: b.note.trim(), status: setStatus('resolved') });
+        break;
+      }
+      case 'reopen': {
+        if (!atLevel && !creator) return forbid();
+        if (!finished) return problem(409, 'INVALID_STATE', 'Request is open', 'REQUEST_OPEN');
+        if (!b.note?.trim()) return problem(400, 'VALIDATION_FAILED', 'note is required');
+        r.resolvedAt = null; r.resolvedBy = null; r.closedAt = null;
+        entry('reopened', { note: b.note.trim(), to: target(), status: setStatus('reopened') });
+        break;
+      }
+      case 'close': {
+        if (!atLevel && !creator) return forbid();
+        if (r.status === 'closed') return problem(409, 'INVALID_STATE', 'Already closed');
+        r.closedAt = now;
+        entry('closed', { note: b.note?.trim() || null, status: setStatus('closed') });
+        break;
+      }
+      default:
+        return problem(404, 'NOT_FOUND', 'Unknown action');
+    }
+    r.updatedAt = now; r.version += 1;
+    db.addAudit({ actor: actor(ctx.user), action: `request.${action === 'comment' ? 'commented' : action === 'forward' ? 'forwarded' : action === 'assign' ? 'assigned' : action === 'resolve' ? 'resolved' : action === 'reopen' ? 'reopened' : 'closed'}`, entity: 'request', entityId: r.id, reason: b.note ?? '' });
+    return HttpResponse.json(r);
+  })),
   // ---------- leave requests (1.12.0) ----------
   http.get(`${BASE}/leave-requests`, authed(({ ctx, url }) => {
     const g = (k: string) => url.searchParams.get(k);
@@ -2304,6 +2431,16 @@ function overview145(sc: string[], url: URL, col: S['Collection'][], staffIn: db
     pinApprovals: { count: db.proposals.filter((p) => sc.includes(p.branchId) && p.row.status === 'pending').length, link: L('/location-proposals', { status: 'pending' }) },
     cashInHand: { amountPoisha: pos.reduce((s, p) => s + (p.onHandPoisha ?? 0), 0), count: pos.filter((p) => (p.onHandPoisha ?? 0) > 0).length, link: L('/cash/positions') },
     coworkStats: { sessions: { count: sess.length, link: L('/cowork/sessions', { from, to }) } },
+    requestStats: (() => {
+      const live = db.requests.filter((r) => sc.includes(r.branchId) && r.status !== 'resolved' && r.status !== 'closed');
+      const st = 'open,in_progress,forwarded,reopened';
+      return {
+        areaManagerQueue: { count: live.filter((r) => r.currentQueue === 'area_manager').length, link: L('/requests', { queue: 'area_manager', status: st }) },
+        superAdminQueue: { count: live.filter((r) => r.currentQueue === 'super_admin').length, link: L('/requests', { queue: 'super_admin', status: st }) },
+        assigned: { count: live.filter((r) => r.currentQueue === 'assignee').length, link: L('/requests', { queue: 'assignee', status: st }) },
+        importantOpen: { count: live.filter((r) => r.priority === 'important').length, link: L('/requests', { priority: 'important', status: st }) },
+      };
+    })(),
     prospectStats: {
       created: { count: pros.filter((p) => (p.createdDate ?? '') >= from && (p.createdDate ?? '') <= to).length, link: L('/prospects', { from, to }) },
       converted: { count: pros.filter((p) => p.status === 'converted' && p.convertedAt && day(p.convertedAt) >= from && day(p.convertedAt) <= to).length, link: L('/prospects', { from, to, status: 'converted' }) },

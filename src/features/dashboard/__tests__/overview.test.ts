@@ -59,3 +59,15 @@ describe('pageHref (1.45.0 dashboard links)', () => {
     expect(pageHref(null, '/y/')).toBe('/y/');
   });
 });
+
+describe('pageHref for requestStats (1.48.0, FR-W-070)', () => {
+  const st = 'open,in_progress,forwarded,reopened';
+  it('opens the queue tab the number counts, without the default statuses', () => {
+    expect(pageHref({ path: '/requests', query: { queue: 'area_manager', status: st } }, '/')).toBe('/requests/?queue=area_manager');
+    expect(pageHref({ path: '/requests', query: { queue: 'super_admin', status: st } }, '/')).toBe('/requests/?queue=super_admin');
+  });
+  it('opens All with "with a person" for queue=assignee, and keeps priority', () => {
+    expect(pageHref({ path: '/requests', query: { queue: 'assignee', status: st } }, '/')).toBe('/requests/?queue=all&where=assignee');
+    expect(pageHref({ path: '/requests', query: { priority: 'important', status: st } }, '/')).toBe('/requests/?queue=all&priority=important');
+  });
+});

@@ -56,8 +56,9 @@ test('old links still open their page inside its section; a page below a tab has
 
   // a customer's own page: the Customers item is highlighted, the strip is not shown (the page has its own tabs)
   await nav(page, S.customers);
+  await expect(page.locator('main tbody tr a').first()).toBeVisible();
   await page.locator('main tbody tr').first().click();
-  await page.getByRole('dialog').locator('a[href^="/customers/"]').first().click();
+  await page.getByRole('dialog').getByRole('link', { name: custBn.openFull }).click();
   await expect(page).toHaveURL(/\/customers\/[^/?]+\/$/);
   await expect(page.getByTestId('section-tabs')).toHaveCount(0);
   await expect(menu.getByRole('link', { name: new RegExp(`^${S.customers}`) })).toHaveAttribute('aria-current', 'page');

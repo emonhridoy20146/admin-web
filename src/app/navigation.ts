@@ -13,7 +13,7 @@ import type { SectionDef } from '@/shared/feature/types';
 import './features';
 
 export const sections: SectionDef[] = [
-  { id: 'inbox', title: 'shell:sections.inbox', icon: Inbox, group: 'top', order: 2, tabs: ['/inbox', '/activity', '/notices'], badgeFrom: ['/inbox'] },
+  { id: 'inbox', title: 'shell:sections.inbox', icon: Inbox, group: 'top', order: 2, tabs: ['/inbox', '/requests', '/activity', '/notices'], badgeFrom: ['/inbox', '/requests'] },
   {
     id: 'customers', title: 'shell:sections.customers', icon: UserRound, group: 'field', order: 10,
     tabs: ['/customers', '/map', '/pin-approvals', '/prospects', '/areas', '/data-quality'],

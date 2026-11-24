@@ -120,7 +120,11 @@ const PAGES: Record<string, { page: string; keys: Record<string, string | null> 
   '/cowork/sessions': { page: '/cowork/', keys: { from: 'from', to: 'to', userId: 'userId', branchId: 'branch' } },
   '/attendance/days': { page: '/attendance/', keys: { branchId: 'branch' } },
   '/cash/positions': { page: '/cash/', keys: { branchId: 'branch' } },
+  // 1.48.0 requestStats: the inbox opens on the queue the number counts (see requestsHref for the special values)
+  '/requests': { page: '/requests/', keys: { queue: 'queue', status: 'status', priority: 'priority', branchId: 'branch' } },
 };
+
+const ACTIVE_REQUESTS = 'open,in_progress,forwarded,reopened';
 
 /**
  * Turns the list link the server gives with a dashboard number into the admin page that shows those rows, with the
@@ -133,6 +137,7 @@ export function pageHref(link: ApiLink | null | undefined, fallback: string): st
   const m = PAGES[path];
   if (!m) return fallback;
   const out = new URLSearchParams();
+  if (path === '/requests') return requestsHref(link.query ?? {}, m.page);
   for (const [k, v] of Object.entries(link.query ?? {})) {
     const key = m.keys[k];
     if (!key || v === '' || v == null) continue;
@@ -145,4 +150,23 @@ export function pageHref(link: ApiLink | null | undefined, fallback: string): st
   }
   const qs = out.toString();
   return qs ? `${m.page}?${qs}` : m.page;
+}
+
+/**
+ * The requests inbox's own link for a requestStats number (FR-W-070): a queue opens that queue tab; `queue=assignee`
+ * (waiting with a person) opens All with the "with a person" filter; no queue opens All; the "not finished" statuses are
+ * the page's default and are left out; one status stays as it is.
+ */
+function requestsHref(query: Record<string, string>, page: string): string {
+  const out = new URLSearchParams();
+  const queue = query.queue;
+  if (queue === 'area_manager' || queue === 'super_admin') out.set('queue', queue);
+  else {
+    out.set('queue', 'all');
+    if (queue === 'assignee') out.set('where', 'assignee');
+  }
+  if (query.status && query.status !== ACTIVE_REQUESTS) out.set('status', query.status.includes(',') ? 'any' : query.status);
+  if (query.priority) out.set('priority', query.priority);
+  if (query.branchId) out.set('branch', query.branchId);
+  return `${page}?${out.toString()}`;
 }

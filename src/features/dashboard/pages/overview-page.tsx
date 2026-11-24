@@ -21,7 +21,7 @@ import { fillDays, monthCompare } from '../model/overview';
 import { todayDhaka } from '@/shared/lib/time';
 import { useMemo } from 'react';
 import { AlertsCard, AttendanceCard, BranchesCard, LeadersCard, ModulesOffCard, MonthCard, PayStateCard, PromiseCard, TrendCard } from '../components/sections';
-import { OutcomeCard, PeriodCollectionsCard, ProspectsCard, PromiseOutcomeCard, TopStaffCard } from '../components/period';
+import { OutcomeCard, PeriodCollectionsCard, ProspectsCard, PromiseOutcomeCard, RequestsCard, TopStaffCard } from '../components/period';
 import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
 import { PAST_PRESETS } from '@/shared/lib/date-range';
 
@@ -168,6 +168,7 @@ export function OverviewPage() {
         {gate.flag('module.attendance') && <AttendanceCard a={d?.attendance} loading={q.isLoading} />}
         {gate.flag('module.promises') && !v145 && <PromiseCard dueToday={d?.promises?.dueToday ?? 0} keptToday={d?.promises?.keptToday ?? 0} brokenYesterday={d?.promises?.brokenYesterday ?? 0} />}
         {v145 && <ProspectsCard d={d} loading={q.isLoading} showProspects={gate.flag('module.prospects') && gate.can('prospect.view')} showCowork={gate.flag('module.cowork')} />}
+        {gate.flag('module.requests') && gate.can('request.view') && <RequestsCard d={d} loading={q.isLoading} />}
       </div>
 
       {v145 && (
