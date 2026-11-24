@@ -3351,10 +3351,13 @@ export interface components {
             key?: string;
             module?: string;
             description?: components["schemas"]["I18nText"];
+            /** @description Per role key (area_manager since 1.48.0) */
             defaults?: {
                 [key: string]: boolean;
             };
             reserved?: boolean;
+            /** @description Added in 1.48.0 (ADR-065). Roles that never hold this key: no override can grant it to them (user.manage, rbac.manage, flag.manage and settings.manage for area_manager) */
+            neverFor?: components["schemas"]["Role"][];
         };
         /** @description Added in 1.3.0 */
         OverrideEntry: {
