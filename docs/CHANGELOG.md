@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed (owner request 2026-11-24: the map on the places page was too short)
+- `/places`: the map is 60vh tall (min 384 px), and 70vh from the `lg` breakpoint (it was 40vh, min 288 px). The list stays below it.
+
 ### Fixed (owner report 2026-11-24: the home page showed only "This module is turned off / Open feature flags")
 - **Cause:** the dashboard feature was gated on the flag `module.dashboard`, which field-api never had: `GET /dashboard/overview` belongs to the reports module, whose flag is `module.reports` ("Dashboard and reports"). The server's flag snapshot never carried the key, so the dashboard was always "off", and the owner could not find a switch for it. The mock API listed a `module.dashboard` flag, so tests passed. This dated from the first scaffold.
 - **Fix:** the dashboard uses `module.reports`. The mock no longer has `module.dashboard`, and the flag label was removed. Every other feature's flag was checked against field-api's module manifests and exists there.
