@@ -19,7 +19,8 @@ export function useBranchSync() {
   const setUi = useUi((s) => s.set);
   const urlBranch = sp.get('branch') ?? '';
   const mine = user?.branchIds ?? [];
-  const isGlobal = user?.role === 'super_admin' || user?.role === 'viewer';
+  // super admins, area managers (1.48.0, every branch) and viewers may look at all branches at once
+  const isGlobal = user?.role === 'super_admin' || user?.role === 'area_manager' || user?.role === 'viewer';
 
   useEffect(() => {
     // single-branch users are pinned; others validate URL/store against their branches
@@ -49,7 +50,8 @@ export function BranchSwitcher() {
   const sp = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const isGlobal = user?.role === 'super_admin' || user?.role === 'viewer';
+  // super admins, area managers (1.48.0, every branch) and viewers may look at all branches at once
+  const isGlobal = user?.role === 'super_admin' || user?.role === 'area_manager' || user?.role === 'viewer';
   const current = branches?.find((b) => b.id === branchId);
   const label = current ? pickText(current.name) : t('allBranches');
 

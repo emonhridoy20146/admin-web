@@ -75,16 +75,18 @@ function auth(request: Request): Ctx | Response {
   const user = db.userById(t.userId)!;
   return { user };
 }
+/** 1.48.0: only a super admin gives or takes away these roles */
+const SA_ONLY: string[] = ['super_admin', 'area_manager', 'branch_manager'];
 function perms(u: db.MockUser) {
   return new Set(db.effective(u).filter((p) => p.allowed).map((p) => p.key));
 }
 function need(ctx: Ctx, key: string): Response | null {
   return perms(ctx.user).has(key) ? null : problem(403, 'FORBIDDEN', 'You do not have permission for this action', key);
 }
-/** branch scope: SA/viewer = all (or the requested branch); BM = own branches ∩ requested */
+/** branch scope: SA/AM/viewer = all (or the requested branch); BM = own branches ∩ requested */
 function scope(ctx: Ctx, url: URL): string[] {
   const req = url.searchParams.get('branchId');
-  const mine = ctx.user.role === 'super_admin' || ctx.user.role === 'viewer' ? db.branches.map((b) => b.id!) : (ctx.user.branchIds ?? []);
+  const mine = ctx.user.role === 'super_admin' || ctx.user.role === 'area_manager' || ctx.user.role === 'viewer' ? db.branches.map((b) => b.id!) : (ctx.user.branchIds ?? []);
   return req ? mine.filter((b) => b === req) : mine;
 }
 const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
@@ -494,6 +496,7 @@ export const handlers = [
     const deny = need(ctx, 'user.manage');
     if (deny) return deny;
     const b = (await request.json()) as S['UserCreate'];
+    if (SA_ONLY.includes(b.role!) && ctx.user.role !== 'super_admin') return problem(403, 'FORBIDDEN', 'Only a super admin gives this role', 'user.manage');
     if (db.users.some((u) => u.phone === b.phone)) return problem(409, 'PHONE_TAKEN', 'Phone already used');
     const temp = `Fos-${Math.random().toString(36).slice(2, 8)}`;
     const u: db.MockUser = { id: db.oid('6734'), ...b, active: true, mustChangePassword: true, locale: 'bn', lastLoginAt: null, version: 1, password: temp, erpEmployeeId: b.erpEmployeeId ?? null, shiftId: b.shiftId ?? null, cashLimitPoisha: b.cashLimitPoisha ?? null };
@@ -514,6 +517,7 @@ export const handlers = [
     const u = db.userById(params.id);
     if (!u) return problem(404, 'NOT_FOUND', 'User not found');
     const b = (await request.json()) as S['UserUpdate'];
+    if (b.role && b.role !== u.role && (SA_ONLY.includes(b.role) || SA_ONLY.includes(u.role!)) && ctx.user.role !== 'super_admin') return problem(403, 'FORBIDDEN', 'Only a super admin changes this role', 'user.manage');
     const before = { role: u.role, branchIds: u.branchIds, cashLimitPoisha: u.cashLimitPoisha };
     Object.assign(u, { ...b, reason: undefined, version: (u.version ?? 1) + 1 });
     db.addAudit({ actor: actor(ctx.user), action: 'user.update', entity: 'user', entityId: u.id, before, after: { role: u.role, branchIds: u.branchIds, cashLimitPoisha: u.cashLimitPoisha }, reason: b.reason ?? '' });
@@ -1909,8 +1913,11 @@ export const handlers = [
     const from = sp.get('from');
     const to = sp.get('to');
     if (entityId) all = all.filter((a) => a.entityId === entityId);
-    if (from) all = all.filter((a) => a.at! >= from);
-    if (to) all = all.filter((a) => a.at! <= to);
+    // 1.48.0: a plain date is an inclusive Asia/Dhaka business date; a date-time is compared as it is
+    const dayStart = (d: string) => (d.length === 10 ? new Date(`${d}T00:00:00+06:00`).toISOString() : d);
+    const dayEnd = (d: string) => (d.length === 10 ? new Date(Date.parse(`${d}T00:00:00+06:00`) + 86_400_000 - 1).toISOString() : d);
+    if (from) all = all.filter((a) => a.at! >= dayStart(from));
+    if (to) all = all.filter((a) => a.at! <= dayEnd(to));
     const sc = scope(ctx, url);
     all = all.filter((a) => !a.branchId || sc.includes(a.branchId));
     const p = page(all, url);

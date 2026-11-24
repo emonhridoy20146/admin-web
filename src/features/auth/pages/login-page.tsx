@@ -16,6 +16,7 @@ import { login } from '../api/auth';
 
 const DEMO = [
   { user: 'admin', role: 'super_admin' },
+  { user: 'area', role: 'area_manager' },
   { user: 'manager', role: 'branch_manager' },
   { user: 'viewer', role: 'viewer' },
   { user: 'newmanager', role: 'branch_manager', note: 'first' },

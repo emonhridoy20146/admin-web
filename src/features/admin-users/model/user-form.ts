@@ -2,10 +2,23 @@ import type { ErpEmployee, Role, User, UserCreate, UserUpdate } from '../api/use
 
 export const ROLES = [
   'super_admin',
+  'area_manager',
   'branch_manager',
   'field_staff',
   'viewer',
 ] as const satisfies readonly Role[];
+
+/** Contract 1.48.0 (ADR-065): only a super admin gives or takes away these roles; the server answers 403 otherwise. */
+export const SA_ONLY_ROLES: readonly Role[] = ['super_admin', 'area_manager', 'branch_manager'];
+
+/**
+ * The roles the signed-in user may pick in the user form: a super admin all; anyone else (a manager with a user.manage
+ * override) only roles outside SA_ONLY_ROLES, plus the user's current role so an edit can keep it.
+ */
+export function pickableRoles(myRole: Role | undefined, current?: Role): Role[] {
+  if (myRole === 'super_admin') return [...ROLES];
+  return ROLES.filter((r) => !SA_ONLY_ROLES.includes(r) || r === current);
+}
 
 /** Roles that collect money and so should carry an ERP employee (the form asks for it for these). */
 export const COLLECTING_ROLES: readonly Role[] = ['field_staff', 'branch_manager'];

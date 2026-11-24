@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useBranches } from '@/features/shell';
 import { useShifts } from '@/features/attendance';
 import { useUi } from '@/shared/lib/ui-store';
+import { useSession } from '@/shared/auth/session';
 import { pickText } from '@/shared/lib/format';
 import { Dialog } from '@/shared/ui/overlay';
 import { Field, Input, Select } from '@/shared/ui/form';
@@ -20,7 +21,7 @@ import {
   fromUser,
   makeHome,
   orderErpEmployees,
-  ROLES,
+  pickableRoles,
   toCreate,
   toUpdate,
   validate,
@@ -44,6 +45,7 @@ export function UserFormDialog({
   const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   const branchId = useUi((s) => s.branchId);
+  const myRole = useSession((s) => s.user?.role);
   const branches = useBranches();
   const shifts = useShifts();
   const create = useCreateUser();
@@ -179,7 +181,7 @@ export function UserFormDialog({
                 value={v.role}
                 onChange={(e) => set('role', e.target.value as UserFormValues['role'])}
               >
-                {ROLES.map((r) => (
+                {pickableRoles(myRole, user?.role).map((r) => (
                   <option key={r} value={r}>
                     {tc(`role.${r}`)}
                   </option>

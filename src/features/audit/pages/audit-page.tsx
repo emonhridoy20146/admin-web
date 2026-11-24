@@ -1,12 +1,12 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Copy, ScrollText, X } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatDateTime, formatRelative, pickText } from '@/shared/lib/format';
-import { FEED_PRESETS, rangeInstants } from '@/shared/lib/date-range';
+import { FEED_PRESETS } from '@/shared/lib/date-range';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
@@ -30,15 +30,15 @@ export function AuditPage() {
   useUi((s) => s.bnDigits);
   const url = useUrlState();
   // FR-W-068: the shared date filter (presets, custom range, Asia/Dhaka days, in the link; old `range=today|7d|30d|all`
-  // links open as the same preset). The server filters (`from`/`to` date-times on GET /audit), so paging stays exact.
+  // links open as the same preset). The server filters by Asia/Dhaka business dates (contract 1.48.0 `from`/`to`), so
+  // paging stays exact.
   const range = useDateRange({ presets: FEED_PRESETS, fallback: '7d', reset: ['cursor'] });
   const action = oneOf(url.get('action'), ['', ...GROUPS] as const, '');
   const entity = oneOf(url.get('entity'), ['', ...ENTITIES] as const, '');
   const entityId = url.get('entityId');
   const cursor = url.get('cursor');
   const [limit, setLimit] = useState(25);
-  const span = useMemo(() => (range.from ? rangeInstants({ from: range.from, to: range.to }) : null), [range.from, range.to]);
-  const q = useAudit({ from: span?.from, to: span?.to, action: action || undefined, entity: entity || undefined, entityId: entityId || undefined, cursor: cursor || undefined, limit });
+  const q = useAudit({ from: range.from || undefined, to: range.to || undefined, action: action || undefined, entity: entity || undefined, entityId: entityId || undefined, cursor: cursor || undefined, limit });
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('audit:') ? drawer.slice(6) : null;

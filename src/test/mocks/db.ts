@@ -90,7 +90,7 @@ export const users: MockUser[] = [];
 function addUser(role: Role, branchIds: string[], name: { bn: string; en: string }, extra: Partial<MockUser> = {}) {
   const u: MockUser = {
     id: oid('6734'), name, phone: phone(), username: undefined, role, branchIds,
-    employeeCode: `${role === 'field_staff' ? 'FS' : role === 'branch_manager' ? 'BM' : role === 'viewer' ? 'VW' : 'SA'}${String(users.length + 1).padStart(3, '0')}`,
+    employeeCode: `${role === 'field_staff' ? 'FS' : role === 'branch_manager' ? 'BM' : role === 'area_manager' ? 'AM' : role === 'viewer' ? 'VW' : 'SA'}${String(users.length + 1).padStart(3, '0')}`,
     erpEmployeeId: `E-${2000 + users.length}`, shiftId: null, cashLimitPoisha: role === 'field_staff' ? 5_000_000 : null,
     active: true, mustChangePassword: false, locale: 'bn', lastLoginAt: isoAt(now().minus({ hours: int(1, 30) })), version: 1,
     password: 'Demo@2026', ...extra,
@@ -510,6 +510,8 @@ export function effective(u: MockUser) {
   return catalog.map((p) => {
     if (p.reserved) return { key: p.key, allowed: false, source: 'reserved' as const };
     if (u.role === 'super_admin') return { key: p.key, allowed: true, source: 'super_admin' as const };
+    // 1.48.0 (ADR-065): no override grants a key the role can never hold
+    if ((p as { neverFor?: string[] }).neverFor?.includes(u.role!)) return { key: p.key, allowed: false, source: 'role' as const };
     const uo = userOverrides[u.id!]?.[p.key];
     if (uo) return { key: p.key, allowed: uo === 'allow', source: 'user' as const };
     for (const b of u.branchIds ?? []) {
@@ -1606,3 +1608,7 @@ export const prospects: S['Prospect'][] = [];
   }
   prospects.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
+
+// 1.48.0 (ADR-065): an area manager (every branch, no user / flag / settings management). Seeded last so the ids and
+// random draws of everything above stay as they were.
+export const areaManager = addUser('area_manager', [B[0]!], { bn: 'আরিফুর রহমান', en: 'Arifur Rahman' }, { username: 'area' });

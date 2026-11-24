@@ -151,8 +151,8 @@ test('settings: attendance photo is required by default; drop one moment and sav
 });
 
 // FR-W-068 (owner request 2026-11-24, item B): the audit log has the shared date filter; the range is in the link and
-// goes to the server as Asia/Dhaka day boundaries, so paging stays exact.
-test('audit log: shared date filter, preset and custom range in the link, sent as Dhaka from/to', async ({ page }) => {
+// goes to the server as Asia/Dhaka business dates (contract 1.48.0), so paging stays exact.
+test('audit log: shared date filter, preset and custom range in the link, sent as Dhaka dates', async ({ page }) => {
   await login(page);
   await page.goto('/admin/audit/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(auditBn.title);
@@ -163,18 +163,18 @@ test('audit log: shared date filter, preset and custom range in the link, sent a
   await pickRange(page, commonBn.range.today);
   await expect(page).toHaveURL(/range=today/);
   const u = new URL((await today).url());
-  // Dhaka midnight is 18:00 UTC the day before
-  expect(u.searchParams.get('from')).toMatch(/T18:00:00\.000Z$/);
-  expect(u.searchParams.get('to')).toMatch(/T17:59:59\.999Z$/);
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+  expect(u.searchParams.get('from')).toBe(day);
+  expect(u.searchParams.get('to')).toBe(day);
 
   await trigger.click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel(commonBn.range.from).fill('2026-11-01');
   await dialog.getByLabel(commonBn.range.to).fill('2026-11-03');
-  const custom = page.waitForRequest((r) => r.url().includes('/audit?') && r.url().includes('2026-10-31T18'));
+  const custom = page.waitForRequest((r) => r.url().includes('/audit?') && r.url().includes('from=2026-11-01'));
   await dialog.getByRole('button', { name: commonBn.range.apply }).click();
   await expect(page).toHaveURL(/from=2026-11-01&to=2026-11-03/);
-  expect(new URL((await custom).url()).searchParams.get('to')).toBe('2026-11-03T17:59:59.999Z');
+  expect(new URL((await custom).url()).searchParams.get('to')).toBe('2026-11-03');
 
   // an old link keeps working as the same preset
   await page.goto('/admin/audit/?range=30d');

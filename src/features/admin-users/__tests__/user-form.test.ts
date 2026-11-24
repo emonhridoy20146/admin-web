@@ -3,6 +3,7 @@ import {
   changedKeys,
   emptyForm,
   fromUser,
+  pickableRoles,
   needsErpLink,
   makeHome,
   normalizePhone,
@@ -126,5 +127,15 @@ describe('user form model', () => {
     expect(needsErpLink({ role: 'field_staff', erpEmployeeId: null, active: false })).toBe(false);
     expect(needsErpLink({ role: 'super_admin', erpEmployeeId: null, active: true })).toBe(false);
     expect(needsErpLink({ role: 'viewer', erpEmployeeId: null, active: true })).toBe(false);
+  });
+});
+
+describe('pickableRoles (contract 1.48.0, ADR-065)', () => {
+  it('lets a super admin give every role, area manager included', () => {
+    expect(pickableRoles('super_admin')).toEqual(['super_admin', 'area_manager', 'branch_manager', 'field_staff', 'viewer']);
+  });
+  it('lets anyone else give only field staff and viewer, keeping the edited user’s own role', () => {
+    expect(pickableRoles('branch_manager')).toEqual(['field_staff', 'viewer']);
+    expect(pickableRoles('area_manager', 'branch_manager')).toEqual(['branch_manager', 'field_staff', 'viewer']);
   });
 });
