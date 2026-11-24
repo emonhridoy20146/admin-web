@@ -63,12 +63,41 @@ export function SectionTabs() {
     if (l < list.scrollLeft || l + el.offsetWidth > list.scrollLeft + list.clientWidth) list.scrollLeft = l - 16;
   }, [activePath, tabsKey]);
 
+  // Fade only the side that has more tabs to scroll to, so the first and last tab are never half hidden.
+  const [more, setMore] = useState({ start: false, end: false });
+  const measure = useCallback(() => {
+    const l = listRef.current;
+    if (!l) return;
+    const start = l.scrollLeft > 2;
+    const end = l.scrollLeft + l.clientWidth < l.scrollWidth - 2;
+    setMore((m) => (m.start === start && m.end === end ? m : { start, end }));
+  }, []);
+  useEffect(() => {
+    const l = listRef.current;
+    if (!l) return;
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(l);
+    return () => ro.disconnect();
+  }, [measure, tabsKey]);
+
   if (!hit || !hit.exact || hit.nav.tabs.length < 2) return null;
   const branch = sp.get('branch');
   const section = t(hit.nav.section.title.replace(/^shell:/, ''));
   return (
     <nav aria-label={t('sections.tabs', { section })} data-testid="section-tabs" className="mx-auto w-full max-w-[1600px] pt-2 print:hidden">
-      <ul ref={listRef} className="scrollbar-thin flex gap-1 overflow-x-auto border-b border-line px-1 max-lg:[mask-image:linear-gradient(to_left,transparent,black_32px)] lg:px-3">
+      <ul
+        ref={listRef}
+        onScroll={measure}
+        data-more-start={more.start || undefined}
+        data-more-end={more.end || undefined}
+        className={cn(
+          'scrollbar-thin flex gap-0.5 overflow-x-auto border-b border-line px-1.5 lg:px-3.5',
+          more.start && more.end && '[mask-image:linear-gradient(to_right,transparent,black_32px,black_calc(100%-32px),transparent)]',
+          more.start && !more.end && '[mask-image:linear-gradient(to_right,transparent,black_32px)]',
+          !more.start && more.end && '[mask-image:linear-gradient(to_left,transparent,black_32px)]',
+        )}
+      >
         {hit.nav.tabs.map((r) => (
           // tab text lines up with the page content edge (16 px phone, 24 px desktop); the fade says more tabs scroll in
           <TabLink key={r.path} route={r} active={r.path === hit.active.path} href={withBranch(r.path === hit.active.path ? `${r.path}/` : lastTabHref(r.path), branch)} />
@@ -89,7 +118,7 @@ function TabLink({ route, active, href }: { route: NavRoute; active: boolean; hr
         href={href}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'relative inline-flex h-10 items-center gap-2 rounded-t-sm px-3 text-sm whitespace-nowrap transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11',
+          'relative inline-flex h-10 items-center gap-2 rounded-t-sm px-2.5 text-sm whitespace-nowrap transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11',
           'after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full',
           active ? 'font-semibold text-primary after:bg-primary' : 'font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg',
         )}
