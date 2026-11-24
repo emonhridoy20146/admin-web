@@ -242,7 +242,15 @@ export function MapView({ center, zoom = 13, initialBounds, markers, clusters, l
     );
   };
 
-  const mapEl = <div ref={el} role="application" aria-label={label} className={cn('fos-map isolate z-0 h-full min-h-64 w-full overflow-hidden rounded-md border border-line bg-surface-subtle', className)} />;
+  // Leaflet adds its own classes (`leaflet-container`, …) to the element it is given. React owns this outer box's
+  // class, so when `className` changes (the customer map's full screen) React rewrote the attribute and wiped
+  // Leaflet's classes: the tile CSS stopped applying and the map turned white with only the pins left (owner report
+  // 2026-11-24). Leaflet gets the inner element, whose class React never changes.
+  const mapEl = (
+    <div role="application" aria-label={label} className={cn('fos-map isolate z-0 h-full min-h-64 w-full overflow-hidden rounded-md border border-line bg-surface-subtle', className)}>
+      <div ref={el} className="h-full w-full" />
+    </div>
+  );
   if (!locate) return mapEl;
   return (
     <div className="relative h-full w-full">

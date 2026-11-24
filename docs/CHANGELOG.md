@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed (owner report 2026-11-24: customer map turned white in full screen and stayed white after leaving it)
+- **Cause:** `MapView` gave Leaflet the same element whose `className` React controls. The customer map changes that class when entering or leaving full screen (`rounded-none border-0`). React then rewrote the class attribute and removed the classes Leaflet had added (`leaflet-container`, …), so Leaflet's tile CSS no longer applied. Only the marker pane was still visible.
+- **Fix:** Leaflet gets an inner element whose class React never changes. The outer box keeps the role, label and style classes. The full-screen journey now checks that `.leaflet-container` and the tile pane survive entering and leaving full screen.
+
 ### Changed (owner request 2026-11-24: the map on the places page was too short)
 - `/places`: the map is 60vh tall (min 384 px), and 70vh from the `lg` breakpoint (it was 40vh, min 288 px). The list stays below it.
 
