@@ -46,8 +46,9 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - ☑ A — Drawer padding fixed at the root (shared `Drawer` body pads `space.20`), guarded by a component test and an e2e over 11 drawers at 390/1440 px (FR-W-067).
 - ☑ B — Audit log uses the shared date filter; server `from`/`to` (already in the pinned contract), no client-side filtering (FR-W-068).
 - ☑ C — Sidebar 8 items with section tab strips; every page kept its URL (FR-W-069, ADR-W28).
-- ☐ D — Requests inbox and ☐ E — area manager role: waiting for field-api contract 1.48.0 to be pinned on the branch.
-- Note: `contract/openapi.yaml` on `main` reads version **1.46.0**; no 1.47.0 contract was found in this repo.
+- ☑ D — Requests inbox on contract 1.48.0 (FR-W-070, ADR-W29). Live: turn `module.requests` on in Feature flags.
+- ☑ E — Area manager role in users, branch switcher and permissions (FR-W-071).
+- Contract pinned on the branch: **1.48.0** (field-api main 360ce85). Before it, `main` read 1.46.0; no 1.47.0 contract was in this repo.
 
 ## Status notes (2026-11-23, batch 1123, contracts 1.45.0 and 1.46.0)
 - ☑ Customers pager 100/500/1000 with numbered pages (FR-W-060; one request per page with contract 1.46.0 `offset`), map full screen (FR-W-061), pin approvals paged (FR-W-062), shared date filter on eight pages (FR-W-063), management dashboard (FR-W-064), promise follow-ups (FR-W-065), possible customers (FR-W-066). Settings: nothing new in 1.45.0.

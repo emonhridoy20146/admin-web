@@ -162,7 +162,7 @@ The sidebar has **8 items**; related pages are tabs of one section. The list liv
 | Sidebar item | Tabs (each its own route) |
 |---|---|
 | Overview | — (`/`) |
-| Inbox | Inbox `/inbox` · Staff activity `/activity` · Notices `/notices` (· Requests, contract 1.48.0) |
+| Inbox | Inbox `/inbox` · Requests `/requests` · Staff activity `/activity` · Notices `/notices` |
 | Customers | Customers `/customers` · Customer map `/map` · Pin approvals `/pin-approvals` · Possible customers `/prospects` · Areas & assignments `/areas` · Data quality `/data-quality` |
 | Collections | Collections `/collections` · Conflicts `/collections/conflicts` · Cash on hand `/cash` · Handovers `/handovers` |
 | Field work | Visits `/visits` · Co-work `/cowork` · Promises `/promises` · Tasks `/tasks` · Places `/places` |
@@ -204,7 +204,8 @@ The sidebar has **8 items**; related pages are tabs of one section. The list liv
 | Feature flags | `/admin/flags` | Table: key, description, global toggle, per-branch toggles, owner, review-by | — | Toggle (with reason) |
 | Devices | `/admin/devices` | Devices, pending approvals, sessions, remote logout | — | Approve |
 | Places | `/places` | Map of labelled pins above a table of places (name, kind, state, added by); Places move requests `/places/move-requests` as cards with a small map (current, requested, dashed line) | newest / oldest request | New place · Approve move |
-| Audit log | `/admin/audit` | Filterable table + diff viewer drawer | at desc | Export |
+| Audit log | `/admin/audit` | Filterable table + diff viewer drawer; shared date filter (Dhaka dates) | at desc | Export |
+| Requests | `/requests` | Queue tabs with counts (my queue, area manager, super admin, assigned to me, all), filters, drawer with the full timeline, comments and forward / assign / resolve / reopen / close | createdAt desc | New request |
 | System health | `/admin/system` | ERP status, outbox, jobs, sync health per device, app versions in field | — | Retry |
 
 ## 5. Components and rules

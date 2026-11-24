@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+Contract: field-api **1.48.0** (field-api `main` 360ce85; merged from `claude/contract-1-48` fc7cd81, pinned by the coordinator). `pnpm gen:api` from `contract/openapi.yaml`; permission catalog **72 keys** (`request.create`, `request.view`, `request.manage`, `request.important.manage`), role `area_manager` with `neverFor` (user.manage, rbac.manage, flag.manage, settings.manage). `scripts/sync-contract.mjs` reads the role columns from the catalog header (coordinator's change).
+
+### Added (owner request 2026-11-24, batch 1124 item D: requests inbox — FR-W-070, ADR-W29)
+- New feature `requests` (flag `module.requests`, **off by default on the server: turn it on in Feature flags**), page `/requests` as a tab of the Inbox section, ⌘K "Requests" and "New request".
+- Queue tabs with counts: My queue, Area manager queue, Super admin queue, Assigned to me, All. Filters in the link: date range, status (with counts, default "not finished"), priority, sender, search; branch from the header switcher.
+- Drawer (shared `Drawer`, padded): message, answer, where it waits, level, branch, due date, customer link, the full timeline with icons (created, comment, forwarded from → to, assigned, status, resolved, reopened, closed; unknown kinds shown raw), a comment box (idempotent `clientId`), and actions by permission and level: Forward (queue or person, note required), Assign (note optional), Resolve and Reopen (note required), Close (note optional). 403/409/422 are shown in the dialog.
+- New request dialog for office users (`request.create`): kind, priority (important → super admin queue), title, message, customer, due date, branch; one `clientId` per opening.
+- Dashboard: Requests card from `requestStats` (area manager queue, super admin queue, with a person, important not finished), each opening its inbox view; nav badge = my queue.
+- Mock: `/requests` list (scope, filters, `total`, `counts`), create, get, comment / forward / assign / resolve / reopen / close with the contract's rules, `requestStats`.
+
+### Added (owner request 2026-11-24, batch 1124 item E: area manager role — FR-W-071)
+- Users: super admins give `area_manager` (help text explains the role); only a super admin sees super admin / area manager / branch manager in the role picker (`pickableRoles`), and the mock answers 403 otherwise, like the server.
+- Area managers see "All branches" in the switcher (every branch, contract 1.48.0).
+- User create, password reset, Feature flags and Settings are hidden for area managers by their permissions (they lack `user.manage`, `flag.manage`, `settings.manage`); direct links show the forbidden page and the server still answers 403.
+- Permissions: an Area manager column in the role matrix; `neverFor` keys show "Never for this role" and cannot be overridden for that role (user overrides too).
+- Mock: demo login `area` (Area manager), `neverFor` respected, catalog served with `neverFor`.
+- Audit log sends plain Asia/Dhaka dates as `from`/`to` (1.48.0) instead of date-times.
+- e2e: `requests.spec.ts` (send → comment → forward → assign → resolve → reopen → close, all on the timeline, with axe on the dialogs; dashboard tiles and link state; area manager limits; the role in users and permissions). The request drawer joined the drawer-padding guard; `/requests/` joined the a11y page list.
+
 ### Changed (owner request 2026-11-24, batch 1124 item C: fewer sidebar pages — FR-W-069, ADR-W28)
 - **Sidebar: 8 items instead of 35.** Overview · Inbox (Inbox, Staff activity, Notices) · Customers (Customers, Customer map, Pin approvals, Possible customers, Areas & assignments, Data quality) · Collections (Collections, Conflicts, Cash on hand, Handovers) · Field work (Visits, Co-work, Promises, Tasks, Places) · Staff (Staff, Attendance, Leave requests, Live map, Route history, Leaderboard, Targets) · Reports · Admin (Users, Devices, Permissions, Settings, Holidays & shifts, Feature flags, Audit log, Photo storage, System health). Groups are separated by a rule; the foldable group headings are gone.
 - **Section tab strip** (`shell/components/section-tabs.tsx`) above the page on every tab: icon, label and count per tab, `aria-current="page"`, ≥ 44 px on touch, scrolls sideways on phones with the open tab in view and a fade at the edge, not printed. It is its own `nav` landmark above `<main>`. Pages below a tab (a customer's page, place move requests) highlight the section in the sidebar without the strip.
