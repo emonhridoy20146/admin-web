@@ -71,13 +71,14 @@ export function Section({ title, actions, children, className }: { title?: React
   );
 }
 
-export function DescList({ items, className }: { items: { label: string; value: React.ReactNode }[]; className?: string }) {
+/** Label/value pairs in two columns. `full` items (free text such as a reason or note) span both columns and wrap instead of being cut off. */
+export function DescList({ items, className }: { items: { label: string; value: React.ReactNode; full?: boolean }[]; className?: string }) {
   return (
     <dl className={cn('grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2', className)}>
       {items.map((it, i) => (
-        <div key={i} className="min-w-0">
+        <div key={i} className={cn('min-w-0', it.full && 'sm:col-span-2')}>
           <dt className="text-sm text-fg-tertiary">{it.label}</dt>
-          <dd className="mt-0.5 truncate text-base text-fg">{it.value}</dd>
+          <dd className={cn('mt-0.5 text-base text-fg', it.full ? 'whitespace-pre-line break-words' : 'truncate')}>{it.value}</dd>
         </div>
       ))}
     </dl>

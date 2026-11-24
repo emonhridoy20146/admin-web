@@ -228,10 +228,10 @@ function LeaveDrawer({ r, all, canDecide, onClose, onApprove, onReject }: { r: L
               { label: t('leave.col.type'), value: t(`leave.type.${r.type}`) },
               { label: t('leave.col.dates'), value: <span className="tabular">{range(r)}</span> },
               { label: t('leave.col.days'), value: t('leave.daysN', { count: leaveDays(r), n: formatNumber(leaveDays(r)) }) },
-              { label: t('leave.col.reason'), value: r.reason ? <span lang="bn">{r.reason}</span> : <span className="text-fg-tertiary">{t('leave.noReason')}</span> },
+              { label: t('leave.col.reason'), value: r.reason ? <span lang="bn">{r.reason}</span> : <span className="text-fg-tertiary">{t('leave.noReason')}</span>, full: true },
               { label: t('leave.col.asked'), value: formatDateTime(r.createdAt!) },
               ...(r.decidedAt ? [{ label: t('leave.decidedAt'), value: formatDateTime(r.decidedAt) }] : []),
-              ...(r.decisionReason ? [{ label: t('leave.decisionReason'), value: <span lang="bn">{r.decisionReason}</span> }] : []),
+              ...(r.decisionReason ? [{ label: t('leave.decisionReason'), value: <span lang="bn">{r.decisionReason}</span>, full: true }] : []),
               ...(r.cancelledAt ? [{ label: t('leave.cancelledAt'), value: formatDateTime(r.cancelledAt) }] : []),
             ]}
           />

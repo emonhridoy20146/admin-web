@@ -3,14 +3,15 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Lock, PanelLeftClose, PanelLeftOpen, PowerOff, WifiOff } from 'lucide-react';
+import { Lock, PanelLeftClose, PanelLeftOpen, PowerOff, WifiOff } from 'lucide-react';
 import * as D from '@radix-ui/react-dialog';
 import { cn } from '@/shared/lib/cn';
 import { useSession } from '@/shared/auth/session';
 import { onForcedLogout, refreshSession, scheduleProactiveRefresh } from '@/shared/auth/refresh';
-import { navRoutes, featureForPath } from '@/shared/feature/registry';
+import { featureForPath, navEntries, sectionForPath, type NavRoute } from '@/shared/feature/registry';
 import { useGate } from '@/shared/feature/useGate';
-import type { FeatureRoute, NavGroup } from '@/shared/feature/types';
+import type { NavGroup } from '@/shared/feature/types';
+import type { LucideIcon } from 'lucide-react';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatNumber } from '@/shared/lib/format';
 import { Button } from '@/shared/ui/button';
@@ -22,6 +23,7 @@ import { IdleWatcher } from './idle-watcher';
 import { CommandPalette } from './command-palette';
 import { PrintMasthead } from './print-masthead';
 import { useBranchSync } from './branch-switcher';
+import { lastTabHref, SectionTabs, useBadgeSum } from './section-tabs';
 import { useAutoErpSync, useBranchFlags, useMe } from '../api/queries';
 
 const GROUPS: NavGroup[] = ['top', 'field', 'people', 'insights', 'admin'];
@@ -123,7 +125,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
           <D.Content className="fixed inset-y-0 start-0 z-40 flex w-[min(300px,86vw)] flex-col bg-surface shadow-e3 animate-drawer focus:outline-none md:hidden">
             <D.Title className="sr-only">{t('nav.menu')}</D.Title>
             <D.Description className="sr-only">{t('nav.menu')}</D.Description>
-            <SidebarContent collapsed={false} mobile />
+            <SidebarContent collapsed={false} mobile onNavigate={() => setMobileOpen(false)} />
           </D.Content>
         </D.Portal>
       </D.Root>
@@ -136,6 +138,8 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
             {t('offline')}
           </div>
         )}
+        {/* FR-W-069: the section's tabs are a nav landmark of their own, above (not inside) the main content */}
+        <SectionTabs />
         <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-16 sm:pt-6 lg:px-6 print:max-w-none print:p-0" data-offline={!online || undefined}>
           <PrintMasthead />
           <ModuleGate>{children}</ModuleGate>
@@ -147,19 +151,19 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SidebarContent({ collapsed, mobile }: { collapsed: boolean; mobile?: boolean }) {
+function SidebarContent({ collapsed, mobile, onNavigate }: { collapsed: boolean; mobile?: boolean; onNavigate?: () => void }) {
   const { t } = useTranslation();
   const gate = useGate();
-  const routes = navRoutes(gate);
+  const entries = navEntries(gate);
   const pathname = usePathname();
   const sp = useSearchParams();
   const setUi = useUi((s) => s.set);
-  const navClosed = useUi((s) => s.navClosed);
   const wide = mobile || !collapsed;
   const branch = sp.get('branch');
-  const isActive = (r: FeatureRoute) => (r.path === '/' ? pathname === '/' : pathname === r.path || pathname.startsWith(r.path.replace(/\/$/, '') + '/'));
-  // longest-prefix wins, so "/collections/conflicts" is not also highlighting "/collections"
-  const active = routes.filter(isActive).sort((a, b) => b.path.length - a.path.length)[0]?.path;
+  const withBranch = (href: string) => (branch ? `${href}${href.includes('?') ? '&' : '?'}branch=${branch}` : href);
+  // FR-W-069: a section is active on any of its tabs and on pages below them (a customer's page, move requests)
+  const activeSection = sectionForPath(pathname, gate)?.nav.section.id;
+  const isActive = (r: NavRoute) => (r.path === '/' ? pathname === '/' : pathname === r.path || pathname.startsWith(r.path.replace(/\/$/, '') + '/'));
 
   return (
     <>
@@ -172,36 +176,31 @@ function SidebarContent({ collapsed, mobile }: { collapsed: boolean; mobile?: bo
           </span>
         </Link>
       </div>
-      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3" aria-label={t('nav.menu')}>
+      {/* a tap on a link closes the phone menu even when it opens the page already shown (the current section) */}
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3" aria-label={t('nav.menu')} onClick={(e) => (e.target as HTMLElement).closest('a') && onNavigate?.()}>
+        {/* Eight or so items: groups are separated by a rule, without headings to fold (ADR-W28). */}
         {GROUPS.map((g) => {
-          const items = routes.filter((r) => r.navGroup === g);
+          const items = entries.filter((e) => e.group === g);
           if (!items.length) return null;
-          // A section can be folded; the one holding the open page never hides it. The rail (narrow) shows everything.
-          const holdsActive = items.some((r) => r.path === active);
-          const folded = g !== 'top' && navClosed.includes(g) && !holdsActive;
-          const toggle = () => setUi({ navClosed: navClosed.includes(g) ? navClosed.filter((x) => x !== g) : [...navClosed, g] });
           return (
-            <div key={g} className={cn(g === 'top' ? 'mb-1' : 'mt-1 border-t border-line/70 pt-1 first:border-0')}>
-              {g !== 'top' && (
-                <button
-                  type="button"
-                  onClick={toggle}
-                  aria-expanded={!folded}
-                  className={cn(
-                    'group/sec flex h-8 w-full items-center justify-between rounded-sm px-2.5 text-xs font-semibold tracking-wide text-fg-tertiary transition-colors duration-[var(--dur-fast)] hover:text-fg-secondary [@media(pointer:coarse)]:h-10',
-                    wide ? (mobile ? '' : 'hidden lg:flex') : 'hidden',
-                  )}
-                >
-                  {t(`nav.${g}`)}
-                  <ChevronDown className={cn('size-3.5 opacity-0 transition-[transform,opacity] duration-[var(--dur-fast)] group-hover/sec:opacity-100 group-focus-visible/sec:opacity-100', folded && '-rotate-90 opacity-100')} aria-hidden />
-                </button>
+            <ul key={g} className="space-y-px border-t border-line/70 pt-2 mt-2 first:mt-0 first:border-0 first:pt-0">
+              {items.map((e) =>
+                e.kind === 'route' ? (
+                  <NavItem key={e.route.path} label={t(e.route.title)} icon={e.route.icon} badges={e.route.useBadge ? [e.route] : []} active={!activeSection && isActive(e.route)} wide={wide} mobile={mobile} href={withBranch(e.route.path)} />
+                ) : (
+                  <NavItem
+                    key={e.nav.section.id}
+                    label={t(e.nav.section.title)}
+                    icon={e.nav.section.icon}
+                    badges={e.nav.tabs.filter((r) => r.useBadge && (!e.nav.section.badgeFrom || e.nav.section.badgeFrom.includes(r.path)))}
+                    active={activeSection === e.nav.section.id}
+                    wide={wide}
+                    mobile={mobile}
+                    href={withBranch(lastTabHref(e.nav.href))}
+                  />
+                ),
               )}
-              <ul className={cn('space-y-px', folded && (mobile ? 'hidden' : 'lg:hidden'))}>
-                {items.map((r) => (
-                  <NavItem key={r.path} route={r} active={active === r.path} wide={wide} mobile={mobile} href={branch ? `${r.path}?branch=${branch}` : r.path} />
-                ))}
-              </ul>
-            </div>
+            </ul>
           );
         })}
       </nav>
@@ -217,11 +216,8 @@ function SidebarContent({ collapsed, mobile }: { collapsed: boolean; mobile?: bo
   );
 }
 
-function NavItem({ route, active, wide, mobile, href }: { route: FeatureRoute; active: boolean; wide: boolean; mobile?: boolean; href: string }) {
-  const { t } = useTranslation();
-  const Icon = route.icon;
-  const badge = route.useBadge?.();
-  const label = t(route.title);
+function NavItem({ label, icon: Icon, badges, active, wide, mobile, href }: { label: string; icon?: LucideIcon; badges: NavRoute[]; active: boolean; wide: boolean; mobile?: boolean; href: string }) {
+  const [badge, probes] = useBadgeSum(badges);
   const link = (
     <Link
       href={href}
@@ -249,7 +245,12 @@ function NavItem({ route, active, wide, mobile, href }: { route: FeatureRoute; a
       ) : null}
     </Link>
   );
-  return <li>{wide ? link : <Tooltip content={label} side="right">{link}</Tooltip>}</li>;
+  return (
+    <li>
+      {probes}
+      {wide ? link : <Tooltip content={label} side="right">{link}</Tooltip>}
+    </li>
+  );
 }
 
 /** Hides disabled modules and pages without permission (W-E9). Direct URLs show a calm explanation. */

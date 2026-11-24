@@ -39,6 +39,7 @@
     "role": "Role",
     "roleHelp": {
       "super_admin": "Everything in every branch, including settings and permissions.",
+      "area_manager": "Works every branch: requests, reports and teams. Cannot create users, reset passwords, or change flags or settings. The branch below is their home branch.",
       "branch_manager": "Runs the branches listed below.",
       "field_staff": "Uses the staff app. Sees every customer of the branches below and can work in more than one.",
       "viewer": "Read-only access to the branches listed below."

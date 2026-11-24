@@ -145,7 +145,7 @@ export function HandoversPage() {
         }
       >
         {open && (
-          <div className="space-y-5 p-5">
+          <div className="space-y-5">
             {open.status === 'pending_acceptance' && (
               <p className="flex items-start gap-2 rounded-sm bg-info-bg px-3 py-2 text-sm text-info">
                 <Hourglass className="mt-0.5 size-4 shrink-0" aria-hidden />

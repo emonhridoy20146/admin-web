@@ -37,6 +37,12 @@ export function HandoverFormDialog({ open, onOpenChange, staff, areas }: { open:
   const err = (k: keyof HandoverForm) => (errors[k] ? t(errors[k]!, { min: formatNumber(REASON_MIN) }) : undefined);
   const active = staff.filter((u) => u.active !== false);
   const held = useMemo(() => (v.fromUserId ? areasOf(v.fromUserId, areas) : []), [v.fromUserId, areas]);
+  // The giver can be picked before the areas have loaded (slow link); tick the giver's areas once they arrive, as a
+  // pick after loading does (no box could have been ticked or cleared before the areas were there).
+  const areasLoaded = (areas?.length ?? 0) > 0;
+  useEffect(() => {
+    if (areasLoaded) setV((s) => (s.fromUserId && s.areaIds.length === 0 ? { ...s, areaIds: areasOf(s.fromUserId, areas).map((a) => a.id!) } : s));
+  }, [areasLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
   const customers = customersIn(v.areaIds, areas);
   const label = (u: User) => `${pickText(u.name, locale)} · ${u.employeeCode ?? ''}`;
 

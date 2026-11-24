@@ -95,7 +95,7 @@ export function UserDrawer({ id, onClose }: { id: string | null; onClose: () => 
           ) : undefined
         }
       >
-        <div className="p-5">
+        <div>
           {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
           {q.isLoading && (
             <div className="space-y-3">

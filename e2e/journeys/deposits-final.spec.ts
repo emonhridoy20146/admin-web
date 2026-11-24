@@ -4,14 +4,14 @@ import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import inboxBn from '../../src/features/inbox/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import { login, nav, S } from '../fixtures';
 
 // Owner request 2026-11-22 (contract 1.35.0, FR-W-053, master FR-CASH-010, ADR-049): a collection goes to the ERP when
 // the collector deposits it; a deposit is final. The office only reads what each deposit contained.
 
 test('deposits are final: no verify, reject or delete; a deposit shows its collections with method, ERP state and totals', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, cashBn.title);
+  await nav(page, cashBn.title, S.collections);
   // the list opens on the deposits made since 1.35.0, each "Deposited"
   const tabs = page.getByRole('group', { name: cashBn.deposits });
   await expect(tabs.getByRole('button', { name: cashBn.depositTab.submitted, exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -53,7 +53,7 @@ test('deposits are final: no verify, reject or delete; a deposit shows its colle
 
 test('older deposits keep their status and the oldest-first view of the cash they covered', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, cashBn.title);
+  await nav(page, cashBn.title, S.collections);
   await page.getByRole('group', { name: cashBn.deposits }).getByRole('button', { name: cashBn.depositTab.all, exact: true }).click();
   await expect(page).toHaveURL(/deposits=all/);
   const old = page.locator('#deposits tbody tr').filter({ hasText: commonBn.status.verified }).first();
@@ -73,7 +73,7 @@ test('older deposits keep their status and the oldest-first view of the cash the
 
 test('the KPI counts today\'s deposits; an old "deposit to verify" reminder in the inbox has no action link', async ({ page }) => {
   await login(page);
-  await nav(page, cashBn.title);
+  await nav(page, cashBn.title, S.collections);
   await expect(page.getByText(cashBn.kpi.depositedToday)).toBeVisible();
   await expect(page.getByText(/যাচাই বাকি/)).toHaveCount(0);
 
@@ -85,7 +85,7 @@ test('the KPI counts today\'s deposits; an old "deposit to verify" reminder in t
 
 test('a collector without an ERP employee link carries a warning on the users list and in the drawer', async ({ page }) => {
   await login(page);
-  await nav(page, usersBn.title);
+  await nav(page, usersBn.title, S.admin);
   const badge = page.getByTestId('erp-link-missing');
   // Which collector is unlinked depends on the time of day in the mock data, so it may not be on page 1. Show 100 rows
   // (every user fits) instead of paging: the paging loop stopped early on the loading rows and failed at some hours.

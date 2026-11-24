@@ -18,7 +18,7 @@ import { Input, Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
 import { useBranchOverrides, useCatalog, useEffective, useRoleHolders, useSetBranchOverrides, useSetUserOverrides, useUserPick, useUserSearch, type PermissionDef, type Role } from '../api/rbac';
-import { currentOverrides, groupByModule, overridesForRole, ROLES, stageModule, toChanges, type Effect, type ModuleGroup } from '../model/matrix';
+import { currentOverrides, groupByModule, neverFor, overridesForRole, ROLES, stageModule, toChanges, type Effect, type ModuleGroup } from '../model/matrix';
 import { Allowed, OverrideTable, StagedBar } from '../components/override-table';
 
 const TABS = ['roles', 'branch', 'user'] as const;
@@ -60,7 +60,7 @@ function RoleDefaults({ groups }: { groups: ModuleGroup[] }) {
     <>
       <p className="mb-3 flex items-start gap-2 text-sm text-fg-secondary"><Info className="mt-0.5 size-4 shrink-0" aria-hidden />{t('rolesHint')}</p>
       <div className="scrollbar-thin overflow-x-auto rounded-md border border-line bg-surface shadow-e1">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[760px] text-sm">
           <caption className="sr-only">{t('tabs.roles')}</caption>
           <thead className="bg-surface-subtle text-xs text-fg-secondary">
             <tr className="border-b border-line">
@@ -72,7 +72,7 @@ function RoleDefaults({ groups }: { groups: ModuleGroup[] }) {
             {groups.map((g) => (
               <Fragment key={g.module}>
                 <tr className="border-b border-line bg-surface-subtle/60">
-                  <th scope="rowgroup" colSpan={5} className="px-4 py-2 text-start text-xs font-semibold uppercase tracking-wide text-fg-secondary">{t(`modules.${g.module}`, { defaultValue: g.module })}</th>
+                  <th scope="rowgroup" colSpan={ROLES.length + 1} className="px-4 py-2 text-start text-xs font-semibold uppercase tracking-wide text-fg-secondary">{t(`modules.${g.module}`, { defaultValue: g.module })}</th>
                 </tr>
                 {g.perms.map((p) => (
                   <tr key={p.key} className="border-b border-line last:border-0">
@@ -82,7 +82,13 @@ function RoleDefaults({ groups }: { groups: ModuleGroup[] }) {
                     </th>
                     {ROLES.map((r) => (
                       <td key={r} className="px-3 py-2.5">
-                        {p.reserved ? <span className="inline-flex items-center gap-1 text-xs text-fg-tertiary"><Lock className="size-3.5" aria-hidden />{t('reserved')}</span> : <Allowed value={!!p.defaults?.[r]} />}
+                        {p.reserved ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-fg-tertiary"><Lock className="size-3.5" aria-hidden />{t('reserved')}</span>
+                        ) : neverFor(p, r) ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-fg-tertiary" title={t('neverHint')}><Lock className="size-3.5" aria-hidden />{t('never')}</span>
+                        ) : (
+                          <Allowed value={!!p.defaults?.[r]} />
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -228,7 +234,8 @@ function UserOverrides({ groups, catalog }: { groups: ModuleGroup[]; catalog: Pe
             const e = byKey[key];
             // inherited value: what the user would have without a user-level override
             const base = e && e.source !== 'user' ? !!e.allowed : roleDefault(key);
-            return { base, current: current[key] ?? 'inherit', staged: staged[key], source: e?.source, locked: !canManage || isSuper };
+            const def = catalog.find((p) => p.key === key);
+            return { base, current: current[key] ?? 'inherit', staged: staged[key], source: e?.source, locked: !canManage || isSuper, never: !!def && neverFor(def, u?.role) };
           }}
           onStage={(key, e) => setStaged((s) => ({ ...s, [key]: e }))}
           onBulk={(g, e) => setStaged((s) => stageModule(s, g, e))}

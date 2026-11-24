@@ -86,11 +86,11 @@ export function ProspectDrawer({ id, seed, onClose, onOpen }: { id: string | nul
           ) : undefined
         }
       >
-        {q.error && !p ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} className="m-5" /> : null}
+        {q.error && !p ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} className="mb-5" /> : null}
         {!p ? (
-          <div className="space-y-3 p-5">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
+          <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : (
-          <div className="space-y-6 p-5">
+          <div className="space-y-6">
             {setStatus.error || create.error ? <ErrorBanner error={setStatus.error ?? create.error} /> : null}
             {p.status === 'converted' && (
               <div className="flex items-start gap-3 rounded-md border border-success/30 bg-success-bg px-3 py-2.5 text-sm text-success">

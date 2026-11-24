@@ -3,11 +3,11 @@ import { expect, test } from '@playwright/test';
 import targetsBn from '../../src/features/targets/i18n/bn.json' with { type: 'json' };
 import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' };
 import staffBn from '../../src/features/staff/i18n/bn.json' with { type: 'json' };
-import { confirmWithReason, login, nav } from '../fixtures';
+import { confirmWithReason, login, nav, S } from '../fixtures';
 
 test('daily targets: change the branch target, give one person their own, then return them to the branch target', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, targetsBn.title);
+  await nav(page, targetsBn.title, S.staff);
 
   // the branch default (the card's own button; row buttons are named after the person)
   await page.getByRole('button', { name: targetsBn.edit, exact: true }).click();
@@ -58,7 +58,7 @@ test('daily targets: change the branch target, give one person their own, then r
 
 test('data quality: problems per issue, the customers behind one, and the full list as a PDF', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, repBn.dq.title);
+  await nav(page, repBn.dq.title, S.customers);
   const listTitle = (k: keyof typeof repBn.dq.issue) => repBn.dq.listTitle.replace('{{issue}}', repBn.dq.issue[k].label);
   // opens on the issue with the most customers
   await expect(page.getByRole('heading', { name: listTitle('no_location') })).toBeVisible();
@@ -92,7 +92,7 @@ test('data quality: problems per issue, the customers behind one, and the full l
 
 test('leaderboard: month ranking, switch the measure and the period, equal values share a rank', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, repBn.lb.title);
+  await nav(page, repBn.lb.title, S.staff);
   await expect(page.getByRole('list', { name: repBn.lb.top }).getByRole('listitem')).toHaveCount(3);
   await expect(page.getByRole('columnheader', { name: repBn.lb.metric.collected }).first()).toBeVisible();
   await expect(page.locator('tbody tr').first().locator('td').first()).toHaveText('১');
@@ -112,7 +112,7 @@ test('leaderboard: month ranking, switch the measure and the period, equal value
 
 test('collection board: verified money of everyone across branches, a crown on first place, all time and one month', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, repBn.lb.title);
+  await nav(page, repBn.lb.title, S.staff);
   await page.getByRole('group', { name: repBn.lb.board.which }).getByRole('button', { name: repBn.lb.board.tabs.collection }).click();
   await page.waitForURL(/board=collection/);
   await expect(page.getByText(repBn.lb.board.subtitle)).toBeVisible();

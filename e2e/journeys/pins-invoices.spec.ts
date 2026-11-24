@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import { login, nav, S } from '../fixtures';
 
 // Owner request 2026-11-18 (contract 1.14.0, ADR-W18, FR-W-028): the map opens on Patuakhali district and moves
 // freely, pins are coloured by payment state, the customer pages filter by installment / credit invoices and an
@@ -19,7 +19,7 @@ async function waitForRows(page: Page) {
 
 test('map: opens on Patuakhali district, keeps the place the user moved to, colour legend filters', async ({ page }) => {
   await login(page);
-  await nav(page, custBn.map.title);
+  await nav(page, custBn.map.title, S.customers);
   await expect(page).toHaveURL(/[?&]at=/);
   const first = atOf(page.url());
   // Patuakhali district (not Barishal city at 22.70, 90.37)

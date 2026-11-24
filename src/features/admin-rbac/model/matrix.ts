@@ -1,7 +1,12 @@
 import type { Effective, OverrideChange, OverrideEntry, PermissionDef, Role } from '../api/rbac';
 
 export type Effect = 'inherit' | 'allow' | 'deny';
-export const ROLES = ['super_admin', 'branch_manager', 'field_staff', 'viewer'] as const satisfies readonly Role[];
+export const ROLES = ['super_admin', 'area_manager', 'branch_manager', 'field_staff', 'viewer'] as const satisfies readonly Role[];
+
+/** Contract 1.48.0 (ADR-065): a key this role can never hold; no override can grant it (e.g. user.manage for area_manager). */
+export function neverFor(p: Pick<PermissionDef, 'neverFor'>, role: string | undefined): boolean {
+  return !!role && !!p.neverFor?.includes(role as Role);
+}
 
 export interface ModuleGroup {
   module: string;

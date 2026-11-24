@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import settingsBn from '../../src/features/admin-settings/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import { login, nav, S } from '../fixtures';
 
 // Contract 1.44.0 (field-api PR #40, ADR-057, FR-CUS-021, FR-ERP-008). Owner decision 2026-11-23: every ERP customer
 // and every invoice, cash sales included, shows in the system; a cash sale is never due.
@@ -73,7 +73,7 @@ test('who did it: the list names the last visitor, "this month" names who visite
 
 test('settings: "Customers pulled from the ERP" is editable, every customer by default, in Bangla', async ({ page }) => {
   await login(page);
-  await nav(page, settingsBn.title);
+  await nav(page, settingsBn.title, S.admin);
   const field = page.getByLabel(settingsBn.fields['erp.customerScope'].label);
   await expect(field).toBeVisible();
   await expect(field).toHaveValue('all');

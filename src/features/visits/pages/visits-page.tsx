@@ -197,7 +197,7 @@ export function VisitsPage() {
         }
       >
         {open && (
-          <div className="space-y-5 p-5">
+          <div className="space-y-5">
             {coworkOn && coWorkState(open) === 'invalid' && (
               <p className="flex items-start gap-2 rounded-sm bg-warning-bg px-3 py-2 text-sm text-warning">
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />

@@ -37,6 +37,7 @@ const isoAt = (d: DateTime) => d.toUTC().toISO()!;
 export const catalog = catalogJson as {
   key: string; module: string; description: string; added: boolean; reserved: boolean;
   defaults: Record<Role, boolean | null>;
+  neverFor?: Role[];
 }[];
 
 // ---------- branches ----------
@@ -90,7 +91,7 @@ export const users: MockUser[] = [];
 function addUser(role: Role, branchIds: string[], name: { bn: string; en: string }, extra: Partial<MockUser> = {}) {
   const u: MockUser = {
     id: oid('6734'), name, phone: phone(), username: undefined, role, branchIds,
-    employeeCode: `${role === 'field_staff' ? 'FS' : role === 'branch_manager' ? 'BM' : role === 'viewer' ? 'VW' : 'SA'}${String(users.length + 1).padStart(3, '0')}`,
+    employeeCode: `${role === 'field_staff' ? 'FS' : role === 'branch_manager' ? 'BM' : role === 'area_manager' ? 'AM' : role === 'viewer' ? 'VW' : 'SA'}${String(users.length + 1).padStart(3, '0')}`,
     erpEmployeeId: `E-${2000 + users.length}`, shiftId: null, cashLimitPoisha: role === 'field_staff' ? 5_000_000 : null,
     active: true, mustChangePassword: false, locale: 'bn', lastLoginAt: isoAt(now().minus({ hours: int(1, 30) })), version: 1,
     password: 'Demo@2026', ...extra,
@@ -492,7 +493,7 @@ const FLAG_DEFS: [string, string, boolean][] = [
   ['module.attendance', 'Attendance and breaks', true], ['module.location', 'Duty-hour location tracking', true],
   ['module.stops', 'Stop and visit suggestions', false], ['module.reports', 'Reports and exports', true],
   ['module.notifications', 'Push notifications and broadcasts', true], ['module.devices', 'Device binding and approvals', true],
-  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.places', 'Map places (text markers on the map)', true], ['module.activity', 'Staff activity feed', true], ['module.prospects', 'Possible customers (1.45.0)', true], ['module.sync', 'Offline sync endpoints', true],
+  ['module.search', 'Global search', true], ['module.cowork', 'Co-work: staff working together', true], ['module.targets', 'Daily targets per staff', true], ['module.tasks', 'Admin tasks for staff', true], ['module.places', 'Map places (text markers on the map)', true], ['module.activity', 'Staff activity feed', true], ['module.prospects', 'Possible customers (1.45.0)', true], ['module.requests', 'Requests from staff (1.48.0; off by default on the server)', true], ['module.sync', 'Offline sync endpoints', true],
   ['module.sms', 'SMS receipts to customers (OD-06, proposed)', false], ['module.microfinance', 'RESERVED — blocked until legal review', false],
 ];
 export const flags: S['FeatureFlag'][] = FLAG_DEFS.map(([key, description, on]) => ({
@@ -510,6 +511,8 @@ export function effective(u: MockUser) {
   return catalog.map((p) => {
     if (p.reserved) return { key: p.key, allowed: false, source: 'reserved' as const };
     if (u.role === 'super_admin') return { key: p.key, allowed: true, source: 'super_admin' as const };
+    // 1.48.0 (ADR-065): no override grants a key the role can never hold
+    if (p.neverFor?.includes(u.role!)) return { key: p.key, allowed: false, source: 'role' as const };
     const uo = userOverrides[u.id!]?.[p.key];
     if (uo) return { key: p.key, allowed: uo === 'allow', source: 'user' as const };
     for (const b of u.branchIds ?? []) {
@@ -1605,4 +1608,74 @@ export const prospects: S['Prospect'][] = [];
     });
   }
   prospects.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// 1.48.0 (ADR-065): an area manager (every branch, no user / flag / settings management). Seeded last so the ids and
+// random draws of everything above stay as they were.
+export const areaManager = addUser('area_manager', [B[0]!], { bn: 'আরিফুর রহমান', en: 'Arifur Rahman' }, { username: 'area' });
+
+// ---------- requests (1.48.0, FR-REQ-001..006). Built from the people above without random draws. ----------
+export type MockRequest = S['Request'];
+export const requests: MockRequest[] = [];
+{
+  const person = (u: MockUser) => ({ id: u.id!, name: u.name?.en ?? '' });
+  const T: [S['RequestType'], string, string][] = [
+    ['complaint', 'গ্রাহক রসিদ পাননি বলে অভিযোগ করছেন', 'গত সপ্তাহে কিস্তি নিয়েছি, অ্যাপে রসিদ গেছে কিন্তু গ্রাহক বলছেন এসএমএস পাননি। অফিস থেকে একবার ফোন করে দিলে ভালো হয়।'],
+    ['request', 'ফোনের চার্জার নষ্ট, নতুন দরকার', 'দুপুরের পর ফোন বন্ধ হয়ে যাচ্ছে, লোকেশন যাচ্ছে না। একটি চার্জার বা পাওয়ার ব্যাংক দরকার।'],
+    ['report', 'বাজারে একই গ্রাহকের দুই নামে হিসাব', 'সাগরদী বাজারে একজন গ্রাহকের দুটি কোড দেখছি, একটি পুরনো ঠিকানায়। কোনটি রাখব জানাবেন।'],
+    ['inform', 'আগামীকাল সকালে দেরিতে আসব', 'ছেলের স্কুলে অভিভাবক সভা, সকাল ১১টার মধ্যে কাজে যোগ দেব।'],
+    ['request', 'নতুন এলাকা ভাগ করে দেওয়ার অনুরোধ', 'আমার এলাকায় গ্রাহক অনেক বেড়েছে, দিনে সবার কাছে যাওয়া যাচ্ছে না। নতুন কাউকে কিছু এলাকা দিলে ভালো হয়।'],
+    ['complaint', 'গ্রাহক কিস্তি দিতে অস্বীকার করছেন, হুমকি দিয়েছেন', 'আজ তৃতীয়বার গেলাম, গ্রাহক খারাপ ব্যবহার করেছেন। একা যেতে ভয় লাগছে, ম্যানেজার সঙ্গে গেলে ভালো হয়।'],
+    ['report', 'পণ্য ফেরত দিতে চান, টিভি চলছে না', 'গ্রাহকের টিভি এক মাসেই নষ্ট। ওয়ারেন্টিতে সারানো যাবে কিনা দেখবেন।'],
+  ];
+  const at = (h: number) => isoAt(now().minus({ hours: h }));
+  const date = (iso: string) => DateTime.fromISO(iso).setZone(ZONE).toISODate()!;
+  const q = (queue: 'area_manager' | 'super_admin') => ({ queue, user: null });
+  for (let i = 0; i < 16; i++) {
+    const who = staff[(i * 5) % staff.length]!;
+    const [type, title, body] = T[i % T.length]!;
+    const priority: S['RequestPriority'] = i % 4 === 0 ? 'important' : 'normal';
+    const level0 = priority === 'important' ? 'super_admin' : 'area_manager';
+    const t0 = 3 + i * 9;
+    const timeline: S['RequestTimelineEntry'][] = [{ id: oid('6790'), kind: 'created', at: at(t0), actor: person(who), note: null, from: null, to: q(level0), status: { from: null, to: 'open' } }];
+    let status: S['RequestStatus'] = 'open';
+    let level: 'area_manager' | 'super_admin' = level0;
+    let currentQueue: S['RequestQueue'] = level0;
+    let assignee: S['RequestPerson'] | null = null;
+    let resolvedAt: string | null = null, resolvedBy: S['RequestPerson'] | null = null, resolutionNote: string | null = null, closedAt: string | null = null;
+    const step = i % 6;
+    const am = person(areaManager);
+    if (step >= 1) timeline.push({ id: oid('6790'), kind: 'comment', at: at(t0 - 1), actor: am, note: 'দেখছি, আজকের মধ্যে জানাব।', from: null, to: null, status: null });
+    if (step === 1 && level0 === 'area_manager' && i < 8) {
+      timeline.push({ id: oid('6790'), kind: 'forwarded', at: at(t0 - 2), actor: am, note: 'টাকার বিষয়, সুপার অ্যাডমিনের সিদ্ধান্ত দরকার।', from: q('area_manager'), to: q('super_admin'), status: { from: 'open', to: 'forwarded' } });
+      status = 'forwarded'; level = 'super_admin'; currentQueue = 'super_admin';
+    }
+    if (step >= 2) {
+      // the area manager holds some, a super admin one (so "Assigned to me" has rows for both demo logins)
+      const m = i % 4 === 2 ? areaManager : i === 14 ? superAdmin : managers[i % managers.length]!;
+      assignee = person(m);
+      timeline.push({ id: oid('6790'), kind: 'assigned', at: at(t0 - 2), actor: level0 === 'super_admin' ? person(superAdmin) : am, note: 'শাখা ম্যানেজার দেখবেন।', from: q(level0), to: { queue: 'assignee', user: assignee }, status: { from: 'open', to: 'in_progress' } });
+      status = 'in_progress'; currentQueue = 'assignee';
+    }
+    if (step === 3 || step === 4 || step === 5) {
+      resolvedAt = at(t0 - 3); resolvedBy = assignee; resolutionNote = 'গ্রাহকের সঙ্গে কথা হয়েছে, বিষয়টি মিটে গেছে।';
+      timeline.push({ id: oid('6790'), kind: 'resolved', at: resolvedAt, actor: assignee!, note: resolutionNote, from: null, to: null, status: { from: 'in_progress', to: 'resolved' } });
+      status = 'resolved';
+    }
+    if (step === 4) {
+      closedAt = at(t0 - 4);
+      timeline.push({ id: oid('6790'), kind: 'closed', at: closedAt, actor: am, note: null, from: null, to: null, status: { from: 'resolved', to: 'closed' } });
+      status = 'closed';
+    }
+    if (step === 5) {
+      timeline.push({ id: oid('6790'), kind: 'reopened', at: at(t0 - 4), actor: person(who), note: 'সমস্যা আবার হচ্ছে।', from: null, to: { queue: 'assignee', user: assignee }, status: { from: 'resolved', to: 'reopened' } });
+      status = 'reopened'; resolvedAt = null; resolvedBy = null;
+    }
+    const createdAt = at(t0);
+    requests.push({
+      id: oid('6791'), clientId: crypto.randomUUID(), type, priority, title, body, customerId: i % 4 === 0 ? customers[i]!.item.id! : null, photoMediaIds: [],
+      branchId: who.branchIds?.[0] ?? branches[0]!.id!, createdBy: person(who), createdAt, createdDate: date(createdAt), status, currentQueue, level, assignee,
+      dueAt: null, resolvedAt, resolvedBy, resolutionNote, closedAt, timeline, updatedAt: timeline[timeline.length - 1]!.at, version: timeline.length,
+    });
+  }
 }

@@ -7,11 +7,13 @@ import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'jso
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import systemBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
 import prosBn from '../../src/features/prospects/i18n/bn.json' with { type: 'json' };
-import { confirmWithReason, login } from '../fixtures';
+import { confirmWithReason, login, S } from '../fixtures';
 
-async function openMenuAndGo(page: import('@playwright/test').Page, name: string) {
+/** Opens the menu and a sidebar item; with a section (FR-W-069), then that section's tab. */
+async function openMenuAndGo(page: import('@playwright/test').Page, name: string, section?: string) {
   await page.getByRole('button', { name: shellBn.openMenu }).click();
-  await page.getByRole('dialog').getByRole('link', { name }).first().click();
+  await page.getByRole('dialog').getByRole('link', { name: new RegExp(`^${section ?? name}( [০-৯0-9,]+)?$`) }).first().click();
+  if (section) await page.getByTestId('section-tabs').getByRole('link', { name: new RegExp(`^${name}( [০-৯0-9,]+)?$`) }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
 }
 
@@ -20,14 +22,14 @@ test('W-E13 at 390 px: inbox → resolve a conflict → read a deposit, with ≥
   await login(page);
   await openMenuAndGo(page, inboxBn.title);
 
-  await openMenuAndGo(page, colBn.conflicts);
+  await openMenuAndGo(page, colBn.conflicts, S.collections);
   const resolve = page.getByRole('button', { name: colBn.resolve }).first();
   expect((await resolve.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   await resolve.click();
   await confirmWithReason(page, 'Customer confirmed the payment on the phone.', /সমাধান/);
   await expect(page.getByText(colBn.resolved).first()).toBeVisible();
 
-  await openMenuAndGo(page, cashBn.title);
+  await openMenuAndGo(page, cashBn.title, S.collections);
   const tab = page.getByRole('group', { name: cashBn.deposits }).getByRole('button', { name: cashBn.depositTab.all, exact: true });
   expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(40);
   // below 640 px a deposit is a card in a list; no verify or reject anywhere
@@ -159,7 +161,7 @@ test('390 px: no sideways scroll on the dashboard, customers and possible custom
   await expect(page.getByTestId('pager')).toContainText(commonBn.table.pageOf.replace('{{n}}', '১').replace('{{pages}}', '৪'));
   await noSideways();
 
-  await openMenuAndGo(page, prosBn.title);
+  await openMenuAndGo(page, prosBn.title, S.customers);
   await noSideways();
   const trigger = page.getByTestId('date-range');
   expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(40);

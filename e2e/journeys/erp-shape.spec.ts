@@ -3,7 +3,7 @@ import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'jso
 import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import settingsBn from '../../src/features/admin-settings/i18n/bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import { login, nav, S } from '../fixtures';
 
 // Contract 1.13.0: the shape of the real Laravel ERP (field-api ADR-033).
 
@@ -25,7 +25,7 @@ test('customer: plans show the ERP invoice number and products, payments the ERP
 
 test('conflict "collector not linked": link the staff member to their ERP employee from the hint', async ({ page }) => {
   await login(page);
-  await nav(page, colBn.conflicts);
+  await nav(page, colBn.conflicts, S.collections);
   const link = page.getByRole('link', { name: new RegExp(colBn.conflictHint.linkStaff.replace('{{name}}', '(.+)')) }).first();
   await expect(link).toBeVisible();
   const name = (await link.innerText()).replace(colBn.conflictHint.linkStaff.replace('{{name}}', ''), '').trim();
@@ -55,7 +55,7 @@ test('conflict "collector not linked": link the staff member to their ERP employ
 
 test('branch map point: the ERP has none, so it is set in settings (paste coordinates; outside Bangladesh is refused)', async ({ page }) => {
   await login(page);
-  await nav(page, settingsBn.title);
+  await nav(page, settingsBn.title, S.admin);
   const card = page.locator('#set-branches');
   await expect(card.getByRole('heading', { name: settingsBn.sections.branches.title })).toBeVisible();
   await card.getByRole('button', { name: new RegExp(`${settingsBn.branchPoint.move} · ভোলা`) }).click();

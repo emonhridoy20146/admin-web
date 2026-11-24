@@ -5,7 +5,7 @@ import promBn from '../../src/features/promises/i18n/bn.json' with { type: 'json
 import prosBn from '../../src/features/prospects/i18n/bn.json' with { type: 'json' };
 import dashBn from '../../src/features/dashboard/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav, pickRange } from '../fixtures';
+import { login, nav, pickRange, S } from '../fixtures';
 
 // Owner requests 2026-11-23 (batch 1123) on field-api contract 1.45.0: FR-W-060..066.
 
@@ -48,7 +48,7 @@ test('customers: 100 per page by default, numbered pages, jump and back, 500 per
 
 test('customer map: full screen and back with the button and with Esc', async ({ page }) => {
   await login(page);
-  await nav(page, custBn.map.title);
+  await nav(page, custBn.map.title, S.customers);
   const box = page.getByTestId('map-box');
   await page.getByRole('button', { name: commonBn.map.fullscreen }).click();
   await expect(box).toHaveAttribute('data-fullscreen', 'true');
@@ -71,7 +71,7 @@ test('customer map: full screen and back with the button and with Esc', async ({
 
 test('date filter: a preset and a custom range land in the link and narrow the visits', async ({ page }) => {
   await login(page);
-  await nav(page, /^ভিজিট$/);
+  await nav(page, /^ভিজিট$/, S.field);
   const trigger = page.getByTestId('date-range');
   await expect(page.locator('tbody, ul[aria-label]').first()).toBeVisible();
   await pickRange(page, commonBn.range['7d']);
@@ -88,7 +88,7 @@ test('date filter: a preset and a custom range land in the link and narrow the v
 
 test('promise follow-up: broken without a follow-up, make the next promise, see the chain', async ({ page }) => {
   await login(page);
-  await nav(page, promBn.title);
+  await nav(page, promBn.title, S.field);
   await pickRange(page, commonBn.range.all);
   await page.getByRole('button', { name: promBn.followUp.filter }).click();
   await expect(page).toHaveURL(/nofollow=1/);
@@ -111,7 +111,7 @@ test('promise follow-up: broken without a follow-up, make the next promise, see 
 
 test('possible customers: filter, open, mark contacted, convert to a customer, re-open', async ({ page }) => {
   await login(page);
-  await nav(page, prosBn.title);
+  await nav(page, prosBn.title, S.customers);
   await expect(page.getByTestId('prospect-total')).toContainText(bnNum(46));
   await page.getByRole('group', { name: prosBn.col.status }).getByRole('button', { name: prosBn.status.new, exact: true }).click();
   await expect(page).toHaveURL(/status=new/);
@@ -150,7 +150,7 @@ test('dashboard: period section with links to the lists, modules-off card', asyn
 
 test('pin approvals: 20 cards per page', async ({ page }) => {
   await login(page);
-  await nav(page, custBn.pins.title);
+  await nav(page, custBn.pins.title, S.customers);
   await page.getByRole('group', { name: custBn.pins.status }).getByRole('button', { name: custBn.pins.tab.approved }).click();
   const cards = page.locator('main ul.grid > li');
   await expect(cards.first()).toBeVisible();

@@ -14,6 +14,8 @@
     "effective": "Result",
     "source": "Comes from"
   },
+  "never": "Never for this role",
+  "neverHint": "This role can never hold this permission (contract 1.48.0). No override can grant it.",
   "reserved": "Reserved",
   "reservedHint": "Reserved for a future module; cannot be granted.",
   "effect": {

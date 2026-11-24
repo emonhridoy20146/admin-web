@@ -1,7 +1,6 @@
 {
   "title": "Audit log",
   "subtitle": "Who changed what, when and why. Entries cannot be edited or deleted.",
-  "range": { "today": "Today", "7d": "Last 7 days", "30d": "Last 30 days", "all": "All time" },
   "allActions": "All actions",
   "allEntities": "All records",
   "entityFilter": "Only {{entity}} {{id}}",

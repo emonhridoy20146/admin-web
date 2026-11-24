@@ -98,6 +98,7 @@
   },
   "role": {
     "super_admin": "Super admin",
+    "area_manager": "Area manager",
     "branch_manager": "Branch manager",
     "field_staff": "Field staff",
     "viewer": "Viewer"

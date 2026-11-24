@@ -7,6 +7,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -15,15 +16,19 @@
   {
     "key": "user.manage",
     "module": "users",
-    "description": "Create/edit/deactivate users, reset password, in scope (BM cannot create SA/BM)",
+    "description": "Create/edit/deactivate users, reset password, in scope (only a super admin creates or manages SA/AM/BM)",
     "added": false,
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
-    }
+    },
+    "neverFor": [
+      "area_manager"
+    ]
   },
   {
     "key": "rbac.view",
@@ -33,6 +38,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -46,10 +52,14 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
-    }
+    },
+    "neverFor": [
+      "area_manager"
+    ]
   },
   {
     "key": "branch.view",
@@ -59,6 +69,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -72,10 +83,14 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
-    }
+    },
+    "neverFor": [
+      "area_manager"
+    ]
   },
   {
     "key": "erp.sync",
@@ -85,6 +100,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -98,10 +114,14 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
-    }
+    },
+    "neverFor": [
+      "area_manager"
+    ]
   },
   {
     "key": "device.manage",
@@ -111,6 +131,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -124,6 +145,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -137,6 +159,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -150,6 +173,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -163,6 +187,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -176,6 +201,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -189,6 +215,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -202,6 +229,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -215,6 +243,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -228,6 +257,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -241,6 +271,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -254,6 +285,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -267,6 +299,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -280,6 +313,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -293,6 +327,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -306,6 +341,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -319,6 +355,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -332,6 +369,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -345,6 +383,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -358,6 +397,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
@@ -371,6 +411,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -384,6 +425,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -397,6 +439,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -410,6 +453,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -423,6 +467,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -436,6 +481,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -449,6 +495,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -462,6 +509,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -475,6 +523,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -488,6 +537,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -501,6 +551,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": false,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": true,
       "viewer": false
@@ -514,6 +565,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -527,6 +579,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -540,6 +593,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
@@ -553,6 +607,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -566,6 +621,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -579,6 +635,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -592,6 +649,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -605,6 +663,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -618,6 +677,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -631,6 +691,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -644,6 +705,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -657,6 +719,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": false,
       "field_staff": false,
       "viewer": true
@@ -670,6 +733,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": false,
       "viewer": false
@@ -683,6 +747,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": false,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": true,
       "viewer": false
@@ -696,6 +761,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -709,6 +775,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -722,6 +789,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -735,6 +803,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -748,6 +817,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -761,6 +831,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -774,6 +845,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": false,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": true,
       "viewer": false
@@ -787,6 +859,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -800,6 +873,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": true
@@ -813,6 +887,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": true
@@ -826,6 +901,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": true,
       "viewer": false
@@ -839,6 +915,7 @@
     "reserved": false,
     "defaults": {
       "super_admin": true,
+      "area_manager": true,
       "branch_manager": true,
       "field_staff": false,
       "viewer": false
@@ -852,8 +929,65 @@
     "reserved": false,
     "defaults": {
       "super_admin": false,
+      "area_manager": false,
       "branch_manager": false,
       "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "request.create",
+    "module": "requests",
+    "description": "Send a request / report / inform / complaint (app offline or admin); see the ones you sent and the ones assigned to you; comment on them (1.48.0, FR-REQ-001)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "area_manager": true,
+      "branch_manager": true,
+      "field_staff": true,
+      "viewer": false
+    }
+  },
+  {
+    "key": "request.view",
+    "module": "requests",
+    "description": "List and view requests in scope and comment on them (1.48.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "area_manager": true,
+      "branch_manager": true,
+      "field_staff": false,
+      "viewer": true
+    }
+  },
+  {
+    "key": "request.manage",
+    "module": "requests",
+    "description": "Work the area manager queue: forward, assign, resolve, close, reopen requests (1.48.0)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "area_manager": true,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    }
+  },
+  {
+    "key": "request.important.manage",
+    "module": "requests",
+    "description": "Work the super admin queue: receive important requests, move, resolve or close requests at super admin level (1.48.0, ADR-066)",
+    "added": false,
+    "reserved": false,
+    "defaults": {
+      "super_admin": true,
+      "area_manager": false,
+      "branch_manager": false,
+      "field_staff": false,
       "viewer": false
     }
   },
@@ -864,11 +998,19 @@
     "added": false,
     "reserved": true,
     "defaults": {
-      "super_admin": null,
-      "branch_manager": null,
-      "field_staff": null,
-      "viewer": null
-    }
+      "super_admin": false,
+      "area_manager": false,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    },
+    "neverFor": [
+      "super_admin",
+      "area_manager",
+      "branch_manager",
+      "field_staff",
+      "viewer"
+    ]
   },
   {
     "key": "microfinance.manage",
@@ -877,10 +1019,18 @@
     "added": false,
     "reserved": true,
     "defaults": {
-      "super_admin": null,
-      "branch_manager": null,
-      "field_staff": null,
-      "viewer": null
-    }
+      "super_admin": false,
+      "area_manager": false,
+      "branch_manager": false,
+      "field_staff": false,
+      "viewer": false
+    },
+    "neverFor": [
+      "super_admin",
+      "area_manager",
+      "branch_manager",
+      "field_staff",
+      "viewer"
+    ]
   }
 ]

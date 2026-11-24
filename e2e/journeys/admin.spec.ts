@@ -8,11 +8,11 @@ import sysBn from '../../src/features/system/i18n/bn.json' with { type: 'json' }
 import settingsBn from '../../src/features/admin-settings/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { confirmWithReason, login, nav } from '../fixtures';
+import { confirmWithReason, login, nav, pickRange, S } from '../fixtures';
 
 test('W-E8 deny tag.set for one user; effective view shows source user; audit shows the diff', async ({ page }) => {
   await login(page);
-  await nav(page, rbacBn.title);
+  await nav(page, rbacBn.title, S.admin);
   await page.getByRole('tab', { name: rbacBn.tabs.user }).click();
   await page.getByPlaceholder(rbacBn.searchUser).fill('FS009');
   await page.getByRole('button', { name: /FS009/ }).first().click();
@@ -23,7 +23,7 @@ test('W-E8 deny tag.set for one user; effective view shows source user; audit sh
   await expect(row).toContainText(rbacBn.source.user);
   await expect(row.getByRole('radio', { name: rbacBn.effect.deny })).toHaveAttribute('aria-checked', 'true');
 
-  await nav(page, auditBn.title);
+  await nav(page, auditBn.title, S.admin);
   const first = page.locator('tbody tr').first();
   await expect(first).toContainText(auditBn.actions['rbac.override.set']);
   await first.click();
@@ -35,11 +35,14 @@ test('W-E8 deny tag.set for one user; effective view shows source user; audit sh
 
 test('W-E9 turning a module off hides its nav item and the direct route shows the module-off page', async ({ page }) => {
   await login(page);
-  await nav(page, flagsBn.title);
+  await nav(page, flagsBn.title, S.admin);
   const cashFlag = page.getByRole('listitem').filter({ hasText: 'module.cash' });
   await cashFlag.getByRole('switch').click();
   await confirmWithReason(page, 'Cash module paused during the audit week.', flagsBn.turnOff);
   await expect(page.getByRole('navigation').first().getByRole('link', { name: cashBn.title })).toHaveCount(0);
+  // FR-W-069: cash is a tab of the Collections section; with the module off the tab is gone and the section stays
+  await nav(page, S.collections);
+  await expect(page.getByTestId('section-tabs').getByRole('link', { name: new RegExp(`^${cashBn.title}`) })).toHaveCount(0);
   // keyboard shortcut g h navigates client-side to /cash/
   await page.locator('main').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('g');
@@ -50,7 +53,7 @@ test('W-E9 turning a module off hides its nav item and the direct route shows th
 
 test('create a user shows the temporary password once', async ({ page }) => {
   await login(page);
-  await nav(page, usersBn.title);
+  await nav(page, usersBn.title, S.admin);
   await page.getByRole('button', { name: usersBn.new }).click();
   const d = page.getByRole('dialog');
   await d.getByLabel(usersBn.form.nameBn).fill('রহিম উদ্দিন');
@@ -65,7 +68,7 @@ test('create a user shows the temporary password once', async ({ page }) => {
 
 test('devices: approve a waiting phone, then unbind an active one with a reason', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, devBn.title);
+  await nav(page, devBn.title, S.admin);
   const rows = page.locator('tbody tr');
   await page.getByRole('button', { name: new RegExp(`^${devBn.view.pending_approval}`) }).click();
   await expect(page).toHaveURL(/view=pending_approval/);
@@ -88,7 +91,7 @@ test('devices: approve a waiting phone, then unbind an active one with a reason'
 
 test('system health: server, ERP link and phone sync are shown, problems first', async ({ page }) => {
   await login(page);
-  await nav(page, sysBn.title);
+  await nav(page, sysBn.title, S.admin);
   await expect(page.getByText(sysBn.erp.lastSuccess)).toBeVisible();
   await expect(page.getByText(sysBn.api.database)).toBeVisible();
   await expect(page.getByRole('heading', { level: 2, name: sysBn.sync.title })).toBeVisible();
@@ -98,7 +101,7 @@ test('system health: server, ERP link and phone sync are shown, problems first',
 
 test('settings: one branch gets its own duty hours: no weekly day off and a Friday break window; the organisation keeps Friday off', async ({ page }) => {
   await login(page);
-  await nav(page, settingsBn.title);
+  await nav(page, settingsBn.title, S.admin);
   const off = page.getByRole('group', { name: settingsBn.fields['duty.weeklyOff'].label });
   const friday = settingsBn.weekdays[5]!;
   await expect(off.getByRole('button', { name: friday, pressed: true })).toBeVisible();
@@ -136,7 +139,7 @@ test('settings: one branch gets its own duty hours: no weekly day off and a Frid
 
 test('settings: attendance photo is required by default; drop one moment and save with a reason', async ({ page }) => {
   await login(page);
-  await nav(page, settingsBn.title);
+  await nav(page, settingsBn.title, S.admin);
   const group = page.getByRole('group', { name: settingsBn.fields['attendance.selfieEvents'].label });
   for (const k of ['work_in', 'break_start', 'break_end', 'work_out'] as const) await expect(group.getByRole('button', { name: settingsBn.enum[k], pressed: true })).toBeVisible();
   await group.getByRole('button', { name: settingsBn.enum.break_start }).click();
@@ -145,4 +148,37 @@ test('settings: attendance photo is required by default; drop one moment and sav
   await confirmWithReason(page, 'বিরতির সময় ছবি আপাতত লাগবে না', settingsBn.saveConfirm);
   await expect(page.getByText(settingsBn.saved)).toBeVisible();
   await expect(group.getByRole('button', { name: settingsBn.enum.break_start, pressed: false })).toBeVisible();
+});
+
+// FR-W-068 (owner request 2026-11-24, item B): the audit log has the shared date filter; the range is in the link and
+// goes to the server as Asia/Dhaka business dates (contract 1.48.0), so paging stays exact.
+test('audit log: shared date filter, preset and custom range in the link, sent as Dhaka dates', async ({ page }) => {
+  await login(page);
+  await page.goto('/admin/audit/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(auditBn.title);
+  const trigger = page.getByTestId('date-range');
+  await expect(trigger).toContainText(commonBn.range['7d']);
+
+  const today = page.waitForRequest((r) => r.url().includes('/audit?') && r.url().includes('from='));
+  await pickRange(page, commonBn.range.today);
+  await expect(page).toHaveURL(/range=today/);
+  const u = new URL((await today).url());
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());
+  expect(u.searchParams.get('from')).toBe(day);
+  expect(u.searchParams.get('to')).toBe(day);
+
+  await trigger.click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel(commonBn.range.from).fill('2026-11-01');
+  await dialog.getByLabel(commonBn.range.to).fill('2026-11-03');
+  const custom = page.waitForRequest((r) => r.url().includes('/audit?') && r.url().includes('from=2026-11-01'));
+  await dialog.getByRole('button', { name: commonBn.range.apply }).click();
+  await expect(page).toHaveURL(/from=2026-11-01&to=2026-11-03/);
+  expect(new URL((await custom).url()).searchParams.get('to')).toBe('2026-11-03');
+
+  // an old link keeps working as the same preset
+  await page.goto('/admin/audit/?range=30d');
+  await expect(trigger).toContainText(commonBn.range['30d']);
+  await pickRange(page, commonBn.range.all);
+  await expect(page.locator('tbody tr').first()).toBeVisible();
 });

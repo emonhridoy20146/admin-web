@@ -13,6 +13,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description Throttling (FR-AUTH-005, ADR-064): 5 failed logins in 15 min lock the account for 15 min. Failed logins from
+         *     one IP also lock that IP after `auth.ipLockFailures` (default 50) in 15 min, but a user who logs in from a
+         *     device (`X-Device-Id`) or browser (refresh cookie) that already had a session of theirs is not stopped by the
+         *     IP lock. 423 bodies carry `details` = `AccountLockedDetails` and a `Retry-After` header (1.47.0).
+         *     A field staff on a new device gets 403 `DEVICE_NOT_APPROVED` with `details` = `DeviceNotApprovedDetails`
+         *     (1.47.0; FR-AUTH-007); show "waiting for manager approval" and the request id.
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -242,6 +250,11 @@ export interface paths {
         };
         get: operations["listUsers"];
         put?: never;
+        /**
+         * @description user.manage. Only a super admin may create a super admin, area manager or branch manager (403 FORBIDDEN otherwise).
+         *     Since 1.48.0 `role` may be `area_manager` (ADR-065): scope is every branch; `branchIds` is still required (home branch).
+         *     An area manager never holds user.manage, so creating, editing, changing roles and resetting passwords is 403 for them.
+         */
         post: operations["createUser"];
         delete?: never;
         options?: never;
@@ -264,6 +277,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description user.manage (403 FORBIDDEN without it, e.g. for an area manager). Role changes to or from super_admin, area_manager or branch_manager need a super admin. */
         patch: operations["updateUser"];
         trace?: never;
     };
@@ -276,6 +290,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description user.manage (403 FORBIDDEN without it, e.g. for an area manager). */
         post: operations["resetPassword"];
         delete?: never;
         options?: never;
@@ -356,6 +371,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description Binds a pending device. If the user would then have more than `devices.maxPerUser` (default 1) active devices,
+         *     the least recently seen active ones are unbound and their sessions end. Approving a device that is already
+         *     active answers 200 and changes nothing (1.47.0); an unbound device is 409 INVALID_STATE.
+         */
         post: operations["approveDevice"];
         delete?: never;
         options?: never;
@@ -2211,6 +2231,183 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Added in 1.48.0 (FR-REQ-001..006, module `requests`, flag `module.requests`, ADR-066). Requests / tickets newest first.
+         *     Scope: request.view sees the caller's branches (super admin and area manager: every branch), plus the ones the caller
+         *     created or is assigned; a caller with only request.create (field staff) sees the ones they created and the ones
+         *     assigned to them now. `from` / `to` = Asia/Dhaka business date of creation (inclusive). `status` takes one value or
+         *     several separated by commas. `queue` = where the item waits now (`assignee` = assigned to a person). `assigneeId=me`
+         *     means the caller. `q` matches title and body. `counts` = rows per status for the same filters without `status`.
+         */
+        get: operations["listRequests"];
+        put?: never;
+        /**
+         * @description Added in 1.48.0. request.create. Same as the sync mutation `request` (the app sends it offline-first). Idempotent by
+         *     clientId: the same clientId again answers 200 with the stored request (another user's clientId → 409
+         *     IDEMPOTENCY_MISMATCH). `priority: important` waits in the super admin queue, `normal` in the area manager queue.
+         *     The branch is the creator's home branch, or `branchId` (in scope) for office users with request.view.
+         *     `customerId` must be a customer in the caller's scope; `photoMediaIds` must be photos the caller uploaded
+         *     (upload them first, POST /media/upload-url + confirm). Otherwise 400 VALIDATION_FAILED. Audited (`request.created`).
+         *     Notifies the queue: important → holders of request.important.manage (super admins); normal → area managers
+         *     (holders of request.manage without request.important.manage), or the super admins when there is none.
+         */
+        post: operations["createRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Added in 1.48.0. With the full timeline. Out of scope (see GET /requests) is 404. */
+        get: operations["getRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/comment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.48.0. Anyone who can see the request (request.view or request.create). Appends a `comment` timeline entry.
+         *     Idempotent by the comment's clientId (same as the sync mutation `request_comment`). A closed request is 409
+         *     INVALID_STATE (reason REQUEST_CLOSED). Notifies the creator and the assignee (not the author). Audited (`request.commented`).
+         */
+        post: operations["commentRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/forward": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.48.0. request.manage. Sends the request to a queue (`area_manager` or `super_admin`) or to a person
+         *     (`userId`: an active user who holds request.create or request.manage) with a note; status `forwarded`. Exactly one of
+         *     `queue` / `userId`. A request in the super admin queue can be moved only by a holder of request.important.manage
+         *     (403 FORBIDDEN otherwise). Resolved or closed → 409 INVALID_STATE. Unknown target → 422 BUSINESS_RULE
+         *     REQUEST_INVALID_TARGET. Timeline `forwarded { from, to, note }`; notifies the target. Audited (`request.forwarded`).
+         */
+        post: operations["forwardRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.48.0. request.manage. Gives the request to a person (same targets and rules as /forward); status
+         *     `in_progress`. Timeline `assigned`; notifies the assignee. Audited (`request.assigned`).
+         */
+        post: operations["assignRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.48.0. request.manage (super admin queue: request.important.manage), or the current assignee. `note` is
+         *     required. Status `resolved`; timeline `resolved { note }`; notifies the creator. Resolved or closed → 409
+         *     INVALID_STATE. Audited (`request.resolved`).
+         */
+        post: operations["resolveRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.48.0. The creator, or request.manage (super admin queue: request.important.manage). Only a resolved or
+         *     closed request (else 409 INVALID_STATE REQUEST_OPEN); it goes back to the queue / assignee it had; status `reopened`.
+         *     `note` is required. Notifies the queue or assignee. Audited (`request.reopened`).
+         */
+        post: operations["reopenRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Added in 1.48.0. request.manage (super admin queue: request.important.manage), or the creator (withdraws their own).
+         *     Status `closed` (final until reopened); `note` optional. Already closed → 409 INVALID_STATE. Audited (`request.closed`).
+         */
+        post: operations["closeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attendance/events": {
         parameters: {
             query?: never;
@@ -2712,6 +2909,8 @@ export interface paths {
          *     that list exactly the rows behind the number, so the client can open the list with one click. Sections of
          *     switched-off modules come back as zeros or empty arrays. Field staff see only their own figures (scope).
          *     Nothing here is an official ERP balance (cached ERP values carry erpFetchedAt in `erp`).
+         *     1.48.0: `requestStats` (module.requests): requests not resolved or closed, by the queue they wait in now, and the
+         *     important ones; not limited by the range. Each links to GET /requests in the caller's request scope.
          */
         get: operations["dashboardOverview"];
         put?: never;
@@ -2939,6 +3138,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description audit.view, branch scope (super admin and area manager: every branch). Newest first. Every filter combines with AND.
+         *     1.48.0 (FR-AUD-003): `from` / `to` also take an inclusive Asia/Dhaka business date (YYYY-MM-DD): `from` = 00:00 Dhaka
+         *     of that date, `to` = the end of that Dhaka day. A date-time is still read as an exact instant (unchanged).
+         *     A value that is neither, or `from` after `to`, is 400 VALIDATION_FAILED.
+         */
         get: operations["listAudit"];
         put?: never;
         post?: never;
@@ -2964,6 +3169,32 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** @description `details` of 423 ACCOUNT_LOCKED on POST /auth/login. `until` since 1.0; the rest added in 1.47.0. */
+        AccountLockedDetails: {
+            /**
+             * Format: date-time
+             * @description When the lock ends (UTC)
+             */
+            until: string;
+            /** @description Added in 1.47.0. Seconds until `until`; same as the Retry-After header */
+            retryAfterSec?: number;
+            /**
+             * @description Added in 1.47.0. `account`: 5 wrong passwords for this phone/username; `ip`: too many failures from this network and this device or browser has never had a session of the user (ADR-064)
+             * @enum {string}
+             */
+            scope?: "account" | "ip";
+        };
+        /** @description `details` of 403 DEVICE_NOT_APPROVED on POST /auth/login (added in 1.47.0, FR-AUTH-007). The request is a pending device; retrying the login does not create another. */
+        DeviceNotApprovedDetails: {
+            /** @description The pending Device `id`: what an admin approves (POST /devices/{id}/approve) and the request id the app shows */
+            pendingDeviceId: string;
+            /** @description The X-Device-Id that was sent */
+            deviceId: string;
+            /** @enum {string} */
+            status: "pending_approval";
+            /** @description Setting devices.maxPerUser */
+            maxActiveDevices?: number;
+        };
         I18nText: {
             bn?: string;
             en?: string;
@@ -2976,8 +3207,11 @@ export interface components {
             decision: "approve" | "reject";
             reason?: string;
         };
-        /** @enum {string} */
-        Role: "super_admin" | "branch_manager" | "field_staff" | "viewer";
+        /**
+         * @description area_manager added in 1.48.0 (ADR-065): every branch, no user / role / password / flag / settings management. Clients must show an unknown role as its raw key, never fail.
+         * @enum {string}
+         */
+        Role: "super_admin" | "area_manager" | "branch_manager" | "field_staff" | "viewer";
         GeoFix: {
             lat: number;
             lng: number;
@@ -3109,16 +3343,21 @@ export interface components {
             emulator?: boolean;
             /** @enum {string} */
             status?: "active" | "pending_approval" | "unbound";
+            /** @description Added in 1.47.0. Only on pending_approval rows: same model and Android version as the user's only active device, which was not seen for devices.reinstallHintIdleDays days (0 = off, then always false). A hint for the admin; the device still needs approval */
+            likelyReinstall?: boolean;
         };
         PermissionDef: {
             /** @example collection.record */
             key?: string;
             module?: string;
             description?: components["schemas"]["I18nText"];
+            /** @description Per role key (area_manager since 1.48.0) */
             defaults?: {
                 [key: string]: boolean;
             };
             reserved?: boolean;
+            /** @description Added in 1.48.0 (ADR-065). Roles that never hold this key: no override can grant it to them (user.manage, rbac.manage, flag.manage and settings.manage for area_manager) */
+            neverFor?: components["schemas"]["Role"][];
         };
         /** @description Added in 1.3.0 */
         OverrideEntry: {
@@ -4783,10 +5022,10 @@ export interface components {
             /** Format: uuid */
             mutationId: string;
             /**
-             * @description prospect (1.45.0) payload ProspectCreate (same as POST /prospects; needs prospect.create and module.prospects; idempotent by clientId). promise (1.45.0) may carry followUpOf. place, place_edit, place_move_request (1.38.0): see the payload description. collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
+             * @description request (1.48.0) payload RequestCreate (same as POST /requests; needs request.create and module.requests; idempotent by clientId). request_comment (1.48.0) payload RequestComment plus `requestId` (server id) or `requestClientId` (the clientId of a request sent before; send it after that request, dependsOn); needs module.requests; idempotent by the comment clientId. prospect (1.45.0) payload ProspectCreate (same as POST /prospects; needs prospect.create and module.prospects; idempotent by clientId). promise (1.45.0) may carry followUpOf. place, place_edit, place_move_request (1.38.0): see the payload description. collection_withdraw (1.32.0) payload { collectionId | clientId, reason? }: same as POST /collections/{id}/withdraw; needs collection.withdraw; send it after the collection (dependsOn). collection_edit (1.32.0) payload { collectionId | clientId, amountPoisha?, note?, payerName? }: same as PATCH /collections/{id}; needs collection.edit; a repeat with the same values is a replay. customer_phone (1.23.0) payload { customerId, phones: [{ number, label? }] }: same body as POST /customers/{id}/phones; needs permission customer.phone.manage; a repeat adds nothing. attendance_selfie (1.21.0) payload { eventClientId, selfieMediaId }: adds the photo to an attendance event that was sent before its photo uploaded; send it after that event (dependsOn).
              * @enum {string}
              */
-            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit" | "place" | "place_edit" | "place_move_request" | "prospect";
+            entity: "visit" | "collection" | "note" | "promise" | "promise_cancel" | "deposit" | "attendance_event" | "tag" | "location_proposal" | "visit_checkout" | "handover_decision" | "cash_closing" | "contact_attempt" | "broadcast_ack" | "task_resolve_request" | "attendance_selfie" | "customer_phone" | "collection_withdraw" | "collection_edit" | "place" | "place_edit" | "place_move_request" | "prospect" | "request" | "request_comment";
             /** @enum {string} */
             op: "create" | "update";
             /**
@@ -4846,7 +5085,7 @@ export interface components {
         SyncChange: {
             seq?: number;
             /** @enum {string} */
-            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task" | "place" | "prospect";
+            entity?: "customer" | "collection" | "visit" | "note" | "promise" | "tag" | "handover" | "assignment" | "area" | "deposit" | "attendance_day" | "notification" | "broadcast" | "setting" | "contact_attempt" | "location_proposal" | "cowork_session" | "task" | "place" | "prospect" | "request";
             /** @enum {string} */
             op?: "upsert" | "delete";
             id?: string;
@@ -4858,6 +5097,7 @@ export interface components {
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
              *     cowork_session → CoworkSession (1.9.0; sent to every invited or member user on each change)
              *     task → Task (1.20.0; sent to the assignee on every change; the bootstrap snapshot holds open tasks and those closed in the last 30 days)
+             *     request → Request (1.48.0; sent to the creator and to everyone it is or was assigned to, on every change; a request no longer assigned to the user arrives as op=delete; the bootstrap snapshot holds the user's requests and the ones assigned to them that are not closed, plus those closed in the last 30 days)
              *     prospect → Prospect (1.45.0; sent to the staff member who created it, on create and on every office change; the bootstrap snapshot holds their prospects of the last 90 days and every one not converted or dropped)
              *     place → Place (1.38.0; since 1.42.0 (ADR-054) sent to every device of every branch on every change; a deleted place arrives as op=delete reason=deleted; the bootstrap snapshot holds the active places of all branches. Devices whose cursor predates 1.42.0 get CURSOR_EXPIRED once and take a fresh snapshot)
              */
@@ -5160,6 +5400,13 @@ export interface components {
                 converted?: components["schemas"]["DashboardCount"];
                 openNow?: components["schemas"]["DashboardCount"];
             };
+            /** @description Added in 1.48.0. Requests (module.requests) not resolved or closed, in the caller's request scope; not limited by the range */
+            requestStats?: {
+                areaManagerQueue?: components["schemas"]["DashboardCount"];
+                superAdminQueue?: components["schemas"]["DashboardCount"];
+                assigned?: components["schemas"]["DashboardCount"] & unknown;
+                importantOpen?: components["schemas"]["DashboardCount"];
+            };
         };
         /**
          * @description Added in 1.45.0
@@ -5265,6 +5512,150 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
             version: number;
+        };
+        /**
+         * @description Added in 1.48.0. Clients must show an unknown value as its raw key
+         * @enum {string}
+         */
+        RequestType: "request" | "report" | "inform" | "complaint";
+        /**
+         * @description Added in 1.48.0. important waits in the super admin queue, normal in the area manager queue
+         * @enum {string}
+         */
+        RequestPriority: "normal" | "important";
+        /**
+         * @description Added in 1.48.0
+         * @enum {string}
+         */
+        RequestStatus: "open" | "in_progress" | "forwarded" | "resolved" | "closed" | "reopened";
+        /**
+         * @description Added in 1.48.0. Where the request waits now; assignee = with the person in `assignee`
+         * @enum {string}
+         */
+        RequestQueue: "area_manager" | "super_admin" | "assignee";
+        RequestPerson: {
+            id: string;
+            name: string;
+        };
+        /** @description Added in 1.48.0. A queue, or a person (queue = assignee and user set) */
+        RequestTarget: {
+            queue: components["schemas"]["RequestQueue"];
+            user: components["schemas"]["RequestPerson"] | null;
+        };
+        /** @description Added in 1.48.0 (FR-REQ-001). Body of POST /requests and payload of the sync mutation `request` */
+        RequestCreate: {
+            /** Format: uuid */
+            clientId: string;
+            type: components["schemas"]["RequestType"];
+            priority: components["schemas"]["RequestPriority"];
+            title: string;
+            body: string;
+            /** @description A customer in the caller's scope */
+            customerId?: string;
+            /** @description Photos the caller uploaded (media flow) */
+            photoMediaIds?: string[];
+            /** Format: date-time */
+            dueAt?: string;
+            /** @description Office users with request.view only, in scope; everyone else gets their home branch */
+            branchId?: string;
+        };
+        /** @description Added in 1.48.0 */
+        RequestComment: {
+            /** Format: uuid */
+            clientId: string;
+            text: string;
+        };
+        RequestNote: {
+            note: string;
+        };
+        /** @description Added in 1.48.0. Exactly one of queue / userId */
+        RequestForward: {
+            /** @enum {string} */
+            queue?: "area_manager" | "super_admin";
+            userId?: string;
+            note: string;
+        };
+        RequestAssign: {
+            userId: string;
+            note?: string;
+        };
+        /** @description Added in 1.48.0. Append-only; an entry is never changed or removed */
+        RequestTimelineEntry: {
+            id: string;
+            /**
+             * @description Clients must show an unknown kind as its raw key
+             * @enum {string}
+             */
+            kind: "created" | "comment" | "forwarded" | "assigned" | "status_changed" | "resolved" | "reopened" | "closed";
+            /** Format: date-time */
+            at: string;
+            actor: components["schemas"]["RequestPerson"];
+            /** @description comment text, forward/assign/resolve/reopen/close note */
+            note?: string | null;
+            /** @description forwarded / assigned: where it was */
+            from?: components["schemas"]["RequestTarget"] | null;
+            /** @description created / forwarded / assigned: where it went */
+            to?: components["schemas"]["RequestTarget"] | null;
+            /** @description The status change this entry made, if any */
+            status?: {
+                from: string | null;
+                to: components["schemas"]["RequestStatus"];
+            } | null;
+        };
+        /** @description Added in 1.48.0 (FR-REQ-001..006). A request / report / inform / complaint from staff, traced end to end */
+        Request: {
+            id: string;
+            clientId: string;
+            type: components["schemas"]["RequestType"];
+            priority: components["schemas"]["RequestPriority"];
+            title: string;
+            body: string;
+            customerId?: string | null;
+            photoMediaIds?: string[];
+            branchId: string;
+            createdBy: components["schemas"]["RequestPerson"];
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date
+             * @description Asia/Dhaka business date of createdAt
+             */
+            createdDate: string;
+            status: components["schemas"]["RequestStatus"];
+            currentQueue: components["schemas"]["RequestQueue"];
+            /**
+             * @description The queue responsible for it, also while it is with a person: set by priority, changed by forwarding to a queue. At super_admin only request.important.manage holders move, resolve or close it
+             * @enum {string}
+             */
+            level: "area_manager" | "super_admin";
+            assignee: components["schemas"]["RequestPerson"] | null;
+            /** Format: date-time */
+            dueAt?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolvedBy?: components["schemas"]["RequestPerson"] | null;
+            resolutionNote?: string | null;
+            /** Format: date-time */
+            closedAt?: string | null;
+            timeline: components["schemas"]["RequestTimelineEntry"][];
+            /** Format: date-time */
+            updatedAt?: string;
+            version: number;
+        };
+        RequestPage: {
+            items: components["schemas"]["Request"][];
+            nextCursor: string | null;
+            /** @description Rows matching the filters (all pages) */
+            total: number;
+            /** @description Rows per status for the same filters without `status` */
+            counts: {
+                open: number;
+                in_progress: number;
+                forwarded: number;
+                resolved: number;
+                closed: number;
+                reopened: number;
+            };
         };
         /** @description Added in 1.45.0. The list behind a dashboard number: GET /api/v1{path}?{query}. Query values are strings; arrays are comma separated */
         DashboardLink: {
@@ -5681,8 +6072,32 @@ export interface operations {
                 };
             };
             401: components["responses"]["Problem"];
-            403: components["responses"]["Problem"];
-            423: components["responses"]["Problem"];
+            /** @description DEVICE_NOT_APPROVED (FR-AUTH-007) or another 403 Problem */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"] & {
+                        details?: components["schemas"]["DeviceNotApprovedDetails"] | {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            /** @description ACCOUNT_LOCKED */
+            423: {
+                headers: {
+                    /** @description Seconds until the lock ends (1.47.0) */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"] & {
+                        details: components["schemas"]["AccountLockedDetails"];
+                    };
+                };
+            };
             426: components["responses"]["Problem"];
         };
     };
@@ -6038,6 +6453,7 @@ export interface operations {
                 };
             };
             400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     getUser: {
@@ -6089,6 +6505,7 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            403: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
         };
     };
@@ -6114,6 +6531,7 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Problem"];
         };
     };
     deactivateUser: {
@@ -6224,8 +6642,16 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        id?: string;
+                        /** @enum {string} */
+                        status?: "active";
+                    };
+                };
             };
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
         };
     };
     registerPushToken: {
@@ -9730,6 +10156,298 @@ export interface operations {
             409: components["responses"]["Problem"];
         };
     };
+    listRequests: {
+        parameters: {
+            query?: {
+                branchId?: components["parameters"]["BranchId"];
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0; a value after `to` is 400 */
+                from?: components["parameters"]["FromDate"];
+                /** @description Inclusive Asia/Dhaka business date (YYYY-MM-DD). Added to GET /inbox and GET /activity in 1.45.0 */
+                to?: components["parameters"]["ToDate"];
+                status?: components["schemas"]["RequestStatus"][];
+                priority?: components["schemas"]["RequestPriority"];
+                type?: components["schemas"]["RequestType"];
+                queue?: components["schemas"]["RequestQueue"];
+                /** @description A user id, or `me` */
+                assigneeId?: string;
+                createdBy?: string;
+                customerId?: string;
+                q?: string;
+                limit?: components["parameters"]["Limit"];
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestPage"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    createRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    getRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    commentRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestComment"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    forwardRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestForward"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    assignRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestAssign"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    resolveRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestNote"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    reopenRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestNote"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
+    closeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Request"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+        };
+    };
     listAttendanceEvents: {
         parameters: {
             query: {
@@ -10965,7 +11683,9 @@ export interface operations {
                 action?: string;
                 entity?: string;
                 entityId?: string;
+                /** @description Inclusive. A date-time, or (1.48.0) an Asia/Dhaka business date = from 00:00 Dhaka */
                 from?: string;
+                /** @description Inclusive. A date-time, or (1.48.0) an Asia/Dhaka business date = to the end of that Dhaka day */
                 to?: string;
                 limit?: components["parameters"]["Limit"];
                 cursor?: components["parameters"]["Cursor"];
@@ -10988,6 +11708,9 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
 }

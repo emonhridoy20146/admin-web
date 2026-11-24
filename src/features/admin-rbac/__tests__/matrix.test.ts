@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PermissionDef } from '../api/rbac';
-import { overridesForRole, currentOverrides, groupByModule, resolve, stageModule, toChanges } from '../model/matrix';
+import { neverFor, overridesForRole, currentOverrides, groupByModule, resolve, stageModule, toChanges } from '../model/matrix';
 
 const catalog: PermissionDef[] = [
   { key: 'tag.view', module: 'tags', defaults: { branch_manager: true } },
@@ -50,5 +50,15 @@ describe('permissions matrix model', () => {
     const groups = groupByModule(catalog);
     expect(stageModule({}, groups[0]!, 'deny')).toEqual({ 'tag.view': 'deny', 'tag.set': 'deny' });
     expect(stageModule({}, groups[2]!, 'allow')).toEqual({});
+  });
+});
+
+describe('neverFor (contract 1.48.0)', () => {
+  it('locks a key the role can never hold and nothing else', () => {
+    const p = { neverFor: ['area_manager' as const] };
+    expect(neverFor(p, 'area_manager')).toBe(true);
+    expect(neverFor(p, 'branch_manager')).toBe(false);
+    expect(neverFor({}, 'area_manager')).toBe(false);
+    expect(neverFor(p, undefined)).toBe(false);
   });
 });

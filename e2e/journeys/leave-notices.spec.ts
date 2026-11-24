@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import attBn from '../../src/features/attendance/i18n/bn.json' with { type: 'json' };
 import noticesBn from '../../src/features/notices/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
-import { confirmWithReason, login, nav } from '../fixtures';
+import { confirmWithReason, login, nav, S } from '../fixtures';
 
 const dhakaToday = (page: import('@playwright/test').Page) => page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date()));
 
 test('leave: the manager approves one request and rejects another with a reason', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, attBn.leave.title);
+  await nav(page, attBn.leave.title, S.staff);
 
   // waiting requests of the manager's branch, oldest first
   const rows = page.locator('tbody tr');
@@ -46,7 +46,7 @@ test('leave: the manager approves one request and rejects another with a reason'
 
 test('work calendar: add a branch holiday and delete it, add a shift and give it to a staff member', async ({ page }) => {
   await login(page);
-  await nav(page, attBn.calendar.title);
+  await nav(page, attBn.calendar.title, S.admin);
 
   // a holiday on the 1st of the month after next for one branch (the mock seeds a branch holiday 9 days from
   // today, which is the 1st of next month on some days, so next month is not always free)
@@ -91,7 +91,7 @@ test('work calendar: add a branch holiday and delete it, add a shift and give it
   await expect(page.locator('tbody tr').filter({ hasText: 'Evening market' })).toContainText('14:00 – 21:00');
 
   // give it to a field staff member in Users (the change asks for a reason)
-  await nav(page, usersBn.title);
+  await nav(page, usersBn.title, S.admin);
   // a field staff member of Barishal (the row opens the drawer)
   await page.locator('tbody tr').filter({ hasText: /FS0\d\d/ }).first().locator('td').first().click();
   await page.getByRole('dialog').getByRole('button', { name: usersBn.drawer.edit }).click();
@@ -108,7 +108,7 @@ test('work calendar: add a branch holiday and delete it, add a shift and give it
 
 test('notices: send a must-read notice and see who has not read it', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, noticesBn.title);
+  await nav(page, noticesBn.title, S.inbox);
 
   // an older must-read notice: the people who have not read it come first
   await page.locator('tbody tr').filter({ hasText: 'রসিদ ছাড়া টাকা নয়' }).locator('td').first().getByRole('button').click();

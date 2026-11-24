@@ -181,5 +181,6 @@
     "noneYet": "None recorded in this period.",
     "cowork": "Co-work",
     "coworkSessions": "Co-work sessions in the period"
-  }
+  },
+  "req": {"title": "Requests", "sub": "Not resolved or closed, by where they wait now", "areaManagerQueue": "Area manager queue", "superAdminQueue": "Super admin queue", "assigned": "With a person", "importantOpen": "Important, not finished"}
 }

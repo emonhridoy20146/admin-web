@@ -9,6 +9,7 @@ import { applyTheme, useUi } from '@/shared/lib/ui-store';
 import { isMockApi } from '@/shared/api/config';
 import { isApiError } from '@/shared/api/problem';
 import { messages } from './features';
+import './navigation';
 
 function makeClient() {
   return new QueryClient({

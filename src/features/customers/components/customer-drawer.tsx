@@ -22,7 +22,7 @@ export function CustomerDrawer({ id, onClose, footer }: { id: string | null; onC
       headerExtra={c ? <CustomerStatusRow c={c} /> : null}
       footer={footer}
     >
-      <div className="space-y-5 p-5">
+      <div className="space-y-5">
         {q.error ? <ErrorBanner error={q.error} onRetry={() => q.refetch()} /> : null}
         {q.isLoading || !c ? (
           <div className="space-y-3">

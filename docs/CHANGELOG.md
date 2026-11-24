@@ -2,6 +2,46 @@
 
 ## [Unreleased]
 
+Contract: field-api **1.48.0** (field-api `main` 360ce85; merged from `claude/contract-1-48` fc7cd81, pinned by the coordinator). `pnpm gen:api` from `contract/openapi.yaml`; permission catalog **72 keys** (`request.create`, `request.view`, `request.manage`, `request.important.manage`), role `area_manager` with `neverFor` (user.manage, rbac.manage, flag.manage, settings.manage). `scripts/sync-contract.mjs` reads the role columns from the catalog header (coordinator's change).
+
+### Added (owner request 2026-11-24, batch 1124 item D: requests inbox — FR-W-070, ADR-W29)
+- New feature `requests` (flag `module.requests`, **off by default on the server: turn it on in Feature flags**), page `/requests` as a tab of the Inbox section, ⌘K "Requests" and "New request".
+- Queue tabs with counts: My queue, Area manager queue, Super admin queue, Assigned to me, All. Filters in the link: date range, status (with counts, default "not finished"), priority, sender, search; branch from the header switcher.
+- Drawer (shared `Drawer`, padded): message, answer, where it waits, level, branch, due date, customer link, the full timeline with icons (created, comment, forwarded from → to, assigned, status, resolved, reopened, closed; unknown kinds shown raw), a comment box (idempotent `clientId`), and actions by permission and level: Forward (queue or person, note required), Assign (note optional), Resolve and Reopen (note required), Close (note optional). 403/409/422 are shown in the dialog.
+- New request dialog for office users (`request.create`): kind, priority (important → super admin queue), title, message, customer, due date, branch; one `clientId` per opening.
+- Dashboard: Requests card from `requestStats` (area manager queue, super admin queue, with a person, important not finished), each opening its inbox view; nav badge = my queue.
+- Mock: `/requests` list (scope, filters, `total`, `counts`), create, get, comment / forward / assign / resolve / reopen / close with the contract's rules, `requestStats`.
+
+### Added (owner request 2026-11-24, batch 1124 item E: area manager role — FR-W-071)
+- Users: super admins give `area_manager` (help text explains the role); only a super admin sees super admin / area manager / branch manager in the role picker (`pickableRoles`), and the mock answers 403 otherwise, like the server.
+- Area managers see "All branches" in the switcher (every branch, contract 1.48.0).
+- User create, password reset, Feature flags and Settings are hidden for area managers by their permissions (they lack `user.manage`, `flag.manage`, `settings.manage`); direct links show the forbidden page and the server still answers 403.
+- Permissions: an Area manager column in the role matrix; `neverFor` keys show "Never for this role" and cannot be overridden for that role (user overrides too).
+- Mock: demo login `area` (Area manager), `neverFor` respected, catalog served with `neverFor`.
+- Audit log sends plain Asia/Dhaka dates as `from`/`to` (1.48.0) instead of date-times.
+- e2e: `requests.spec.ts` (send → comment → forward → assign → resolve → reopen → close, all on the timeline, with axe on the dialogs; dashboard tiles and link state; area manager limits; the role in users and permissions). The request drawer joined the drawer-padding guard; `/requests/` joined the a11y page list.
+
+### Changed (owner request 2026-11-24, batch 1124 item C: fewer sidebar pages — FR-W-069, ADR-W28)
+- **Sidebar: 8 items instead of 35.** Overview · Inbox (Inbox, Staff activity, Notices) · Customers (Customers, Customer map, Pin approvals, Possible customers, Areas & assignments, Data quality) · Collections (Collections, Conflicts, Cash on hand, Handovers) · Field work (Visits, Co-work, Promises, Tasks, Places) · Staff (Staff, Attendance, Leave requests, Live map, Route history, Leaderboard, Targets) · Reports · Admin (Users, Devices, Permissions, Settings, Holidays & shifts, Feature flags, Audit log, Photo storage, System health). Groups are separated by a rule; the foldable group headings are gone.
+- **Section tab strip** (`shell/components/section-tabs.tsx`) above the page on every tab: icon, label and count per tab, `aria-current="page"`, ≥ 44 px on touch, scrolls sideways on phones with the open tab in view and a fade at the edge, not printed. It is its own `nav` landmark above `<main>`. Pages below a tab (a customer's page, place move requests) highlight the section in the sidebar without the strip.
+- **Every tab is still its own route**, so old links, bookmarks, ⌘K commands, `g` shortcuts and dashboard/inbox links open the same page; no redirects were needed. A tab reopens with the filters it was left with (memory only; drawers, dialogs, page and branch are not kept).
+- Gating stays per tab (module flag + permission); a section without visible tabs is hidden; the sidebar item opens the first visible tab. A section's badge adds up its actionable tabs (`badgeFrom`). ⌘K also finds sections by name ("Admin", "Field work").
+- Registry: `registerSections`, `navSections`, `navEntries`, `sectionForPath` (`shared/feature/registry.ts`); the IA is one list in `src/app/navigation.ts`, checked at start-up (every tab must be a route, no route in two sections). Unit tests for the registry and the real IA (8–12 items, every nav page in a section).
+- **Fixed on the way:** tapping the section you are already in left the phone menu open (it closed only on a path change); the handover dialog now ticks the giver's areas when the areas arrive after the giver was picked.
+- e2e: `nav(page, tab, S.section)` and `tab(page, name)` helpers; journeys updated; new `navigation.spec.ts` (8–12 items, tabs, remembered filters, old links, detail page without strip, ⌘K, 390 px touch + axe on the strip). The a11y page list is unchanged because every page kept its URL; the strip is checked on all of them.
+
+### Changed (owner request 2026-11-24, batch 1124 item B: audit date filter — FR-W-068)
+- `/admin/audit` uses the shared `DateRangeFilter` (presets Today … Last month, All time, Custom range; Asia/Dhaka days; `range` or `from`/`to` in the link; default Last 7 days) instead of its own four-button switch. Old `?range=today|7d|30d|all` links open as the same preset.
+- Server-side from the start: `GET /audit` already takes `from`/`to` date-times in the pinned contract, so the page sends the Dhaka day start of `from` and the end of `to` (`rangeInstants`) and the cursor pager stays exact; no client-side filtering was needed. If contract 1.48.0 changes these to business dates, only `useAudit`'s parameters change.
+- Phones: the action and record selects sit side by side under the date filter.
+- e2e: `admin.spec.ts` checks a preset and a custom range in the link and the `from`/`to` sent (Dhaka midnight = 18:00 UTC).
+
+### Fixed (owner report 2026-11-24, batch 1124 item A: drawer text touched the left edge — FR-W-067)
+- **Cause:** the shared `Drawer` (`shared/ui/overlay.tsx`) gave its scrolling body no padding, so every feature had to add its own `p-5`. Six drawers did not: place, task, leave request, cash in hand, deposit and notice (text 0–1 px from the edge at 390 px and 1440 px; notice and deposit also touched the right edge).
+- **Fix:** the drawer body owns the padding (`px-5 py-5` = `space.20`, the same as the header and footer). The per-feature `p-5`/`m-5` wrappers were removed from customer, collection, visit, promise, staff, handover, co-work, target, possible customer, user and audit drawers, so nothing is padded twice. A `flush` prop exists for content that must run edge to edge (not used yet). Long free text in a `DescList` (`full: true`: leave reason, decision reason) spans both columns and wraps instead of being cut off.
+- **Guard:** component test `shared/ui/__tests__/drawer.test.tsx` and e2e `drawer-padding.spec.ts`, which opens 11 drawers at 1440 px and 390 px and fails when any text is closer than 16 px to the drawer's left or right edge (checked: it fails with the old `Drawer`).
+- Devices have no drawer (a dialog, already padded). The request drawer (item D) is built on the same `Drawer`.
+
 ### Fixed (owner report 2026-11-24: customer map turned white in full screen and stayed white after leaving it)
 - **Cause:** `MapView` gave Leaflet the same element whose `className` React controls. The customer map changes that class when entering or leaving full screen (`rounded-none border-0`). React then rewrote the class attribute and removed the classes Leaflet had added (`leaflet-container`, …), so Leaflet's tile CSS no longer applied. Only the marker pane was still visible.
 - **Fix:** Leaflet gets an inner element whose class React never changes. The outer box keeps the role, label and style classes. The full-screen journey now checks that `.leaflet-container` and the tile pane survive entering and leaving full screen.

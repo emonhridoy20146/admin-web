@@ -6,7 +6,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, CircleCheck, Footprints, Handshake, Trophy, UserRoundSearch, Users, Wallet } from 'lucide-react';
+import { ArrowRight, CircleCheck, Footprints, Handshake, ShieldCheck, Siren, Trophy, UserRoundCheck, UserRoundSearch, Users, Wallet } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { formatMoneyCompact, formatNumber, formatPercent } from '@/shared/lib/format';
 import type { components } from '@/shared/api/schema';
@@ -286,6 +286,43 @@ export function ProspectsCard({ d, loading, showProspects, showCowork, className
               </Link>
             )}
           </>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/** 1.48.0 (FR-W-070): requests not finished, by where they wait now; each number opens that view of the requests inbox. */
+export function RequestsCard({ d, loading, className }: { d?: Overview; loading: boolean; className?: string }) {
+  const { t } = useTranslation('dashboard');
+  const r = d?.requestStats;
+  if (!loading && !r) return null;
+  const rows = [
+    { key: 'areaManagerQueue', icon: Users, c: r?.areaManagerQueue, tone: 'text-primary' },
+    { key: 'superAdminQueue', icon: ShieldCheck, c: r?.superAdminQueue, tone: 'text-primary' },
+    { key: 'assigned', icon: UserRoundCheck, c: r?.assigned, tone: 'text-primary' },
+    { key: 'importantOpen', icon: Siren, c: r?.importantOpen, tone: 'text-danger' },
+  ] as const;
+  return (
+    <Card className={cn('flex flex-col', className)} data-testid="requests-card">
+      <CardHeader title={t('req.title')} subtitle={t('req.sub')} />
+      <div className="flex-1 p-4">
+        {loading ? (
+          <Skeleton className="h-32" />
+        ) : (
+          <ul className="grid grid-cols-2 gap-2">
+            {rows.map((x) => (
+              <li key={x.key}>
+                <Link href={pageHref(x.c?.link, '/requests/')} className="flex h-full min-h-11 flex-col gap-1 rounded-md border border-line px-3 py-2.5 hover:bg-surface-hover">
+                  <span className="flex items-center gap-1.5 text-xs text-fg-secondary">
+                    <x.icon className={cn('size-3.5 shrink-0', x.tone)} aria-hidden />
+                    {t(`req.${x.key}`)}
+                  </span>
+                  <span className={cn('tabular text-xl font-semibold', x.key === 'importantOpen' && (x.c?.count ?? 0) > 0 ? 'text-danger' : 'text-fg')}>{formatNumber(x.c?.count ?? 0)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </Card>

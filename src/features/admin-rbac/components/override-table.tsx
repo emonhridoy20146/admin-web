@@ -54,6 +54,8 @@ export interface OverrideRowState {
   staged?: Effect;
   source?: string;
   locked?: boolean;
+  /** 1.48.0: this role can never hold the key (catalog `neverFor`); shown locked, never granted */
+  never?: boolean;
 }
 
 export function OverrideTable({
@@ -83,7 +85,7 @@ export function OverrideTable({
         </thead>
         <tbody>
           {groups.map((g) => {
-            const allLocked = g.perms.every((p) => p.reserved || rows(p.key!).locked);
+            const allLocked = g.perms.every((p) => p.reserved || rows(p.key!).locked || rows(p.key!).never);
             return (
               <Fragment key={g.module}>
                 <tr className="border-b border-line bg-surface-subtle/60">
@@ -110,8 +112,8 @@ export function OverrideTable({
                   const r = rows(p.key!);
                   const effect = r.staged ?? r.current;
                   const changed = r.staged != null && r.staged !== r.current;
-                  const locked = p.reserved || r.locked;
-                  const result = p.reserved ? false : resolve(effect, r.base);
+                  const locked = p.reserved || r.locked || r.never;
+                  const result = p.reserved || r.never ? false : resolve(effect, r.base);
                   return (
                     <tr key={p.key} className={cn('border-b border-line last:border-0', changed && 'bg-primary-subtle/40')}>
                       <th scope="row" className="px-4 py-2.5 text-start font-normal">
@@ -128,6 +130,10 @@ export function OverrideTable({
                         {p.reserved ? (
                           <Tooltip content={t('reservedHint')}>
                             <span tabIndex={0} className="inline-flex items-center gap-1 text-xs text-fg-tertiary"><Lock className="size-3.5" aria-hidden />{t('reserved')}</span>
+                          </Tooltip>
+                        ) : r.never ? (
+                          <Tooltip content={t('neverHint')}>
+                            <span tabIndex={0} className="inline-flex items-center gap-1 text-xs text-fg-tertiary"><Lock className="size-3.5" aria-hidden />{t('never')}</span>
                           </Tooltip>
                         ) : (
                           <EffectToggle value={effect} onChange={(e) => onStage(p.key!, e)} label={p.key!} disabled={locked} changed={changed} />

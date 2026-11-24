@@ -1,26 +1,25 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Copy, ScrollText, X } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { useUi } from '@/shared/lib/ui-store';
 import { formatDateTime, formatRelative, pickText } from '@/shared/lib/format';
-import { dhakaDayStartIso } from '@/shared/lib/time';
+import { FEED_PRESETS } from '@/shared/lib/date-range';
 import { oneOf, useUrlState } from '@/shared/lib/url-state';
 import { PageHeader, DescList } from '@/shared/ui/page';
 import { DataTable, useCursorPager, type Column } from '@/shared/ui/data-table';
 import { EmptyState } from '@/shared/ui/feedback';
 import { Badge } from '@/shared/ui/badge';
-import { Avatar, Segmented, Tooltip } from '@/shared/ui/primitives';
+import { Avatar, Tooltip } from '@/shared/ui/primitives';
+import { DateRangeFilter, useDateRange } from '@/shared/ui/date-range-filter';
 import { Select } from '@/shared/ui/form';
 import { Button } from '@/shared/ui/button';
 import { Drawer } from '@/shared/ui/overlay';
 import { useAudit, type AuditEntry } from '../api/audit';
 import { diffRows, show } from '../model/diff';
 
-const RANGES = ['today', '7d', '30d', 'all'] as const;
-const RANGE_DAYS: Record<(typeof RANGES)[number], number | null> = { today: 0, '7d': 6, '30d': 29, all: null };
 const GROUPS = ['user', 'rbac', 'settings', 'flag', 'collection', 'deposit', 'tag', 'handover', 'auth', 'location'] as const;
 const ENTITIES = ['user', 'branch', 'settings', 'feature_flag', 'collection', 'deposit', 'customer', 'handover', 'session'] as const;
 
@@ -30,14 +29,16 @@ export function AuditPage() {
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const url = useUrlState();
-  const range = oneOf(url.get('range'), RANGES, '7d');
+  // FR-W-068: the shared date filter (presets, custom range, Asia/Dhaka days, in the link; old `range=today|7d|30d|all`
+  // links open as the same preset). The server filters by Asia/Dhaka business dates (contract 1.48.0 `from`/`to`), so
+  // paging stays exact.
+  const range = useDateRange({ presets: FEED_PRESETS, fallback: '7d', reset: ['cursor'] });
   const action = oneOf(url.get('action'), ['', ...GROUPS] as const, '');
   const entity = oneOf(url.get('entity'), ['', ...ENTITIES] as const, '');
   const entityId = url.get('entityId');
   const cursor = url.get('cursor');
   const [limit, setLimit] = useState(25);
-  const from = useMemo(() => (RANGE_DAYS[range] == null ? undefined : dhakaDayStartIso(RANGE_DAYS[range]!)), [range]);
-  const q = useAudit({ from, action: action || undefined, entity: entity || undefined, entityId: entityId || undefined, cursor: cursor || undefined, limit });
+  const q = useAudit({ from: range.from || undefined, to: range.to || undefined, action: action || undefined, entity: entity || undefined, entityId: entityId || undefined, cursor: cursor || undefined, limit });
   const pager = useCursorPager(cursor, (c) => url.set({ cursor: c }));
   const drawer = url.get('drawer');
   const drawerId = drawer.startsWith('audit:') ? drawer.slice(6) : null;
@@ -92,13 +93,13 @@ export function AuditPage() {
         <span>{t('subtitle')}</span>
       </PageHeader>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Segmented label={t('col.at')} value={range} onChange={(v) => reset({ range: v === '7d' ? null : v })} options={RANGES.map((r) => ({ value: r, label: t(`range.${r}`) }))} />
-        <div className="flex flex-wrap gap-2 lg:ms-auto">
-          <Select value={action} onChange={(e) => reset({ action: e.target.value || null })} className="h-9 w-48" aria-label={t('col.action')}>
+        <DateRangeFilter value={range} onChange={(c, r) => (pager.reset(), range.set(c, r))} label={t('col.at')} />
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:ms-auto">
+          <Select value={action} onChange={(e) => reset({ action: e.target.value || null })} className="h-9 w-full sm:w-48" aria-label={t('col.action')}>
             <option value="">{t('allActions')}</option>
             {GROUPS.map((g) => <option key={g} value={g}>{t(`groups.${g}`)}</option>)}
           </Select>
-          <Select value={entity} onChange={(e) => reset({ entity: e.target.value || null })} className="h-9 w-44" aria-label={t('col.entity')}>
+          <Select value={entity} onChange={(e) => reset({ entity: e.target.value || null })} className="h-9 w-full sm:w-44" aria-label={t('col.entity')}>
             <option value="">{t('allEntities')}</option>
             {ENTITIES.map((g) => <option key={g} value={g}>{t(`entities.${g}`)}</option>)}
           </Select>
@@ -147,7 +148,7 @@ function AuditDrawer({ entry, open, onClose, locale }: { entry: AuditEntry | nul
       subtitle={entry?.at ? `${formatDateTime(entry.at)} · ${entry.actor?.name ?? ''}` : undefined}
     >
       {entry && (
-        <div className="space-y-6 p-5">
+        <div className="space-y-6">
           {entry.reason ? (
             <blockquote className="rounded-md border-s-4 border-primary bg-primary-subtle/50 px-4 py-3 text-sm text-fg">{entry.reason}</blockquote>
           ) : (
