@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed (owner report 2026-11-24: the home page showed only "This module is turned off / Open feature flags")
+- **Cause:** the dashboard feature was gated on the flag `module.dashboard`, which field-api never had: `GET /dashboard/overview` belongs to the reports module, whose flag is `module.reports` ("Dashboard and reports"). The server's flag snapshot never carried the key, so the dashboard was always "off", and the owner could not find a switch for it. The mock API listed a `module.dashboard` flag, so tests passed. This dated from the first scaffold.
+- **Fix:** the dashboard uses `module.reports`. The mock no longer has `module.dashboard`, and the flag label was removed. Every other feature's flag was checked against field-api's module manifests and exists there.
+
 Contract: field-api **1.46.0** (field-api `main` a5341af, pinned by the coordinator; additive: `GET /customers` takes `limit` up to 1000 and a 0-based `offset` that wins over `cursor`; `total` is exact, no longer capped at 10,000). The customers pager now asks for one page in one request (`offset=(page-1)*size`, `limit=size`); the 100-row chunk walk and the 10,000 cap in the header are gone. Mock API: `offset` and `limit` ≤ 1000 on `/customers`.
 
 Contract: field-api **1.45.0** (field-api `main` d538aa4, pinned by the coordinator in this branch; additive: `GET /dashboard/overview` statistics with `from`/`to` and list links, `from`/`to` on `GET /inbox` and `GET /activity`, promise follow-ups (`followUpOf`, `followUpId`, `attempt`, `chainRootId`, `closedAt`, `createdBy` and `brokenWithoutFollowUp` filters, `CustomerDetail.recentPromises`), possible customers (`/prospects`, flag `module.prospects`), `attendanceRequired` and permission `attendance.exempt`, visit `businessDate` / `checkInLocalTime`). `pnpm gen:api` from `contract/openapi.yaml`; permission catalog 68 keys (`prospect.view`, `prospect.create`, `prospect.manage`, `attendance.exempt`). No new settings in 1.45.0, so the settings page is unchanged (owner item H).

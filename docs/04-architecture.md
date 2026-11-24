@@ -39,7 +39,7 @@ Extension points let a new feature add a dashboard widget, a customer-detail tab
 |---|---|---|---|
 | `auth` | — | — | `/login`, `/change-password` |
 | `shell` | — | — | layout, nav, header, branch switcher |
-| `dashboard` | `module.dashboard` | `report.view` | `/` |
+| `dashboard` | `module.reports` | `report.view` | `/` |
 | `inbox` | `module.inbox` | `inbox.view` | `/inbox` |
 | `customers` | `module.customers` | `customer.view`, `customer.export`, `customer.location.approve` | `/customers`, `/customers/[id]`, `/map`, `/pin-approvals` |
 | `map` | `module.customers` | `customer.view`, `assignment.manage` | `/map` |

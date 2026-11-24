@@ -45,7 +45,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 ## Status notes (2026-11-23, batch 1123, contracts 1.45.0 and 1.46.0)
 - ☑ Customers pager 100/500/1000 with numbered pages (FR-W-060; one request per page with contract 1.46.0 `offset`), map full screen (FR-W-061), pin approvals paged (FR-W-062), shared date filter on eight pages (FR-W-063), management dashboard (FR-W-064), promise follow-ups (FR-W-065), possible customers (FR-W-066). Settings: nothing new in 1.45.0.
 - Header fits 390 px (was 407 px wide).
-- Live: the dashboard needs `module.dashboard` ON and possible customers `module.prospects` ON in Feature flags.
+- Live: the dashboard needs `module.reports` ON (there is no `module.dashboard` on the server) and possible customers `module.prospects` ON in Feature flags.
 
 ## Status notes (2026-11-15)
 - Verified: lint (incl. boundaries), typecheck, 69 unit tests, 21 Playwright journeys incl. axe on 19 pages, `check:permissions`, `check:i18n`, static export served with rewrites + hashed CSP.

@@ -21,7 +21,6 @@
   "reset": "Undo",
   "saved": "Flag updated",
   "names": {
-    "module.dashboard": "Overview dashboard",
     "module.inbox": "Needs-attention inbox",
     "module.customers": "Customers",
     "module.tags": "Bad-customer tags",
