@@ -129,8 +129,9 @@ export function PlacesPage() {
 
       {/* The map above the list, both full width: side by side the table scrolled sideways at 1440 px. */}
       <div className="flex flex-col gap-4">
+        {/* Owner request 2026-11-24: the map was too short; most of the viewport on desktop, the list stays below. */}
         {status === 'active' && (
-          <div className="h-[40vh] min-h-72">
+          <div className="h-[60vh] min-h-96 lg:h-[70vh]">
             <MapView label={t('map.label')} center={center} zoom={home ? 14 : DEFAULT_VIEW.zoom} markers={map.markers} lines={map.lines} fit={fit} onView={(v) => setZoom(v.zoom)} onMarkerClick={(id) => url.set({ drawer: id }, { push: true })} locate />
           </div>
         )}
