@@ -55,13 +55,18 @@ export function SectionTabs() {
     if (activePath) remember(activePath, new URLSearchParams(sp.toString()));
   }, [activePath, sp]);
 
-  useLayoutEffect(() => {
+  // Keep the open tab in view. Measured from on-screen boxes, and again whenever the strip's size changes (icons,
+  // badges and fonts arrive after the first paint and move the tabs).
+  const showActive = useCallback(() => {
     const list = listRef.current;
     const el = list?.querySelector<HTMLElement>('[aria-current=page]');
     if (!list || !el) return;
-    const l = el.offsetLeft - list.offsetLeft;
-    if (l < list.scrollLeft || l + el.offsetWidth > list.scrollLeft + list.clientWidth) list.scrollLeft = l - 16;
-  }, [activePath, tabsKey]);
+    const lb = list.getBoundingClientRect();
+    const eb = el.getBoundingClientRect();
+    if (eb.left < lb.left) list.scrollLeft -= lb.left - eb.left + 16;
+    else if (eb.right > lb.right) list.scrollLeft += eb.right - lb.right + 16;
+  }, []);
+  useLayoutEffect(showActive, [showActive, activePath, tabsKey]);
 
   // Fade only the side that has more tabs to scroll to, so the first and last tab are never half hidden.
   const [more, setMore] = useState({ start: false, end: false });
@@ -76,10 +81,11 @@ export function SectionTabs() {
     const l = listRef.current;
     if (!l) return;
     measure();
-    const ro = new ResizeObserver(measure);
+    const ro = new ResizeObserver(() => (showActive(), measure()));
     ro.observe(l);
+    for (const li of l.children) ro.observe(li);
     return () => ro.disconnect();
-  }, [measure, tabsKey]);
+  }, [measure, showActive, tabsKey]);
 
   if (!hit || !hit.exact || hit.nav.tabs.length < 2) return null;
   const branch = sp.get('branch');
