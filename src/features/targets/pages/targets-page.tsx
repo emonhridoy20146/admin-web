@@ -221,7 +221,7 @@ function History({ r }: { r: StaffTarget }) {
   const h = useTargetHistory(r.userId);
   const rows = h.data ?? [];
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-5">
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line [&>*]:bg-surface">
         <div className="px-4 py-3">
           <dt className="text-xs text-fg-tertiary">{t('col.amount')}</dt>

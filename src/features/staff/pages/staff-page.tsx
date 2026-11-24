@@ -223,7 +223,7 @@ export function StaffPage() {
         headerExtra={open && targetRatio(open) != null && targetRatio(open)! >= 1 ? <Badge tone="success">{t('targetMet')}</Badge> : undefined}
       >
         {open && (
-          <div className="space-y-5 p-5">
+          <div className="space-y-5">
             <div className="rounded-md border border-line px-4 py-3.5">
               <p className="text-xs font-medium text-fg-tertiary">{t('col.collected')}</p>
               <MoneyText poisha={collected(open)} className="text-xl font-semibold" />

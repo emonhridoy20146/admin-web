@@ -189,7 +189,7 @@ export function PromisesPage() {
         }
       >
         {open && (
-          <div className="space-y-5 p-5">
+          <div className="space-y-5">
             <div className="rounded-md border border-line px-4 py-3.5">
               <p className="text-xs font-medium text-fg-tertiary">{t('col.amount')}</p>
               <MoneyText poisha={open.promisedAmountPoisha} className="text-xl font-semibold" />

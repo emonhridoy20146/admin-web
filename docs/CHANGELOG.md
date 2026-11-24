@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed (owner report 2026-11-24, batch 1124 item A: drawer text touched the left edge — FR-W-067)
+- **Cause:** the shared `Drawer` (`shared/ui/overlay.tsx`) gave its scrolling body no padding, so every feature had to add its own `p-5`. Six drawers did not: place, task, leave request, cash in hand, deposit and notice (text 0–1 px from the edge at 390 px and 1440 px; notice and deposit also touched the right edge).
+- **Fix:** the drawer body owns the padding (`px-5 py-5` = `space.20`, the same as the header and footer). The per-feature `p-5`/`m-5` wrappers were removed from customer, collection, visit, promise, staff, handover, co-work, target, possible customer, user and audit drawers, so nothing is padded twice. A `flush` prop exists for content that must run edge to edge (not used yet). Long free text in a `DescList` (`full: true`: leave reason, decision reason) spans both columns and wraps instead of being cut off.
+- **Guard:** component test `shared/ui/__tests__/drawer.test.tsx` and e2e `drawer-padding.spec.ts`, which opens 11 drawers at 1440 px and 390 px and fails when any text is closer than 16 px to the drawer's left or right edge (checked: it fails with the old `Drawer`).
+- Devices have no drawer (a dialog, already padded). The request drawer (item D) is built on the same `Drawer`.
+
 ### Fixed (owner report 2026-11-24: customer map turned white in full screen and stayed white after leaving it)
 - **Cause:** `MapView` gave Leaflet the same element whose `className` React controls. The customer map changes that class when entering or leaving full screen (`rounded-none border-0`). React then rewrote the class attribute and removed the classes Leaflet had added (`leaflet-container`, …), so Leaflet's tile CSS no longer applied. Only the marker pane was still visible.
 - **Fix:** Leaflet gets an inner element whose class React never changes. The outer box keeps the role, label and style classes. The full-screen journey now checks that `.leaflet-container` and the tile pane survive entering and leaving full screen.

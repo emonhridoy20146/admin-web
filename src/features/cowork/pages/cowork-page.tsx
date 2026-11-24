@@ -165,12 +165,12 @@ export function CoworkPage() {
         {open ? (
           <SessionDetail s={open} canVisits={canVisits} />
         ) : one.isLoading || q.isLoading ? (
-          <div className="space-y-3 p-5">
+          <div className="space-y-3">
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-24 w-full" />
           </div>
         ) : (
-          <div className="p-5">
+          <div>
             <ErrorBanner error={one.error ?? new Error(t('notFound'))} />
           </div>
         )}
@@ -246,7 +246,7 @@ function SessionDetail({ s, canVisits }: { s: Session; canVisits: boolean }) {
   const minutes = openMinutes(s);
 
   return (
-    <div className="space-y-6 p-5">
+    <div className="space-y-6">
       {s.endedBy && (
         <div className="rounded-md border border-warning/30 bg-warning-bg px-3 py-2.5 text-sm" data-testid="cowork-ended-by-office">
           <p className="font-medium text-warning">{t('end.byOffice', { name: s.endedBy.name ?? '—', time: s.endedAt ? formatTime(s.endedAt) : '' })}</p>

@@ -147,7 +147,7 @@ function AuditDrawer({ entry, open, onClose, locale }: { entry: AuditEntry | nul
       subtitle={entry?.at ? `${formatDateTime(entry.at)} · ${entry.actor?.name ?? ''}` : undefined}
     >
       {entry && (
-        <div className="space-y-6 p-5">
+        <div className="space-y-6">
           {entry.reason ? (
             <blockquote className="rounded-md border-s-4 border-primary bg-primary-subtle/50 px-4 py-3 text-sm text-fg">{entry.reason}</blockquote>
           ) : (
