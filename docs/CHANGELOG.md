@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed (owner request 2026-11-24, batch 1124 item B: audit date filter — FR-W-068)
+- `/admin/audit` uses the shared `DateRangeFilter` (presets Today … Last month, All time, Custom range; Asia/Dhaka days; `range` or `from`/`to` in the link; default Last 7 days) instead of its own four-button switch. Old `?range=today|7d|30d|all` links open as the same preset.
+- Server-side from the start: `GET /audit` already takes `from`/`to` date-times in the pinned contract, so the page sends the Dhaka day start of `from` and the end of `to` (`rangeInstants`) and the cursor pager stays exact; no client-side filtering was needed. If contract 1.48.0 changes these to business dates, only `useAudit`'s parameters change.
+- Phones: the action and record selects sit side by side under the date filter.
+- e2e: `admin.spec.ts` checks a preset and a custom range in the link and the `from`/`to` sent (Dhaka midnight = 18:00 UTC).
+
 ### Fixed (owner report 2026-11-24, batch 1124 item A: drawer text touched the left edge — FR-W-067)
 - **Cause:** the shared `Drawer` (`shared/ui/overlay.tsx`) gave its scrolling body no padding, so every feature had to add its own `p-5`. Six drawers did not: place, task, leave request, cash in hand, deposit and notice (text 0–1 px from the edge at 390 px and 1440 px; notice and deposit also touched the right edge).
 - **Fix:** the drawer body owns the padding (`px-5 py-5` = `space.20`, the same as the header and footer). The per-feature `p-5`/`m-5` wrappers were removed from customer, collection, visit, promise, staff, handover, co-work, target, possible customer, user and audit drawers, so nothing is padded twice. A `flush` prop exists for content that must run edge to edge (not used yet). Long free text in a `DescList` (`full: true`: leave reason, decision reason) spans both columns and wraps instead of being cut off.

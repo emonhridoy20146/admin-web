@@ -8,7 +8,7 @@ import sysBn from '../../src/features/system/i18n/bn.json' with { type: 'json' }
 import settingsBn from '../../src/features/admin-settings/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { confirmWithReason, login, nav } from '../fixtures';
+import { confirmWithReason, login, nav, pickRange } from '../fixtures';
 
 test('W-E8 deny tag.set for one user; effective view shows source user; audit shows the diff', async ({ page }) => {
   await login(page);
@@ -145,4 +145,37 @@ test('settings: attendance photo is required by default; drop one moment and sav
   await confirmWithReason(page, 'বিরতির সময় ছবি আপাতত লাগবে না', settingsBn.saveConfirm);
   await expect(page.getByText(settingsBn.saved)).toBeVisible();
   await expect(group.getByRole('button', { name: settingsBn.enum.break_start, pressed: false })).toBeVisible();
+});
+
+// FR-W-068 (owner request 2026-11-24, item B): the audit log has the shared date filter; the range is in the link and
+// goes to the server as Asia/Dhaka day boundaries, so paging stays exact.
+test('audit log: shared date filter, preset and custom range in the link, sent as Dhaka from/to', async ({ page }) => {
+  await login(page);
+  await page.goto('/admin/audit/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(auditBn.title);
+  const trigger = page.getByTestId('date-range');
+  await expect(trigger).toContainText(commonBn.range['7d']);
+
+  const today = page.waitForRequest((r) => r.url().includes('/audit?') && r.url().includes('from='));
+  await pickRange(page, commonBn.range.today);
+  await expect(page).toHaveURL(/range=today/);
+  const u = new URL((await today).url());
+  // Dhaka midnight is 18:00 UTC the day before
+  expect(u.searchParams.get('from')).toMatch(/T18:00:00\.000Z$/);
+  expect(u.searchParams.get('to')).toMatch(/T17:59:59\.999Z$/);
+
+  await trigger.click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel(commonBn.range.from).fill('2026-11-01');
+  await dialog.getByLabel(commonBn.range.to).fill('2026-11-03');
+  const custom = page.waitForRequest((r) => r.url().includes('/audit?') && r.url().includes('2026-10-31T18'));
+  await dialog.getByRole('button', { name: commonBn.range.apply }).click();
+  await expect(page).toHaveURL(/from=2026-11-01&to=2026-11-03/);
+  expect(new URL((await custom).url()).searchParams.get('to')).toBe('2026-11-03T17:59:59.999Z');
+
+  // an old link keeps working as the same preset
+  await page.goto('/admin/audit/?range=30d');
+  await expect(trigger).toContainText(commonBn.range['30d']);
+  await pickRange(page, commonBn.range.all);
+  await expect(page.locator('tbody tr').first()).toBeVisible();
 });
