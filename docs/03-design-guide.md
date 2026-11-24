@@ -128,25 +128,26 @@ lucide (web) / Material Symbols Rounded (app) mapped by meaning in this table so
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │ ▣ Howlader Field   [Branch: All ▾]   [⌘K Search customers, staff, receipts…]  🔔3 (ERP ● 2m) 👤 │  ← header 56 px
 ├────────────┬─────────────────────────────────────────────────────────────────────┤
-│ Overview   │  Page title                                   [secondary] [Primary]   │
-│ Inbox  12  │  Breadcrumb · "as of 10:42"                                            │
-│ ───────── │ ┌────────── KPI ──────────┬──────────┬──────────┬──────────┐           │
-│ Customers  │ │ Collected today ৳4,82,500│ Visits 312│ Present 27/30│ Conflicts 3│           │
-│ Map        │ └──────────────────────────┴──────────┴──────────┴──────────┘           │
-│ Collections│ ┌ Filters bar: [Date ▾][Staff ▾][Status chips…]  Saved views ▾  ⚙ cols ┐ │
-│ Cash       │ │ Table (sticky header, 13 px, 44 px rows, zebra off, hover neutral.100) │ │
-│ Promises   │ │ …                                                                     │ │
-│ Visits     │ └───────────────────────────────────────────────── pagination ───────┘ │
-│ ───────── │                                                     ┌─ Drawer 480 px ─┐ │
-│ Staff      │                                                     │ row detail       │ │
-│ Attendance │                                                     │ tabs, actions    │ │
-│ Live map   │                                                     └──────────────────┘ │
-│ Assignments│                                                                        │
-│ Handovers  │                                                                        │
-│ Reports    │                                                                        │
-│ ───────── │                                                                        │
-│ Settings   │                                                                        │
-│ Audit log  │                                                                        │
+│ Overview   │  [Customers | Map | Pins 6 | Areas …]   ← section tab strip                 │
+│ Inbox  12  │  Page title                                   [secondary] [Primary]   │
+│ ───────── │  Breadcrumb · "as of 10:42"                                            │
+│ Customers 6│ ┌────────── KPI ──────────┬──────────┬──────────┬──────────┐           │
+│ Collections│ │ Collected today ৳4,82,500│ Visits 312│ Present 27/30│ Conflicts 3│           │
+│ Field work │ └──────────────────────────┴──────────┴──────────┴──────────┘           │
+│ Staff    4 │ ┌ Filters bar: [Date ▾][Staff ▾][Status chips…]  Saved views ▾  ⚙ cols ┐ │
+│ ───────── │ │ Table (sticky header, 13 px, 44 px rows, zebra off, hover neutral.100) │ │
+│ Reports    │ │ …                                                                     │ │
+│ ───────── │ └───────────────────────────────────────────────── pagination ───────┘ │
+│ Admin      │                                                     ┌─ Drawer 480 px ─┐ │
+│            │                                                     │ row detail       │ │
+│            │                                                     │ tabs, actions    │ │
+│            │                                                     └──────────────────┘ │
+│            │                                                                        │
+│            │                                                                        │
+│            │                                                                        │
+│            │                                                                        │
+│            │                                                                        │
+│            │                                                                        │
 └────────────┴─────────────────────────────────────────────────────────────────────┘
  sidebar 248 px (collapsible to 64 px icon rail)
 ```
@@ -155,13 +156,25 @@ lucide (web) / Material Symbols Rounded (app) mapped by meaning in this table so
 - Header shows **ERP freshness dot** (green < 15 min, amber < 60, red otherwise) — click → ERP status panel.
 - Branch switcher is global; persists in URL (`?branch=`) and localStorage; managers with one branch see a static label.
 
-### Navigation groups
-1. **Overview, Inbox** (badge with open critical+high count)
-2. **Field work:** Customers, Map, Collections (sub: Conflicts), Cash & deposits, Promises, Visits
-3. **People:** Staff, Attendance, Live map, Route history, Assignments & areas, Handovers
-4. **Insights:** Reports, Reconciliation, Data quality
-5. **Admin:** Users & roles, Permissions, Settings, Feature flags, Devices, Audit log, System health
-Items hidden when the user lacks the permission or the module flag is off.
+### Navigation: sections with tabs (FR-W-069, ADR-W28)
+The sidebar has **8 items**; related pages are tabs of one section. The list lives in `src/app/navigation.ts` (the only place to regroup).
+
+| Sidebar item | Tabs (each its own route) |
+|---|---|
+| Overview | — (`/`) |
+| Inbox | Inbox `/inbox` · Staff activity `/activity` · Notices `/notices` (· Requests, contract 1.48.0) |
+| Customers | Customers `/customers` · Customer map `/map` · Pin approvals `/pin-approvals` · Possible customers `/prospects` · Areas & assignments `/areas` · Data quality `/data-quality` |
+| Collections | Collections `/collections` · Conflicts `/collections/conflicts` · Cash on hand `/cash` · Handovers `/handovers` |
+| Field work | Visits `/visits` · Co-work `/cowork` · Promises `/promises` · Tasks `/tasks` · Places `/places` |
+| Staff | Staff `/staff` · Attendance `/attendance` · Leave requests `/attendance/leave` · Live map `/live` · Route history `/routes` · Leaderboard `/leaderboard` · Targets `/targets` |
+| Reports | — (`/reports`, with its own Reports / Reconciliation / Downloads tabs) |
+| Admin | Users `/admin/users` · Devices `/admin/devices` · Permissions `/admin/permissions` · Settings `/admin/settings` · Holidays & shifts `/attendance/calendar` · Feature flags `/admin/flags` · Audit log `/admin/audit` · Photo storage `/admin/photos` · System health `/admin/system` |
+
+- Groups (top · field · insights · admin) are separated by a rule; no headings.
+- A tab shows only with its module flag on and its permission held; a section without visible tabs is hidden; the sidebar item opens the first visible tab, with the filters it was left with.
+- The **section tab strip** (`SectionTabs`, shell) sits above the page header on a tab page, not on pages below a tab (customer detail, place move requests: there only the sidebar item is highlighted). Underline tabs, `text.sm`, icon + label + count badge; active = `primary` text and a 2 px `primary` underline; ≥ 44 px on touch; scrolls sideways under `lg` with a fade at the end edge; tab text lines up with the page content edge; hidden on paper. It is a `nav` ("Customers pages") with `aria-current="page"`, not a tablist.
+- Section badge = sum of the tabs in `badgeFrom` (actionable queues only).
+- Every old URL is still a page; a new page goes into a section in `navigation.ts` (until then it shows as its own sidebar item).
 
 ## 4. Page inventory (each with default sort and primary action)
 
@@ -229,7 +242,7 @@ Badge height 22, radius 4, 12 px medium, icon 14 px. Filter chips height 32, rad
 Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/last month (▲ success / ▼ danger with text "+12%") · sparkline (7 days) · click → filtered list. "as of" timestamp in footer.
 
 ### 5.6 Drawer
-480 px (desktop), full-screen (mobile). Header: title, status, close (Esc). Footer: actions. Tabs inside if > 1 section. URL reflects open drawer (`?drawer=customer:6740…`) so it can be shared.
+480 px (desktop), full-screen (mobile). Header: title, status, close (Esc). Body: padded by the drawer itself, `space.20` on both sides like the header and footer (FR-W-067) — never add your own outer padding; `flush` only for edge-to-edge content. Footer: actions. Tabs inside if > 1 section. URL reflects open drawer (`?drawer=customer:6740…`) so it can be shared.
 
 ### 5.7 Maps (react-leaflet)
 - Tile layer from `TileProvider` config (`/meta/app-config`); attribution always visible bottom-right.

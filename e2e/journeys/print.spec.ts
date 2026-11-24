@@ -6,7 +6,7 @@ import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import promBn from '../../src/features/promises/i18n/bn.json' with { type: 'json' };
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav } from '../fixtures';
+import { login, nav, S } from '../fixtures';
 
 /** FR-REP-003 / OD-26: a report printed to PDF has no app chrome, a masthead, and the Bangla font embedded (shaped by the browser). */
 async function expectPrintablePdf(page: Page) {
@@ -51,8 +51,8 @@ test('staff performance and reports print to a Bangla PDF with every column and 
 
 test('the list pages print too: collections, cash on hand and promises have the PDF / print button and print without app chrome (FR-W-045)', async ({ page }) => {
   await login(page);
-  for (const title of [colBn.title, cashBn.title, promBn.title]) {
-    await nav(page, title);
+  for (const [title, section] of [[colBn.title, S.collections], [cashBn.title, S.collections], [promBn.title, S.field]] as const) {
+    await nav(page, title, section);
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
     await expect(page.getByRole('button', { name: commonBn.print.button })).toBeVisible();
     await page.waitForLoadState('networkidle');
@@ -87,8 +87,8 @@ async function expectNoControlsOnPaper(page: Page) {
 
 test('every list prints its data without buttons, search boxes, filters or checkboxes (FR-W-051)', async ({ page }) => {
   await login(page);
-  for (const title of [custBn.title, colBn.title, cashBn.title, promBn.title]) {
-    await nav(page, title);
+  for (const [title, section] of [[custBn.title, S.customers], [colBn.title, S.collections], [cashBn.title, S.collections], [promBn.title, S.field]] as const) {
+    await nav(page, title, section);
     await expect(page.locator('main tbody tr').first()).toBeVisible();
     const left = await expectNoControlsOnPaper(page);
     // the rows themselves are still there

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Command } from 'cmdk';
 import * as D from '@radix-ui/react-dialog';
 import { ArrowRight, CornerDownLeft, Receipt, Search, User, UserRound } from 'lucide-react';
-import { commands, navRoutes } from '@/shared/feature/registry';
+import { commands, navRoutes, navSections } from '@/shared/feature/registry';
 import { useGate } from '@/shared/feature/useGate';
 import { Kbd } from '@/shared/ui/primitives';
 import { Skeleton } from '@/shared/ui/feedback';
@@ -39,6 +39,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   };
   const routes = navRoutes(gate);
   const cmds = commands(gate);
+  // FR-W-069: a sidebar section's name ("Admin", "Field work") opens it too, unless a page already has that name
+  const pageTitles = new Set(routes.map((r) => t(r.title)));
+  const sectionItems = navSections(gate)
+    .filter((n) => !pageTitles.has(t(n.section.title)))
+    .map((n) => ({ key: `section:${n.section.id}`, title: t(n.section.title), icon: n.section.icon, href: n.href }));
   const groups = {
     customer: { label: t('search.customers'), icon: UserRound, href: (id: string) => `/customers/${id}/` },
     user: { label: t('search.users'), icon: User, href: (id: string) => `/admin/users/?drawer=user:${id}` },
@@ -80,7 +85,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   );
                 })}
               <Command.Group heading={t('search.commands')} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-fg-tertiary">
-                {[...cmds.map((c) => ({ key: c.id, title: t(c.title), icon: c.icon ?? ArrowRight, href: c.href })), ...routes.map((r) => ({ key: r.path, title: t(r.title), icon: r.icon ?? ArrowRight, href: r.path }))]
+                {[...cmds.map((c) => ({ key: c.id, title: t(c.title), icon: c.icon ?? ArrowRight, href: c.href })), ...routes.map((r) => ({ key: r.path, title: t(r.title), icon: r.icon ?? ArrowRight, href: r.path })), ...sectionItems]
                   .filter((c) => !q || c.title.toLowerCase().includes(q.toLowerCase()))
                   .slice(0, q ? 8 : 10)
                   .map((c) => (

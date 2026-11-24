@@ -22,6 +22,25 @@ export interface FeatureRoute {
   hidden?: boolean;
 }
 
+/**
+ * A sidebar section (FR-W-069, ADR-W28): one sidebar item that groups related pages of one or more features as tabs.
+ * Sections are the information architecture of the panel and are defined once, in `src/app/navigation.ts`; features
+ * keep owning their routes. Each tab is the feature's own route (its own URL and query state), so old links keep
+ * working. A route listed in no section shows as its own sidebar item, as before.
+ */
+export interface SectionDef {
+  id: string;
+  /** i18n key, `<namespace>:<key>` */
+  title: string;
+  icon: LucideIcon;
+  group: NavGroup;
+  order: number;
+  /** route paths in tab order; the sidebar opens the first one the user may see */
+  tabs: string[];
+  /** tabs whose nav badges add up to the section's sidebar badge (default: every tab) */
+  badgeFrom?: string[];
+}
+
 export interface CommandDef {
   id: string;
   title: string; // i18n key

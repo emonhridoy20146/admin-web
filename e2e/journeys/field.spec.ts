@@ -15,7 +15,7 @@ import handoversBn from '../../src/features/handovers/i18n/bn.json' with { type:
 import coworkBn from '../../src/features/cowork/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import type { Page } from '@playwright/test';
-import { confirmWithReason, login, nav, pickRange } from '../fixtures';
+import { confirmWithReason, login, nav, pickRange, S } from '../fixtures';
 
 async function toggleChip(page: Page, name: string | RegExp) {
   await page.getByRole('button', { name, exact: true, pressed: false }).click();
@@ -83,7 +83,7 @@ test('W-E4 viewer cannot tag', async ({ page }) => {
 
 test('W-E5 resolve a conflict to a plan; a double click resolves it once', async ({ page }) => {
   await login(page);
-  await nav(page, colBn.conflicts);
+  await nav(page, colBn.conflicts, S.collections);
   const cards = page.locator('main [aria-label="' + colBn.fieldRecord + '"]');
   await expect(cards.first()).toBeVisible();
   const before = await cards.count();
@@ -95,7 +95,7 @@ test('W-E5 resolve a conflict to a plan; a double click resolves it once', async
 
 test('W-E5b a refund needs a photo of the proof before it can be confirmed', async ({ page }) => {
   await login(page);
-  await nav(page, colBn.conflicts);
+  await nav(page, colBn.conflicts, S.collections);
   const cards = page.locator('main [aria-label="' + colBn.fieldRecord + '"]');
   await expect(cards.first()).toBeVisible();
   const before = await cards.count();
@@ -127,7 +127,7 @@ test('W-E5b a refund needs a photo of the proof before it can be confirmed', asy
 
 test('cash on hand: a row opens the collections the cash came from, with customer, invoice and receipt', async ({ page }) => {
   await login(page);
-  await nav(page, cashBn.title);
+  await nav(page, cashBn.title, S.collections);
   const row = page.locator('#positions tbody tr').first();
   await expect(row).toContainText('৳'); // the loaded row, not a loading placeholder
   await row.locator('td').nth(1).click();
@@ -150,7 +150,7 @@ test('cash on hand: a row opens the collections the cash came from, with custome
 
 test('W-E7 create a temporary handover, see it pending, then cancel it', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, handoversBn.title);
+  await nav(page, handoversBn.title, S.collections);
   await expect(page.locator('tbody tr button').first()).toBeVisible();
   const before = await page.locator('tbody tr').count();
   await page.getByRole('button', { name: handoversBn.new }).click();
@@ -182,7 +182,7 @@ test('W-E7 create a temporary handover, see it pending, then cancel it', async (
 
 test('promises: filter by window, open one and cancel it with a reason', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, promisesBn.title);
+  await nav(page, promisesBn.title, S.field);
   await pickRange(page, commonBn.range.next7);
   await expect(page).toHaveURL(/range=next7/);
   await page.getByLabel(promisesBn.col.status).selectOption('open');
@@ -198,7 +198,7 @@ test('promises: filter by window, open one and cancel it with a reason', async (
 
 test('visits: filter by outcome, open a visit with photos and view one', async ({ page }) => {
   await login(page);
-  await nav(page, visitsBn.title);
+  await nav(page, visitsBn.title, S.field);
   await pickRange(page, commonBn.range['7d']);
   await expect(page).toHaveURL(/range=7d/);
   await page.getByLabel(visitsBn.col.outcome).selectOption('not_home');
@@ -214,7 +214,7 @@ test('visits: filter by outcome, open a visit with photos and view one', async (
 
 test('attendance: day list, correct an entry with a reason, month matrix', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, attendanceBn.title);
+  await nav(page, attendanceBn.title, S.staff);
   await page.getByRole('button', { name: attendanceBn.prevDay }).click();
   await expect(page).toHaveURL(/date=\d{4}-\d{2}-\d{2}/);
   await expect(page.locator('tbody tr').first().getByRole('button', { name: new RegExp(attendanceBn.correct) })).toBeVisible();
@@ -278,7 +278,7 @@ test('staff: performance list, month view, drawer and jump to the staff member\'
 
 test('customer map: pins listed beside the map, filter, open a customer', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, custBn.map.title);
+  await nav(page, custBn.map.title, S.customers);
   const list = page.getByRole('region', { name: custBn.map.inView });
   await expect(list.getByRole('button').first()).toBeVisible();
   await expect(page.getByRole('application', { name: custBn.map.title })).toBeVisible();
@@ -292,7 +292,7 @@ test('customer map: pins listed beside the map, filter, open a customer', async 
 
 test('pin approvals: approve one proposal and reject another with a reason', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, custBn.pins.title);
+  await nav(page, custBn.pins.title, S.customers);
   const cards = page.locator('main ul > li');
   await expect(cards.first()).toBeVisible();
   const before = await cards.count();
@@ -307,7 +307,7 @@ test('pin approvals: approve one proposal and reject another with a reason', asy
 
 test('areas: assign a staff member, remove an assignee and create an area', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, areasBn.title);
+  await nav(page, areasBn.title, S.customers);
   const cards = page.locator('main ul.grid > li');
   await expect(cards.first()).toBeVisible();
   const before = await cards.count();
@@ -345,7 +345,7 @@ test('areas: assign a staff member, remove an assignee and create an area', asyn
 
 test('live map: staff list with freshness, filter, expand one and jump to the route', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, locBn.live.title);
+  await nav(page, locBn.live.title, S.staff);
   const list = page.getByRole('region', { name: locBn.live.list });
   const rows = list.locator('ul > li');
   await expect(rows.first()).toBeVisible();
@@ -368,7 +368,7 @@ test.describe('maps show the branch and where the admin is (FR-W-034)', () => {
 
   test('live map: branch pin and the "my location" button', async ({ page }) => {
     await login(page, 'manager');
-    await nav(page, locBn.live.title);
+    await nav(page, locBn.live.title, S.staff);
     await expect(page.locator('.leaflet-container')).toBeVisible();
     await expect(page.locator('.leaflet-marker-icon .fos-pin.is-branch').first()).toBeVisible(); // branch pin (staff are dots)
     const paths = page.locator('.leaflet-overlay-pane path');
@@ -382,7 +382,7 @@ test.describe('maps show the branch and where the admin is (FR-W-034)', () => {
   test('customer map: the same button, and a clear message when the browser blocks location', async ({ page, context }) => {
     await context.clearPermissions();
     await login(page, 'manager');
-    await nav(page, custBn.map.title);
+    await nav(page, custBn.map.title, S.customers);
     await page.getByRole('button', { name: commonBn.map.myLocation }).click();
     await expect(page.getByText(commonBn.map.locationDenied)).toBeVisible();
   });
@@ -390,7 +390,7 @@ test.describe('maps show the branch and where the admin is (FR-W-034)', () => {
 
 test('route history: pick a staff member and a day, see summary, stops and select a stop', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, locBn.routes.title);
+  await nav(page, locBn.routes.title, S.staff);
   await expect(page.getByText(locBn.routes.pick)).toBeVisible();
   await page.getByLabel(locBn.routes.staff, { exact: true }).selectOption({ index: 1 });
   await page.getByRole('button', { name: locBn.routes.prevDay }).click();
@@ -449,7 +449,7 @@ test('bulk assign: select customers in the list and give them to one staff membe
 
 test('attendance photos: open a staff member\'s day, see each event with its photo and enlarge one', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, attendanceBn.title);
+  await nav(page, attendanceBn.title, S.staff);
   // go back until a worked day is found (today may not have started, Friday is the weekly off)
   // an auto-closed day has no work-out event by design, so pick a day the person closed themselves
   const worked = page.locator('tbody tr').filter({ hasText: new RegExp(`${attendanceBn.status.present}|${attendanceBn.status.late}`) }).filter({ hasNotText: attendanceBn.autoClosed });
@@ -474,7 +474,7 @@ test('attendance photos: open a staff member\'s day, see each event with its pho
 
 test('co-work: sessions with members and timeline, their joint visits, the visit kind filter and staff credit', async ({ page }) => {
   await login(page);
-  await nav(page, coworkBn.title);
+  await nav(page, coworkBn.title, S.field);
   await pickRange(page, commonBn.range['30d']);
   await page.waitForURL(/range=30d/);
   const withVisits = page.locator('tbody a[href*="/visits/?session="]');
@@ -503,7 +503,7 @@ test('co-work: sessions with members and timeline, their joint visits, the visit
   await page.keyboard.press('Escape');
 
   // visits: only joint ones
-  await nav(page, visitsBn.title);
+  await nav(page, visitsBn.title, S.field);
   await pickRange(page, commonBn.range['30d']);
   await page.waitForURL(/range=30d/);
   await page.getByLabel(visitsBn.cowork.kind).selectOption('joint');
@@ -521,7 +521,7 @@ const tail = (s: string) => new RegExp(`${s.split('}}').pop()!.replace(/[.*+?^${
 
 test('map pin: from the data-quality list, set a missing pin by moving the map and by pasting coordinates (FR-CUS-011)', async ({ page }) => {
   await login(page, 'manager');
-  await nav(page, repBn.dq.title);
+  await nav(page, repBn.dq.title, S.customers);
   const link = page.locator('tbody tr').first().getByRole('link');
   await expect(link).toHaveAttribute('href', /\/customers\/.+\/\?action=pin$/);
   await link.click();
@@ -557,7 +557,7 @@ test('map pin: from the data-quality list, set a missing pin by moving the map a
   await expect(page.getByRole('button', { name: custBn.setPin.openMove })).toBeVisible();
 
   // it is in the pin history as set by a manager
-  await nav(page, custBn.pins.title);
+  await nav(page, custBn.pins.title, S.customers);
   await page.getByRole('button', { name: custBn.pins.tab.approved, exact: true }).click();
   await expect(page.locator('main ul > li').first().getByText(custBn.pins.direct)).toBeVisible();
 });
