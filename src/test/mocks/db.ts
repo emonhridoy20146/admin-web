@@ -37,6 +37,7 @@ const isoAt = (d: DateTime) => d.toUTC().toISO()!;
 export const catalog = catalogJson as {
   key: string; module: string; description: string; added: boolean; reserved: boolean;
   defaults: Record<Role, boolean | null>;
+  neverFor?: Role[];
 }[];
 
 // ---------- branches ----------
@@ -511,7 +512,7 @@ export function effective(u: MockUser) {
     if (p.reserved) return { key: p.key, allowed: false, source: 'reserved' as const };
     if (u.role === 'super_admin') return { key: p.key, allowed: true, source: 'super_admin' as const };
     // 1.48.0 (ADR-065): no override grants a key the role can never hold
-    if ((p as { neverFor?: string[] }).neverFor?.includes(u.role!)) return { key: p.key, allowed: false, source: 'role' as const };
+    if (p.neverFor?.includes(u.role!)) return { key: p.key, allowed: false, source: 'role' as const };
     const uo = userOverrides[u.id!]?.[p.key];
     if (uo) return { key: p.key, allowed: uo === 'allow', source: 'user' as const };
     for (const b of u.branchIds ?? []) {
@@ -1633,7 +1634,7 @@ export const requests: MockRequest[] = [];
   for (let i = 0; i < 16; i++) {
     const who = staff[(i * 5) % staff.length]!;
     const [type, title, body] = T[i % T.length]!;
-    const priority: S['RequestPriority'] = i % 3 === 0 ? 'important' : 'normal';
+    const priority: S['RequestPriority'] = i % 4 === 0 ? 'important' : 'normal';
     const level0 = priority === 'important' ? 'super_admin' : 'area_manager';
     const t0 = 3 + i * 9;
     const timeline: S['RequestTimelineEntry'][] = [{ id: oid('6790'), kind: 'created', at: at(t0), actor: person(who), note: null, from: null, to: q(level0), status: { from: null, to: 'open' } }];
@@ -1645,12 +1646,13 @@ export const requests: MockRequest[] = [];
     const step = i % 6;
     const am = person(areaManager);
     if (step >= 1) timeline.push({ id: oid('6790'), kind: 'comment', at: at(t0 - 1), actor: am, note: 'দেখছি, আজকের মধ্যে জানাব।', from: null, to: null, status: null });
-    if (step === 1 && level0 === 'area_manager') {
+    if (step === 1 && level0 === 'area_manager' && i < 8) {
       timeline.push({ id: oid('6790'), kind: 'forwarded', at: at(t0 - 2), actor: am, note: 'টাকার বিষয়, সুপার অ্যাডমিনের সিদ্ধান্ত দরকার।', from: q('area_manager'), to: q('super_admin'), status: { from: 'open', to: 'forwarded' } });
       status = 'forwarded'; level = 'super_admin'; currentQueue = 'super_admin';
     }
     if (step >= 2) {
-      const m = managers[i % managers.length]!;
+      // the area manager holds some, a super admin one (so "Assigned to me" has rows for both demo logins)
+      const m = i % 4 === 2 ? areaManager : i === 14 ? superAdmin : managers[i % managers.length]!;
       assignee = person(m);
       timeline.push({ id: oid('6790'), kind: 'assigned', at: at(t0 - 2), actor: level0 === 'super_admin' ? person(superAdmin) : am, note: 'শাখা ম্যানেজার দেখবেন।', from: q(level0), to: { queue: 'assignee', user: assignee }, status: { from: 'open', to: 'in_progress' } });
       status = 'in_progress'; currentQueue = 'assignee';

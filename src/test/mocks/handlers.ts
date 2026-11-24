@@ -1089,7 +1089,7 @@ export const handlers = [
   })),
   // ---------- rbac ----------
   http.get(`${BASE}/rbac/permissions`, authed(() =>
-    HttpResponse.json(db.catalog.map((p) => ({ key: p.key, module: p.module, description: { en: p.description, bn: p.description }, defaults: Object.fromEntries(Object.entries(p.defaults).map(([r, v]) => [r, !!v])), reserved: p.reserved }))),
+    HttpResponse.json(db.catalog.map((p) => ({ key: p.key, module: p.module, description: { en: p.description, bn: p.description }, defaults: Object.fromEntries(Object.entries(p.defaults).map(([r, v]) => [r, !!v])), reserved: p.reserved, ...(p.neverFor ? { neverFor: p.neverFor } : {}) }))),
   )),
   http.get(`${BASE}/rbac/users/:userId/effective`, authed(({ params, ctx }) => {
     const deny = need(ctx, 'rbac.view');

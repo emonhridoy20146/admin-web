@@ -18,6 +18,7 @@ const DRAWERS: { name: string; path: string; table?: number }[] = [
   { name: 'notice', path: '/notices/' },
   { name: 'user', path: '/admin/users/' },
   { name: 'audit', path: '/admin/audit/' },
+  { name: 'request', path: '/requests/?queue=all' },
 ];
 
 const MIN_GAP = 16;

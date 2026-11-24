@@ -167,7 +167,9 @@ export function RequestsPage() {
             <option value="normal">{t('priority.normal')}</option>
             <option value="important">{t('priority.important')}</option>
           </Select>
-          <StaffSelect className="col-span-2 sm:w-56" label={t('staff')} value={staff} onChange={(id) => reset({ staff: id })} />
+          <div className="col-span-2 sm:w-56">
+            <StaffSelect className="w-full sm:w-56" label={t('staff')} value={staff} onChange={(id) => reset({ staff: id })} />
+          </div>
           <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')} aria-label={t('search')} className="col-span-2 sm:w-64" />
         </div>
         {withPerson && (
