@@ -54,8 +54,15 @@ test('customer map: full screen and back with the button and with Esc', async ({
   await expect(box).toHaveAttribute('data-fullscreen', 'true');
   const size = await box.boundingBox();
   expect(size!.width).toBeGreaterThan(1400);
+  // Owner report 2026-11-24: full screen wiped Leaflet's classes and the map turned white. The Leaflet container must
+  // survive full screen and its exit, sized to the box.
+  const leaflet = box.locator('.leaflet-container');
+  await expect(leaflet).toHaveCount(1);
+  expect((await leaflet.boundingBox())!.width).toBeGreaterThan(1400);
   await page.getByRole('button', { name: commonBn.map.exitFullscreen }).click();
   await expect(box).not.toHaveAttribute('data-fullscreen', 'true');
+  await expect(leaflet).toHaveCount(1);
+  await expect(box.locator('.leaflet-tile-pane')).toHaveCount(1);
   await page.getByRole('button', { name: commonBn.map.fullscreen }).click();
   await expect(box).toHaveAttribute('data-fullscreen', 'true');
   await page.keyboard.press('Escape');
