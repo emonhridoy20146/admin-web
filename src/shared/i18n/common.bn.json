@@ -292,5 +292,15 @@
     "label": "কর্মী",
     "all": "সব কর্মী",
     "one": "বাছাই করা কর্মী"
+  },
+  "tagLook": {
+    "bad": "খারাপ ট্যাগ",
+    "planEndedUnpaid": "মেয়াদ শেষ, বকেয়া",
+    "repeatedBrokenPromise": "বারবার কথা ভঙ্গ",
+    "refusedToPay": "দিতে অস্বীকার",
+    "absconded": "পলাতক",
+    "fraudSuspected": "প্রতারণার সন্দেহ",
+    "legal": "আইনি ব্যবস্থা",
+    "other": "খারাপ: অন্য কারণ"
   }
 }

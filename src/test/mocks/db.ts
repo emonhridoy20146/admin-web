@@ -281,6 +281,24 @@ branches.forEach((b, bi) => {
   c.detail.badSuggestion = null;
   Object.assign(c.detail, { ...c.item, ...c.detail, totalOutstandingPoisha: 0, overduePoisha: 0, badges: c.item.badges, daysOverdue: 0 });
 }
+// FR-W-072: every bad-tag reason and severity is on screen (deterministic, no random calls so other data stays the same).
+// The first tagged customer of each branch, in list order, gets: absconded, legal, fraud, broken promises, other, plan over.
+{
+  const looks: [S['Tag']['severity'], string][] = [['bad', 'absconded'], ['legal', 'refused_to_pay'], ['bad', 'fraud_suspected'], ['bad', 'repeated_broken_promise'], ['bad', 'other'], ['bad', 'plan_ended_unpaid']];
+  const seen = new Map<string, number>();
+  customers.forEach((c) => {
+    const tag = c.item.tag;
+    if (tag?.state !== 'tagged' || (c.item.totalOutstandingPoisha ?? 0) === 0) return;
+    const i = seen.get(c.branchId) ?? 0;
+    seen.set(c.branchId, i + 1);
+    const look = looks[i];
+    if (!look) return;
+    tag.severity = look[0];
+    tag.reasonCode = look[1];
+    if (c.detail.tag && c.detail.tag !== tag) Object.assign(c.detail.tag, { severity: look[0], reasonCode: look[1] });
+    if (c.tagHistory[0]) c.tagHistory[0].reasonCode = look[1];
+  });
+}
 export const customerById = (id: string) => customers.find((c) => c.item.id === id);
 
 // ---------- notes & visits ----------

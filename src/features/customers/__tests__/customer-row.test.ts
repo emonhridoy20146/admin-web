@@ -42,3 +42,13 @@ describe('customer row view model', () => {
     expect(toCustomerRow({ ...base, location: { lat: null, lng: null, status: 'missing' } }, 'bn').hasLocation).toBe(false);
   });
 });
+
+describe('customer row bad-tag look (FR-W-072)', () => {
+  it('carries the border look of a bad or legal tag, none for watch or untagged', () => {
+    expect(toCustomerRow(base, 'en').tagLook).toBeNull();
+    expect(toCustomerRow({ ...base, tag: { state: 'tagged', severity: 'watch', reasonCode: 'absconded' } }, 'en').tagLook).toBeNull();
+    expect(toCustomerRow({ ...base, tag: { state: 'tagged', severity: 'bad', reasonCode: 'absconded' } }, 'en').tagLook?.token).toBe('status.tag.absconded');
+    expect(toCustomerRow({ ...base, tag: { state: 'tagged', severity: 'legal', reasonCode: 'other' } }, 'en').tagLook?.token).toBe('status.tag.legal');
+    expect(toCustomerRow({ ...base, tag: { state: 'tagged', severity: 'bad', reasonCode: 'new_code' } }, 'en').tagLook?.token).toBe('status.tag.bad');
+  });
+});

@@ -1,4 +1,4 @@
-# 03 — Design Guide (admin-web) and Shared Design Tokens v1.1
+# 03 — Design Guide (admin-web) and Shared Design Tokens v1.3
 
 Design intent: **calm, dense, trustworthy.** This is a money-and-people control room used for hours a day. It should feel like Linear / Stripe Dashboard quality: quiet neutrals, one confident brand colour, status colours that carry meaning, generous but efficient spacing, crisp tables, zero decoration that does not inform. Bangla is a first-class script, not a translation afterthought.
 
@@ -15,9 +15,11 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 6. **Reversible by default.** Confirm only destructive or money actions; everything else is undoable or audited.
 7. **Bilingual parity.** Every layout tested with Bangla (longer, taller glyphs) and English.
 
-## 2. Shared design tokens v1.1 (identical in staff-app)
+## 2. Shared design tokens v1.3 (identical in staff-app)
 
 > Canonical source: this section. `staff-app/docs/03-design-guide.md §2` must hold the same values. Token changes bump the version in both files and both CHANGELOGs.
+>
+> **v1.2 (2026-11-26, from staff-app ADR-M41):** adds the `shadow.sm` / `shadow.md` group (§2.6), light theme only. **v1.3 (2026-11-26, FR-W-072, ADR-W30):** adds the bad-tag reason colours `status.tag.<key>` (§2.3b). ⚠ **The v1.3 values below are PROVISIONAL**: a staff-app session is fixing the final names and values; when the coordinator sends them, this table, `tokens.css` and `design-tokens.json` are aligned to them exactly.
 
 ### 2.1 Colour — brand
 | Token | Hex | Use |
@@ -86,6 +88,23 @@ The colour of a customer's map pin and pay-state badge (field-api `PayState`, AD
 
 Fg on bg ≥ 4.6:1 in both themes. The pin body takes the pin colour with a 1.25 px outline in the fg colour (so yellow still stands out on light tiles; dark mode mixes the pin colour with `neutral.950`), a white face and a glyph in the fg colour (`neutral.900` in dark mode).
 
+### 2.3b Colour — bad-tag reason (v1.3, PROVISIONAL, FR-W-072)
+A customer whose tag is `tagged` with severity `bad` or `legal` has a **border in the colour of its reason** wherever customers are listed (DataTable row and < 640 px card, drawer and detail header, map list, customer picker) and a **reason chip** (icon + label, colour as text and outline) next to the name. `watch`, `pending` and `none` get no border. CSS variables `--st-tag-<key>` (kebab case); Tailwind `st-tag-<key>`; mapper `shared/ui/tag-look.ts` (`tagLookOf`, `reasonLook`). Palette: one red family plus three hues (orange, magenta, violet).
+
+| Token | Light | Dark | Icon | Reason |
+|---|---|---|---|---|
+| `status.tag.absconded` | `#7F1D1D` | `#FF6B6B` | footprints | `absconded` (পলাতক) — **strongest**: 5 px start edge, 2 px ring, filled chip (`status.tag.on` text) |
+| `status.tag.legal` | `#6D28D9` | `#A78BFA` | gavel | severity `legal`, whatever the reason (except absconded) |
+| `status.tag.refusedToPay` | `#991B1B` | `#FCA5A5` | ban | `refused_to_pay` |
+| `status.tag.planEndedUnpaid` | `#CC2222` | `#FB7185` | calendar-x-2 | `plan_ended_unpaid` |
+| `status.tag.repeatedBrokenPromise` | `#C2410C` | `#FB923C` | unlink | `repeated_broken_promise` |
+| `status.tag.fraudSuspected` | `#BE185D` | `#F472B6` | shield-alert | `fraud_suspected` |
+| `status.tag.bad` | `#B91C1C` | `#F87171` | flag | generic: unknown codes fall back here |
+| `status.tag.other` | = `status.tag.bad` | = `status.tag.bad` | flag | `other` |
+| `status.tag.on` | `#FFFFFF` | `#0B0E14` | — | text on the filled absconded chip |
+
+**Precedence:** absconded → legal severity → the reason's colour → `status.tag.bad`. **Border:** 1 px ring + 3 px start edge (absconded 2 px + 5 px). **Contrast:** every colour is ≥ 4.5:1 as text on `surface`, `surface-subtle` and the selected-row `primary-subtle` in its theme (light: 4.95–10.0:1; dark: 5.85–12.4:1), so the chip text passes AA and the border passes 3:1 (WCAG 1.4.11). Never colour alone: the chip says the reason with an icon and a label. The tag dialog shows each reason option with its border and a swatch, and previews the chip the customer will get. Map pins carry only `tagged: boolean` (contract `MapPin`), so the map list uses `status.tag.bad` until the pin carries severity and reason.
+
 ### 2.4 Chart palette (categorical, colour-blind safe order)
 `#2C44CC` · `#0EA5A4` · `#F59E0B` · `#DB2777` · `#7C3AED` · `#65A30D` · `#0284C7` · `#EA580C`. Payment methods fixed: cash `#2C44CC`, bKash `#DB2777`, Nagad `#EA580C`, Rocket `#7C3AED`, bank `#0EA5A4`, other `#64748B`.
 
@@ -115,6 +134,7 @@ Type scale (web, px / line-height). Bangla text uses line-height × 1.15 automat
 - **Spacing (4-pt grid):** `0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64` px → tokens `space.0 … space.64`.
 - **Radius:** `xs 4` (badges) · `sm 6` (inputs, buttons) · `md 8` (cards, menus) · `lg 12` (dialogs, drawers) · `xl 16` (app sheets) · `full`.
 - **Elevation (light):** `e0` none; `e1` `0 1px 2px rgb(16 24 40 / .06)`; `e2` `0 2px 8px rgb(16 24 40 / .08)` (popover, card hover); `e3` `0 12px 32px rgb(16 24 40 / .14)` (dialog, drawer). Dark mode uses surface steps instead of shadows.
+- **Shadow (v1.2, shared with staff-app):** `shadow.sm` `0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08)` (cards) · `shadow.md` `0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04)` (summary cards). Light theme only: dark mode has no shadow (`none`), depth comes from the surface steps and the 1 px border. CSS `--sh-sm` / `--sh-md`, Tailwind `shadow-sm` / `shadow-md`.
 - **Motion:** `fast 120ms`, `base 200ms`, `slow 300ms`; easing `standard cubic-bezier(.2,0,0,1)`, `emphasized cubic-bezier(.3,0,0,1)`. Respect `prefers-reduced-motion`: no slide, fade only, and colour/opacity transitions are instant.
 - **Focus ring:** 2 px `brand.600` + 2 px offset white (dark: `brand.400` with `neutral.950` offset). Never removed.
 - **Z-index:** base 0 · sticky 10 · header 20 · drawer 40 · dialog 50 · toast 60 · tooltip 70.
@@ -237,7 +257,7 @@ The sidebar has **8 items**; related pages are tabs of one section. The list liv
 Primary (brand.600 bg, white), Secondary (white bg, neutral.300 border), Ghost, Destructive (danger), Link. Sizes: sm 32, md 40, lg 44. One primary per view region. Icon-only buttons have tooltip + aria-label.
 
 ### 5.4 Badges & chips
-Badge height 22, radius 4, 12 px medium, icon 14 px. Filter chips height 32, radius full; selected = brand.50 bg + brand.700 text + check icon.
+Badge height 22, radius 4, 12 px medium, icon 14 px. Filter chips height 32, radius full; selected = brand.50 bg + brand.700 text + check icon. Bad-tag reason chip (`<TagChip>`, FR-W-072): badge size, `surface` bg, 1 px outline and text in the reason colour (§2.3b), the reason's icon; absconded is filled. A row that needs a coloured border passes `rowBorderClass` to `DataTable`, which draws it around the row (inset shadows on the cells) and around the card below 640 px.
 
 ### 5.5 KPI cards
 Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/last month (▲ success / ▼ danger with text "+12%") · sparkline (7 days) · click → filtered list. "as of" timestamp in footer.

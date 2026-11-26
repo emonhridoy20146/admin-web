@@ -14,6 +14,8 @@ import { useUi } from '@/shared/lib/ui-store';
 import { Button } from '@/shared/ui/button';
 import { PrintButton } from '@/shared/ui/print';
 import { Card } from '@/shared/ui/card';
+import { tagBoxClass } from '@/shared/ui/tag-chip';
+import { cn } from '@/shared/lib/cn';
 import { EmptyState, ErrorBanner, Skeleton, useErrorMessage } from '@/shared/ui/feedback';
 import { AsOf } from '@/shared/ui/page';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/primitives';
@@ -50,6 +52,7 @@ export function CustomerDetailPage() {
   const extTabs = customerTabs(gate);
   const tab = url.get('tab') || 'overview';
   const c = q.data;
+  const tagBox = tagBoxClass(c?.tag);
 
   const canCollect = useCan('collection.record');
   const canPromise = useCan('promise.create');
@@ -77,7 +80,7 @@ export function CustomerDetailPage() {
         </div>
       ) : (
         <>
-          <header className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <header className={cn('mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between', tagBox && cn('bg-surface p-4', tagBox))} data-tag-border={tagBox ? 'true' : undefined}>
             <div className="min-w-0 space-y-2.5">
               <CustomerTitle c={c} size="lg" />
               <CustomerStatusRow c={c} />

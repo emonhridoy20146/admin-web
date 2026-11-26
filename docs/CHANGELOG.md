@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added (owner request 2026-11-26: bad-tag borders — FR-W-072, ADR-W30)
+- A customer tagged with severity **bad** or **legal** has a border in the colour of its reason and a reason chip (icon + label) next to the name: Customers table rows and the < 640 px cards, the customer drawer header, the detail page header, the customer map list and the customer picker. **Absconded (পলাতক)** is the strongest (thicker border, filled chip); **legal** has its own colour; unknown reason codes use the generic bad colour. `watch` and `pending` get no border.
+- Tag dialog: the reasons are a radio list, each with its border colour and a swatch, and a preview of the chip the customer will get.
+- Shared: `shared/ui/tag-look.ts` (reason → token mapper), `<TagChip>`, `DataTable` `rowBorderClass`, `Drawer` `headerClassName`, `ReasonDialog` `codeLook` / `afterCodes`.
+- Not bordered yet: ⌘K search results (the search contract has no tag) and per-reason colours on the map list (`MapPin` has only `tagged`, so it uses the generic colour). Both need field-api.
+- Mock: tagged customers get every reason and severity (deterministic, per branch).
+- Tests: mapper unit tests (incl. the unknown fallback), component tests (row border, card border, chip, dialog swatches), e2e `tag-borders.spec.ts` at 390 and 1440 px with axe.
+
+### Changed (tokens v1.2 and v1.3)
+- **v1.2:** `shadow.sm` / `shadow.md` from staff-app (ADR-M41), same values; light theme only (`--sh-sm`, `--sh-md`; Tailwind `shadow-sm`, `shadow-md`). `design-tokens.json` 1.3.0.
+- **v1.3 (PROVISIONAL):** `status.tag.{bad, planEndedUnpaid, repeatedBrokenPromise, refusedToPay, absconded, fraudSuspected, legal, other, on}` (`--st-tag-*`). The final names and values come from the staff-app session via the coordinator; 03 §2.3b and `tokens.css` will be aligned to them exactly.
+
 ### Changed (owner request 2026-11-26: returned invoices are not shown)
 - Contract: field-api **1.50.0** (field-api `main` ec06250, PR #48, FR-CUS-023, ADR-068). `pnpm gen:api` from `contract/openapi.yaml`. The API no longer returns returned invoices in customer plans, counts, invoice totals or search; it adds `returnedPlanIds` (ignored by admin-web). No UI change needed.
 

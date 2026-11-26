@@ -42,6 +42,13 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 
 Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/attendance/leave`), holidays and shifts (`/attendance/calendar`, shift in the user form) and notices with read tracking (`/notices`) are done on contract 1.12.0 with journeys and axe. Left: day-sheet planner, SMS logs.
 
+## Status notes (2026-11-26, bad-tag borders)
+- ☑ Bad-tag borders and reason chips on the customers table and cards, drawer and detail headers, map list and customer picker; tag dialog with colour swatches and preview (FR-W-072, ADR-W30). Unit, component and e2e (390/1440 px, axe) green.
+- ☑ Tokens v1.2: `shadow.sm` / `shadow.md` (light only), same values as staff-app.
+- ◐ Tokens v1.3 `status.tag.<key>`: implemented with **provisional** values; waiting for the final names and values from the coordinator.
+- ☐ ⌘K search results: no tag in the search contract (needs field-api). Map list: generic colour only (`MapPin.tagged`).
+- Known, older a11y findings seen by the new axe checks (not caused by this change): the < 640 px DataTable card is a `role=button` holding the name link (nested-interactive); the customer drawer body has a definition-list structure finding.
+
 ## Status notes (2026-11-24, batch 1124)
 - ☑ A — Drawer padding fixed at the root (shared `Drawer` body pads `space.20`), guarded by a component test and an e2e over 11 drawers at 390/1440 px (FR-W-067).
 - ☑ B — Audit log uses the shared date filter; server `from`/`to` (already in the pinned contract), no client-side filtering (FR-W-068).

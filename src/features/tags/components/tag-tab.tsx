@@ -12,12 +12,14 @@ import { Badge } from '@/shared/ui/badge';
 import { EmptyState, ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { Field, Select } from '@/shared/ui/form';
 import { ReasonDialog } from '@/shared/ui/reason-dialog';
+import { TagChip } from '@/shared/ui/tag-chip';
+import { reasonLook, tagLookOf, TAG_REASON_CODES } from '@/shared/ui/tag-look';
 import type { components } from '@/shared/api/schema';
 import { useSetTag, useTagHistory } from '../api/tags';
 
 type Customer = components['schemas']['CustomerDetail'];
 type Tag = components['schemas']['Tag'];
-const TAG_CODES = ['plan_ended_unpaid', 'repeated_broken_promise', 'refused_to_pay', 'absconded', 'fraud_suspected', 'other'] as const;
+const TAG_CODES = TAG_REASON_CODES;
 const UNTAG_CODES = ['cleared', 'mistake', 'other'] as const;
 
 /** Customer-detail extension tab (FR-TAG-002/003/005/008): suggestion, current tag, tag/untag with reason, history. */
@@ -42,7 +44,10 @@ export function TagTab({ customerId, customer: c }: { customerId: string; custom
           </span>
           <div>
             <div className="text-md font-semibold">{tagged ? t('tagged') : t('none')}</div>
-            {tagged && c.tag?.severity && <Badge tone="tagged" icon={false} className="mt-1">{t(`sev.${c.tag.severity}`)}</Badge>}
+            <span className="mt-1 flex flex-wrap items-center gap-1.5">
+              {tagged && c.tag?.severity && <Badge tone="tagged" icon={false}>{t(`sev.${c.tag.severity}`)}</Badge>}
+              <TagChip tag={c.tag} />
+            </span>
           </div>
         </div>
         {tagged && (
@@ -116,6 +121,8 @@ export function TagTab({ customerId, customer: c }: { customerId: string; custom
         codes={(open === 'untag' ? UNTAG_CODES : TAG_CODES).map((k) => [k, t(`codes.${k}`)] as [string, string])}
         confirmLabel={open === 'untag' ? t('untagAction') : t('tagAction')}
         destructive={open === 'tag'}
+        codeLook={open === 'tag' ? (code) => ({ className: reasonLook(code).className }) : undefined}
+        afterCodes={open === 'tag' ? (code) => <TagPreview severity={severity} reasonCode={code} /> : undefined}
         onSubmit={async (v) => {
           await setTag.mutateAsync({ state: open === 'untag' ? 'none' : 'tagged', severity: open === 'tag' ? severity : undefined, reasonCode: v.reasonCode as never, reason: v.reason });
           toast.success(t('done'));
@@ -138,4 +145,17 @@ export function TagTab({ customerId, customer: c }: { customerId: string; custom
 function TagPill({ tag }: { tag?: Tag }) {
   const { t } = useTranslation('tags');
   return tag?.state === 'tagged' ? <Badge tone="tagged" icon={Flag} filled>{t(`sev.${tag.severity ?? 'bad'}`)}</Badge> : <Badge tone="neutral" icon={FlagOff}>{t('none')}</Badge>;
+}
+
+/** FR-W-072: how the customer will look in the lists with this severity and reason (legal and absconded have their own colour). */
+function TagPreview({ severity, reasonCode }: { severity: 'watch' | 'bad' | 'legal'; reasonCode: string }) {
+  const { t } = useTranslation('tags');
+  const look = tagLookOf({ state: 'tagged', severity, reasonCode });
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-fg-secondary" data-testid="tag-preview" aria-live="polite">
+      <span>{t('preview')}</span>
+      {look ? <TagChip look={look} /> : <span className="text-fg-tertiary">{t('previewNone')}</span>}
+      <p className="w-full text-xs text-fg-tertiary">{t('colourHint')}</p>
+    </div>
+  );
 }

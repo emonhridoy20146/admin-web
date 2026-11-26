@@ -1,5 +1,5 @@
 /*
- * Shared design tokens v1.1 — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
+ * Shared design tokens v1.3 (provisional tag colours, see 03 §2.3b) — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
  * Any change here must also be applied to staff-app/docs/03-design-guide.md §2 and both CHANGELOGs.
  * Components never use raw hex values: they use the semantic variables below via the Tailwind theme.
  */
@@ -98,6 +98,18 @@
   --st-mock-fg: #9d174d;
   --st-mock-bg: #fce7f3;
 
+  /* bad-tag reason colours (v1.3, PROVISIONAL until the staff-app values are pinned; 03 §2.3b).
+     Row/card border and reason chip of a customer tagged with severity bad or legal. One red family + 3 hues. */
+  --st-tag-bad: #b91c1c;
+  --st-tag-plan-ended-unpaid: #cc2222;
+  --st-tag-refused-to-pay: #991b1b;
+  --st-tag-absconded: #7f1d1d;
+  --st-tag-repeated-broken-promise: #c2410c;
+  --st-tag-fraud-suspected: #be185d;
+  --st-tag-legal: #6d28d9;
+  --st-tag-other: var(--st-tag-bad);
+  --st-tag-on: #ffffff;
+
   /* pay state (v1.1, ADR-W18): map pin fill / text and outline / soft background */
   --ps-bad-pin: #dc2626;
   --ps-bad-fg: #b91c1c;
@@ -122,6 +134,9 @@
   --e1: 0 1px 2px rgb(16 24 40 / 0.06);
   --e2: 0 2px 8px rgb(16 24 40 / 0.08);
   --e3: 0 12px 32px rgb(16 24 40 / 0.14);
+  /* shadow group (v1.2, same values as staff-app): cards (sm) and summary cards (md); light theme only */
+  --sh-sm: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --sh-md: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
   --pin-shadow: rgb(16 24 40 / 0.35);
 
   /* motion */
@@ -203,12 +218,24 @@
   --ps-paid-off-fg: #a9b1bf;
   --ps-paid-off-bg: #1a2030;
 
+  --st-tag-bad: #f87171;
+  --st-tag-plan-ended-unpaid: #fb7185;
+  --st-tag-refused-to-pay: #fca5a5;
+  --st-tag-absconded: #ff6b6b;
+  --st-tag-repeated-broken-promise: #fb923c;
+  --st-tag-fraud-suspected: #f472b6;
+  --st-tag-legal: #a78bfa;
+  --st-tag-on: #0b0e14;
+
   --chart-1: #5f7df7;
   --pay-cash: #5f7df7;
 
   --e1: 0 0 0 1px rgb(255 255 255 / 0.02);
   --e2: 0 4px 16px rgb(0 0 0 / 0.4);
   --e3: 0 16px 40px rgb(0 0 0 / 0.55);
+  /* v1.2: no shadow in dark mode; depth comes from the surface steps and the 1 px border */
+  --sh-sm: none;
+  --sh-md: none;
 
   color-scheme: dark;
 }

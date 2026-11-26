@@ -97,6 +97,15 @@
   --color-st-bad-suggested-bg: var(--st-bad-suggested-bg);
   --color-st-tagged: var(--st-tagged-fg);
   --color-st-tagged-bg: var(--st-tagged-bg);
+  --color-st-tag-bad: var(--st-tag-bad);
+  --color-st-tag-plan-ended-unpaid: var(--st-tag-plan-ended-unpaid);
+  --color-st-tag-refused-to-pay: var(--st-tag-refused-to-pay);
+  --color-st-tag-absconded: var(--st-tag-absconded);
+  --color-st-tag-repeated-broken-promise: var(--st-tag-repeated-broken-promise);
+  --color-st-tag-fraud-suspected: var(--st-tag-fraud-suspected);
+  --color-st-tag-legal: var(--st-tag-legal);
+  --color-st-tag-other: var(--st-tag-other);
+  --color-st-tag-on: var(--st-tag-on);
   --color-st-pending: var(--st-pending-fg);
   --color-st-pending-bg: var(--st-pending-bg);
   --color-st-mock: var(--st-mock-fg);
@@ -134,6 +143,8 @@
   --shadow-e1: var(--e1);
   --shadow-e2: var(--e2);
   --shadow-e3: var(--e3);
+  --shadow-sm: var(--sh-sm);
+  --shadow-md: var(--sh-md);
   --ease-standard: var(--ease-standard);
   --ease-emphasized: var(--ease-emphasized);
 }
@@ -211,6 +222,42 @@
   /* colour and opacity changes (hover, a button turning enabled) happen at once */
   *, *::before, *::after { transition-duration: 0s !important; }
 }
+
+/*
+ * Bad-tag border (FR-W-072, 03 §2.3b): a customer tagged with severity bad or legal gets a border in the colour of
+ * its reason, wherever customers are listed. `shared/ui/tag-look.ts` picks the modifier; colours are tokens only.
+ * Table rows draw it with inset shadows on the cells (a <tr> cannot take a border in a separated table).
+ */
+.fos-tag { --tag-c: var(--st-tag-bad); --tag-w: 3px; --tag-ring: 1px; }
+.fos-tag--plan-ended-unpaid { --tag-c: var(--st-tag-plan-ended-unpaid); }
+.fos-tag--refused-to-pay { --tag-c: var(--st-tag-refused-to-pay); }
+.fos-tag--absconded { --tag-c: var(--st-tag-absconded); --tag-w: 5px; --tag-ring: 2px; }
+.fos-tag--repeated-broken-promise { --tag-c: var(--st-tag-repeated-broken-promise); }
+.fos-tag--fraud-suspected { --tag-c: var(--st-tag-fraud-suspected); }
+.fos-tag--legal { --tag-c: var(--st-tag-legal); }
+.fos-tag--other { --tag-c: var(--st-tag-other); }
+tr.fos-tag > td {
+  box-shadow: inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+tr.fos-tag > td:first-child {
+  box-shadow: inset var(--tag-w) 0 0 var(--tag-c), inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+tr.fos-tag > td:last-child {
+  box-shadow: inset calc(-1 * var(--tag-ring)) 0 0 var(--tag-c), inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+tr.fos-tag > td:first-child:last-child {
+  box-shadow: inset var(--tag-w) 0 0 var(--tag-c), inset calc(-1 * var(--tag-ring)) 0 0 var(--tag-c), inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+/* cards, list items, drawer and page headers */
+.fos-tag-box {
+  border: var(--tag-ring) solid var(--tag-c);
+  border-inline-start-width: var(--tag-w);
+  border-radius: var(--radius-md);
+}
+/* colour swatch in the tag dialog (and the legend) */
+.fos-tag-swatch { background: var(--tag-c); }
+.fos-tag-chip { color: var(--tag-c); border: 1px solid var(--tag-c); background: var(--surface); }
+.fos-tag-chip.fos-tag--absconded { color: var(--st-tag-on); background: var(--tag-c); }
 
 /* Leaflet base (self-hosted, CSP-safe) is imported by the map module only. */
 

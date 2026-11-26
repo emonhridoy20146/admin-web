@@ -1,5 +1,6 @@
 import type { Locale } from '@/shared/lib/format';
 import type { CustomerListItem } from '../api/customers';
+import { tagLookOf, type TagLook } from '@/shared/ui/tag-look';
 import { payStateOf, type PayState } from './pay-state';
 
 /** Status display order: most urgent / most consequential first (03 §1 "status first"). */
@@ -39,6 +40,8 @@ export interface CustomerRowVM {
   openInvoices: { installment: number; credit: number } | null;
   /** 1.24.0: every invoice of the customer (cancelled ones not counted); null on an older server */
   invoiceTotal: number | null;
+  /** FR-W-072: border and reason chip of a customer tagged bad or legal; null for none, pending or watch */
+  tagLook: TagLook | null;
   /** the list item itself, for the work marks (FR-W-037) */
   item: CustomerListItem;
 }
@@ -89,6 +92,7 @@ export function toCustomerRow(c: CustomerListItem, locale: Locale): CustomerRowV
     missedCount: c.missedCount ?? null,
     openInvoices: c.openInvoices ? { installment: c.openInvoices.installment ?? 0, credit: c.openInvoices.credit ?? 0 } : null,
     invoiceTotal: c.invoiceCount?.total ?? null,
+    tagLook: tagLookOf(c.tag),
     item: c,
   };
 }
