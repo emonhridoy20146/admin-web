@@ -307,7 +307,7 @@ Toast bottom-right, 4 s, max 3; success/info only. Errors that need action are b
 ## 6. Responsive rules
 | Breakpoint | Width | Layout |
 |---|---|---|
-| `xs` | < 640 | Sidebar → bottom sheet nav via hamburger; tables → **card lists** (title = name, 3 key fields, badges, chevron); drawers full screen; KPI cards 2 per row; maps full-screen with bottom sheet list |
+| `xs` | < 640 | Sidebar → bottom sheet nav via hamburger; tables → **card lists** (title = name, 3 key fields, badges, chevron; the card is a plain container that opens on tap, the chevron is its one open button named by the title, focus ring around the card — never a `role=button` card, cells may hold links); drawers full screen; KPI cards 2 per row; maps full-screen with bottom sheet list |
 | `sm` | ≥ 640 | Same as xs, KPI 2 per row, filters in a sheet |
 | `md` | ≥ 768 | Icon-rail sidebar (64 px); tables with priority columns only (hide by `meta.priority` 3+) |
 | `lg` | ≥ 1024 | Full sidebar; drawers side panel |

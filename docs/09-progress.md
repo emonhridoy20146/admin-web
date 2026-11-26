@@ -48,7 +48,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 - ☑ Tokens v1.3 `status.tag.<reasonCode | legal>` and `action.*`: final values from staff-app PR #61, identical in `tokens.css`, 03 §2 and `design-tokens.json`.
 - ☑ Contract **1.52.0** pinned: ⌘K search results framed (`SearchResult.tag`), map list per kind (`MapPin.tag`, `tagged` fallback).
 - Runaway-visit rule not mirrored (no visit outcome on admin list items).
-- Known, older a11y findings seen by the new axe checks (not caused by this change): the < 640 px DataTable card is a `role=button` holding the name link (nested-interactive); the customer drawer body has a definition-list structure finding.
+- ☑ The two older a11y findings the new axe checks saw are fixed (FR-W-073): the < 640 px DataTable card is a plain container with one open button (no nested-interactive); the customer contact list keeps each `dt`/`dd` pair alone in its `div` (definition-list). The axe exclusions in `tag-borders.spec.ts` are gone; `a11y.spec.ts` covers the customers list and drawer at 390 px.
 
 ## Status notes (2026-11-24, batch 1124)
 - ☑ A — Drawer padding fixed at the root (shared `Drawer` body pads `space.20`), guarded by a component test and an e2e over 11 drawers at 390/1440 px (FR-W-067).

@@ -48,3 +48,47 @@ test('map pin and assign dialogs have no serious axe violations', async ({ page 
   }
   expect(found).toEqual([]);
 });
+
+test.describe('390 px', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // the < 640 px card list (one open button per card, no control inside another) and the customer drawer it opens
+  test('customers card list and drawer have no serious axe violations; a card opens from the keyboard', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await login(page);
+    await page.goto('/customers/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const open = page.locator('main li button[data-card-open]');
+    await expect(open.first()).toBeVisible();
+    // no card is a button any more, so nothing interactive sits inside one
+    await expect(page.locator('main ul [role=button]')).toHaveCount(0);
+    const settle = async () => {
+      await page.waitForLoadState('networkidle');
+      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity));
+    };
+    const serious = async (include?: string) => {
+      let b = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']);
+      if (include) b = b.include(include);
+      const r = await b.analyze();
+      return r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`);
+    };
+    await settle();
+    expect(await serious()).toEqual([]);
+
+    // the open button is named by the card title and draws its focus ring around the whole card
+    const first = open.first();
+    const name = (await first.getAttribute('aria-labelledby'))!.split(' ').at(-1)!;
+    const title = (await page.locator(`[id="${name}"]`).innerText()).trim();
+    await expect(first).toHaveAccessibleName(new RegExp(title.split('\n')[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    await first.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(first).toBeFocused();
+    const card = page.locator('main li > div').first();
+    expect(await card.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('solid');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-drawer-content]')).toBeVisible();
+    await settle();
+    expect(await serious('[role=dialog]')).toEqual([]);
+  });
+});

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type RowSelectionState } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Columns3, Rows3, Inbox } from 'lucide-react';
@@ -283,43 +283,17 @@ export function DataTable<T>({
                 </li>
               ))
             : (rows ?? []).map((r) => {
-                const by = (role: Column<T>['mobile']) => columns.filter((c) => c.mobile === role);
                 const k = rowKey(r);
-                const border = rowBorderClass?.(r);
                 return (
-                  <li key={k} className={cn(border && 'px-2 py-1.5')}>
-                    <div
-                      role={onRowClick ? 'button' : undefined}
-                      tabIndex={onRowClick ? 0 : undefined}
-                      onClick={(e) => {
-                        if ((e.target as HTMLElement).closest('button,a,[role=checkbox]')) return;
-                        onRowClick?.(r);
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && onRowClick?.(r)}
-                      className={cn('flex min-h-14 items-start gap-3 px-4 py-3 active:bg-surface-hover', selection?.has(k) && 'bg-primary-subtle', border && `${border} fos-tag-box px-2.5`)}
-                      data-tag-border={border ? 'true' : undefined}
-                    >
-                      {selectable && <Checkbox className="mt-1" aria-label={t('table.selectRow')} checked={!!selection?.has(k)} onCheckedChange={() => toggleRow(k)} />}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 truncate font-medium text-fg">{by('title').map((c) => <span key={c.id}>{c.cell(r)}</span>)}</div>
-                          <div className="tabular shrink-0 text-end font-medium">{by('amount').map((c) => <span key={c.id}>{c.cell(r)}</span>)}</div>
-                        </div>
-                        {by('subtitle').length > 0 && <div className="mt-0.5 truncate text-sm text-fg-tertiary">{by('subtitle').map((c) => <span key={c.id}>{c.cell(r)}</span>)}</div>}
-                        {by('meta').length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-sm text-fg-secondary">
-                            {by('meta').slice(0, 3).map((c) => (
-                              <span key={c.id} className="inline-flex items-center gap-1">
-                                <span className="text-fg-tertiary">{c.header}:</span> {c.cell(r)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {by('badges').length > 0 && <div className="mt-2">{by('badges').map((c) => <span key={c.id}>{c.cell(r)}</span>)}</div>}
-                      </div>
-                      {onRowClick && <ChevronRight className="mt-1 size-4 shrink-0 text-fg-disabled" aria-hidden />}
-                    </div>
-                  </li>
+                  <MobileCard
+                    key={k}
+                    row={r}
+                    columns={columns}
+                    border={rowBorderClass?.(r)}
+                    selected={!!selection?.has(k)}
+                    onOpen={onRowClick}
+                    onToggle={selectable ? () => toggleRow(k) : undefined}
+                  />
                 );
               })}
         </ul>
@@ -337,6 +311,77 @@ export function DataTable<T>({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * One card of the < 640 px list. The card is a plain container, not a button: cells may hold their own links and
+ * buttons (the customer name is a link), and an interactive element inside another is an axe `nested-interactive`
+ * failure. Keyboard and screen-reader users get one "open" button per card (the chevron, named by the title); the
+ * focus ring is drawn around the whole card. A tap anywhere on the card opens it, except on the cell's own controls;
+ * a link that handles its own plain click (calls preventDefault, like the customer name) opens the card too, while a
+ * link that navigates (or a ⌘/Ctrl-click) is left alone.
+ */
+function MobileCard<T>({ row, columns, border, selected, onOpen, onToggle }: {
+  row: T;
+  columns: Column<T>[];
+  border?: string | null;
+  selected: boolean;
+  onOpen?: (r: T) => void;
+  onToggle?: () => void;
+}) {
+  const { t } = useTranslation();
+  const titleId = useId();
+  const by = (role: Column<T>['mobile']) => columns.filter((c) => c.mobile === role);
+  return (
+    <li className={cn(border && 'px-2 py-1.5')}>
+      <div
+        onClick={(e) => {
+          if (!onOpen) return;
+          const target = e.target as HTMLElement;
+          if (target.closest('button:not([data-card-open]),input,select,textarea,[role=checkbox]')) return;
+          if (target.closest('a') && !e.defaultPrevented) return;
+          onOpen(row);
+        }}
+        className={cn(
+          'flex min-h-14 items-start gap-3 px-4 py-3',
+          onOpen && 'cursor-pointer active:bg-surface-hover has-[[data-card-open]:focus-visible]:outline-2 has-[[data-card-open]:focus-visible]:-outline-offset-2 has-[[data-card-open]:focus-visible]:outline-[var(--focus-ring)] has-[[data-card-open]:focus-visible]:outline-solid',
+          selected && 'bg-primary-subtle',
+          border && `${border} fos-tag-box px-2.5`,
+        )}
+        data-tag-border={border ? 'true' : undefined}
+      >
+        {onToggle && <Checkbox className="mt-1" aria-label={t('table.selectRow')} checked={selected} onCheckedChange={onToggle} />}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div id={titleId} className="min-w-0 truncate font-medium text-fg">{by('title').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>
+            <div className="tabular shrink-0 text-end font-medium">{by('amount').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>
+          </div>
+          {by('subtitle').length > 0 && <div className="mt-0.5 truncate text-sm text-fg-tertiary">{by('subtitle').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>}
+          {by('meta').length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-sm text-fg-secondary">
+              {by('meta').slice(0, 3).map((c) => (
+                <span key={c.id} className="inline-flex items-center gap-1">
+                  <span className="text-fg-tertiary">{c.header}:</span> {c.cell(row)}
+                </span>
+              ))}
+            </div>
+          )}
+          {by('badges').length > 0 && <div className="mt-2">{by('badges').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>}
+        </div>
+        {onOpen && (
+          <button
+            type="button"
+            data-card-open
+            aria-labelledby={`${titleId}-open ${titleId}`}
+            className="-my-2.5 -me-2 grid size-11 shrink-0 place-items-center rounded-sm text-fg-disabled focus-visible:outline-none"
+          >
+            <span id={`${titleId}-open`} className="sr-only">{t('actions.open')}</span>
+            <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
+          </button>
+        )}
+      </div>
+    </li>
   );
 }
 

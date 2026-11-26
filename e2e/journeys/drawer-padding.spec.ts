@@ -24,8 +24,9 @@ const DRAWERS: { name: string; path: string; table?: number }[] = [
 const MIN_GAP = 16;
 
 async function openFirst(page: Page, mobile: boolean, table = 0) {
-  const lists = page.locator(mobile ? 'main ul:has(li [role=button])' : 'main table:has(tbody tr[tabindex="0"])');
-  const row = lists.nth(table).locator(mobile ? 'li [role=button]' : 'tbody tr[tabindex="0"]').first();
+  // < 640 px: each card has one open button (data-card-open), named by the card's title
+  const lists = page.locator(mobile ? 'main ul:has(li button[data-card-open])' : 'main table:has(tbody tr[tabindex="0"])');
+  const row = lists.nth(table).locator(mobile ? 'li button[data-card-open]' : 'tbody tr[tabindex="0"]').first();
   await row.click();
   await expect(page.locator('[data-drawer-content]')).toBeVisible();
 }

@@ -223,14 +223,18 @@ function AssignAction({ c }: { c: CustomerDetail }) {
   );
 }
 
+/**
+ * One `dt`/`dd` pair, alone in its `div` (axe definition-list / dlitem): the icon sits inside the `dt`, placed in
+ * the gutter the `div` pads, instead of beside a wrapper around the pair.
+ */
 function Item({ icon: Icon, label, children }: { icon: typeof Phone; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-3">
-      <Icon className="mt-0.5 size-4 shrink-0 text-fg-tertiary" aria-hidden />
-      <div className="min-w-0">
-        <dt className="text-xs text-fg-tertiary">{label}</dt>
-        <dd className="text-fg">{children}</dd>
-      </div>
+    <div className="relative min-w-0 ps-7">
+      <dt className="text-xs text-fg-tertiary">
+        <Icon className="absolute start-0 top-0.5 size-4 text-fg-tertiary" aria-hidden />
+        {label}
+      </dt>
+      <dd className="text-fg">{children}</dd>
     </div>
   );
 }
