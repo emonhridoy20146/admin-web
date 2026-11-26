@@ -71,7 +71,11 @@
     "accepted": "Accepted",
     "cancelled": "Cancelled",
     "expired": "Expired",
-    "reverted": "Reverted"
+    "reverted": "Reverted",
+    "returned": "Returned",
+    "returned_count": "Returned ×{{n}}",
+    "only_returned": "Returned product customer",
+    "returned_payment": "Returned invoice"
   },
   "severity": {
     "critical": "Critical",

@@ -500,5 +500,12 @@
     "office": "Office",
     "removed": "Former user",
     "notInErp": "not in ERP yet"
+  },
+  "returned": {
+    "title": "Returned invoices",
+    "note": "Returned in the ERP. Shown here only: they are in no total, count or KPI, and nothing can be collected on them.",
+    "payments": "ERP payments on this invoice",
+    "paymentsOf": "Payments on returned invoice {{no}}",
+    "viewerNote": "This invoice was returned in the ERP. It is shown for reference only: it is not in the customer's totals and nothing can be collected on it."
   }
 }
