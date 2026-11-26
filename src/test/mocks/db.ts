@@ -1739,14 +1739,13 @@ customers.forEach((c, ci) => {
   setReturned(c, returned);
 });
 // a customer whose only invoice was returned ("returned product customer"): listed, on the map, found by the invoice no.
-// An existing paid-up customer of Barishal that nothing else refers to takes this role, so the customer count (400),
+// An existing paid-up customer of Barishal with no collection, promise or request takes this role (past visits are fine), so the customer count (400),
 // pages and every money total stay as they were.
 {
   const b = branches[0]!;
   const used = new Set<string>([
     ...collections.map((x) => x.customer?.id ?? ''),
     ...promises.map((x) => x.row.customerId ?? x.row.customer?.id ?? ''),
-    ...visits.map((x) => x.row.customerId ?? x.row.customer?.id ?? ''),
     ...requests.map((x) => x.customerId ?? ''),
   ]);
   const c = [...customers].reverse().find(
