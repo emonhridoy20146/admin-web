@@ -20,6 +20,9 @@ export interface paths {
          *     IP lock. 423 bodies carry `details` = `AccountLockedDetails` and a `Retry-After` header (1.47.0).
          *     A field staff on a new device gets 403 `DEVICE_NOT_APPROVED` with `details` = `DeviceNotApprovedDetails`
          *     (1.47.0; FR-AUTH-007); show "waiting for manager approval" and the request id.
+         *     Since 1.51.0 (ADR-069) every role is device-bound on `client: app` except the roles in setting
+         *     `devices.multiDeviceRoles` (default `["super_admin"]`), so area managers, branch managers and viewers can get
+         *     this 403 too. `client: web` logins are never device-bound. `devices.bindRoles` is deprecated and no longer read.
          */
         post: operations["login"];
         delete?: never;
@@ -54,6 +57,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description Ends the caller's session. Since 1.51.0 (ADR-069) it also revokes the tracking tokens of this session and of
+         *     this user on this device only; the user's sessions and tracking tokens on other phones (a super admin on
+         *     several phones) keep working.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -2594,8 +2602,8 @@ export interface paths {
          *     post points (`attendance.record`). Returns an opaque token for `Authorization: Tracking <token>` on
          *     POST /location/points, and nowhere else. The token is bound to the caller's user, device and session and lives
          *     `location.trackingTokenTtlHours` (default 24) hours. Every call rotates: the previous token of this user and
-         *     device stops working at once. Logout, password change / reset, deactivation, device unbind and ending the
-         *     session revoke it. Needs a normal access token (a tracking token is refused here). No body.
+         *     device stops working at once; tokens of the user's other devices are not touched. Logout (of this session or
+         *     device, 1.51.0), password change / reset, deactivation, device unbind and ending the session revoke it. Needs a normal access token (a tracking token is refused here). No body.
          */
         post: operations["issueTrackingToken"];
         delete?: never;
@@ -3546,6 +3554,19 @@ export interface components {
             /** Format: date-time */
             setAt?: string;
         };
+        /**
+         * @description Added in 1.52.0 (FR-TAG-009). The part of `Tag` a list needs to draw the bad-tag border: `severity` and
+         *     `reasonCode` are present only when `state` is `tagged`. Red when tagged with severity `bad` or `legal`
+         *     (not `watch`); the colour per reason comes from `reasonCode`. Reason text and author are not included
+         *     (open the customer for those).
+         */
+        TagSummary: {
+            /** @enum {string} */
+            state: "none" | "pending" | "tagged";
+            /** @enum {string} */
+            severity?: "watch" | "bad" | "legal";
+            reasonCode?: string;
+        };
         TagEvent: {
             id?: string;
             /**
@@ -3970,9 +3991,20 @@ export interface components {
             name?: string;
             outstandingPoisha?: number;
             tagged?: boolean;
+            tag?: components["schemas"]["TagSummary"];
             payState?: components["schemas"]["PayState"];
             /** @description Added in 1.14.0 */
             missedCount?: number;
+        };
+        /** @description One GET /search hit (schema named in 1.52.0; the fields before `tag` are unchanged). */
+        SearchResult: {
+            /** @description customer, user or receipt */
+            type?: string;
+            id?: string;
+            title?: string;
+            subtitle?: string;
+            /** @description Added in 1.52.0. Customer items only (`type: customer`); absent on user and receipt items and from older servers */
+            tag?: components["schemas"]["TagSummary"];
         };
         TimelineItem: {
             /** @enum {string} */
@@ -11486,12 +11518,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        type?: string;
-                        id?: string;
-                        title?: string;
-                        subtitle?: string;
-                    }[];
+                    "application/json": components["schemas"]["SearchResult"][];
                 };
             };
         };
