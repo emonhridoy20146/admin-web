@@ -2579,6 +2579,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/location/tracking-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue (rotate) the tracking token for the native location service
+         * @description 1.49.0 (FR-LOC-013, ADR-067). Staff app only (`client: app` session with a device id) and only for users who may
+         *     post points (`attendance.record`). Returns an opaque token for `Authorization: Tracking <token>` on
+         *     POST /location/points, and nowhere else. The token is bound to the caller's user, device and session and lives
+         *     `location.trackingTokenTtlHours` (default 24) hours. Every call rotates: the previous token of this user and
+         *     device stops working at once. Logout, password change / reset, deactivation, device unbind and ending the
+         *     session revoke it. Needs a normal access token (a tracking token is refused here). No body.
+         */
+        post: operations["issueTrackingToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/location/points": {
         parameters: {
             query?: never;
@@ -2588,6 +2613,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * @description Since 1.49.0 (ADR-067) also accepts `Authorization: Tracking <token>` from POST /location/tracking-token, so the
+         *     native service keeps uploading after the app is closed and the access token has expired. With a tracking token
+         *     `deviceId` must be the token's device; the user must still be active, the session live and the device approved,
+         *     else 401 UNAUTHENTICATED (`details.reason`: TRACKING_TOKEN_INVALID or TRACKING_TOKEN_EXPIRED; do not refresh,
+         *     keep the points buffered until the app issues a new token). Duty-hours rules are unchanged (OFF_DUTY per point).
+         */
         post: operations["ingestPoints"];
         delete?: never;
         options?: never;
@@ -3157,6 +3189,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description 1.49.0 (ADR-067). Opaque; store it where the native service can read it; never log it. */
+        TrackingToken: {
+            /** @description Opaque, starts with `trk_`. Send as `Authorization: Tracking <token>` */
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         Problem: {
             type?: string;
             title: string;
@@ -3732,7 +3771,7 @@ export interface components {
             paidPoisha?: number;
             outstandingPoisha?: number;
             /**
-             * @description `closed` = returned in the ERP; closed and cancelled plans are not collectable and not counted in totals
+             * @description `closed` = not collectable in the field (e.g. a cash sale with money left, a draft, or an invoice the ERP marks not collectable); closed and cancelled plans are not collectable and not counted in totals. Since 1.50.0 (FR-CUS-023) invoices returned in the ERP are not listed at all (see CustomerDetail.returnedPlanIds); the meaning of each value is unchanged
              * @enum {string}
              */
             status?: "active" | "completed" | "closed" | "defaulted" | "cancelled";
@@ -3905,7 +3944,10 @@ export interface components {
                 maxDaysLate?: number;
                 computedAt?: string | null;
             };
+            /** @description Every invoice of the customer FOS shows, complete (replace the stored list, do not merge). Since 1.50.0 (FR-CUS-023) invoices returned in the ERP are never in this list */
             plans?: components["schemas"]["Plan"][];
+            /** @description Added in 1.50.0 (FR-CUS-023, ADR-068). erpPlanIds of the customer's invoices that were returned in the ERP. They are not in `plans` and never shown; a client that already stored one of them (before 1.50.0) deletes it, with its schedule. Empty when none. Older servers omit it */
+            returnedPlanIds?: string[];
             payments?: components["schemas"]["Payment"][];
             pendingCollections?: components["schemas"]["Collection"][];
             badSuggestion?: {
@@ -5091,7 +5133,7 @@ export interface components {
             id?: string;
             /**
              * @description Present for op=upsert. Shape per entity (1.2.0 documents the mapping; values unchanged):
-             *     customer → CustomerDetail · collection → Collection · visit → Visit · note → Note · promise → Promise ·
+             *     customer → CustomerDetail (1.50.0: `plans` is the full list without returned invoices; `returnedPlanIds` = ids to delete) · collection → Collection · visit → Visit · note → Note · promise → Promise ·
              *     tag → Tag (with customerId) · handover → Handover · assignment → Assignment · area → Area · deposit → Deposit ·
              *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
@@ -7157,6 +7199,7 @@ export interface operations {
                 assignedTo?: string;
                 branchId?: components["parameters"]["BranchId"];
                 areaId?: string;
+                /** @description Name (bn/en), customer code, ERP id, mobile number (last digits, 4 or more) or invoice number (separators ignored, e.g. S24052 finds S-24052). Bangla digits are accepted (2026-11-26). */
                 q?: string;
                 near?: string;
                 radiusM?: number;
@@ -10811,6 +10854,43 @@ export interface operations {
             409: components["responses"]["Problem"];
         };
     };
+    issueTrackingToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Token issued; the previous one of this device is revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "trk_3q2Xb0Hk1n0bS8yJ1y8mV1y2Zl9pQe8lYw0bD7fK3cU",
+                     *       "expiresAt": "2026-11-27T04:00:00.000Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["TrackingToken"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            /** @description FORBIDDEN (`details.permission: attendance.record`, or `details.reason: APP_ONLY` for a web session or a session without a device), FEATURE_DISABLED, PASSWORD_CHANGE_REQUIRED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["Problem"];
+        };
+    };
     ingestPoints: {
         parameters: {
             query?: never;
@@ -10844,6 +10924,8 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     heartbeat: {
