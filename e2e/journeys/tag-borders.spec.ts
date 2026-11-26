@@ -49,10 +49,10 @@ for (const width of [390, 1440]) {
       const absconded = bordered.filter({ has: page.locator('[data-tag="absconded"]') }).first();
       await expect(absconded).toBeVisible();
       await expect(absconded.getByTestId('tag-chip')).toHaveText(commonBn.tagLook.absconded);
-      const colour = await tokenColour(page, '--st-tag-absconded');
+      const colour = await tokenColour(page, '--st-tag-absconded-fg');
       if (width < 640) {
         const s = await absconded.evaluate((el) => { const c = getComputedStyle(el); return { w: parseFloat(c.borderInlineStartWidth), c: c.borderInlineStartColor, top: c.borderTopColor }; });
-        expect(s.w).toBeGreaterThanOrEqual(4);
+        expect(s.w).toBeGreaterThanOrEqual(2); // absconded: 2 px frame (others 1.5 px)
         expect(s.c).toBe(colour);
         expect(s.top).toBe(colour);
       } else {
@@ -64,8 +64,8 @@ for (const width of [390, 1440]) {
       // a legal tag has its own colour, different from absconded and from the generic bad colour
       const legal = bordered.filter({ has: page.locator('[data-tag="legal"]') }).first();
       await expect(legal.getByTestId('tag-chip')).toHaveText(commonBn.tagLook.legal);
-      expect(await tokenColour(page, '--st-tag-legal')).not.toBe(colour);
-      expect(await tokenColour(page, '--st-tag-bad')).not.toBe(colour);
+      expect(await tokenColour(page, '--st-tag-legal-fg')).not.toBe(colour);
+      expect(await tokenColour(page, '--st-tag-other-fg')).not.toBe(colour);
 
       await settle(page);
       // Known, older than this change and not caused by it (reported in the PR): below 640 px the DataTable card is a
@@ -111,9 +111,11 @@ test('the tag dialog shows each reason with its colour; tagging borders the cust
   for (const o of await options.all()) {
     const code = (await o.getAttribute('data-code'))!;
     const cssVar = `--st-tag-${code.replace(/_/g, '-')}`;
-    const colour = await tokenColour(page, cssVar);
-    expect(await o.evaluate((el) => getComputedStyle(el).borderInlineStartColor)).toBe(colour);
-    expect(await o.getByTestId('reason-swatch').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(colour);
+    const fg = await tokenColour(page, `${cssVar}-fg`);
+    const bg = await tokenColour(page, `${cssVar}-bg`);
+    expect(await o.evaluate((el) => getComputedStyle(el).borderInlineStartColor)).toBe(fg);
+    const swatch = await o.getByTestId('reason-swatch').evaluate((el) => { const c = getComputedStyle(el); return { bg: c.backgroundColor, border: c.borderTopColor }; });
+    expect(swatch).toEqual({ bg, border: fg });
   }
   await dialog.getByRole('radio', { name: tagsBn.codes.absconded }).check();
   await expect(dialog.getByTestId('tag-preview').getByTestId('tag-chip')).toHaveText(commonBn.tagLook.absconded);

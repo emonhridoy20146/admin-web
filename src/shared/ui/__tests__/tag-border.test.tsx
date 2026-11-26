@@ -54,7 +54,7 @@ describe('TagChip and tagBoxClass', () => {
     const { container } = render(<TagChip tag={{ state: 'pending', severity: 'bad', reasonCode: 'absconded' }} />);
     expect(container).toBeEmptyDOMElement();
     expect(tagBoxClass({ state: 'tagged', severity: 'watch' })).toBe('');
-    expect(tagBoxClass({ state: 'tagged', severity: 'bad', reasonCode: 'nope' })).toBe('fos-tag fos-tag-box');
+    expect(tagBoxClass({ state: 'tagged', severity: 'bad', reasonCode: 'nope' })).toBe('fos-tag fos-tag--other fos-tag-box');
   });
 });
 
@@ -62,7 +62,7 @@ describe('ReasonDialog with code colours (tag dialog)', () => {
   it('shows each reason with its colour: border plus swatch, and keeps the choice', async () => {
     const codes = TAG_REASON_CODES.map((c) => [c, c] as [string, string]);
     render(
-      <ReasonDialog open onOpenChange={() => {}} title="Tag" codes={codes} confirmLabel="Tag" codeLook={(c) => ({ className: reasonLook(c).className })} afterCodes={(c) => <span data-testid="picked">{c}</span>} onSubmit={async () => {}} />,
+      <ReasonDialog open onOpenChange={() => {}} title="Tag" codes={codes} confirmLabel="Tag" codeLook={(c) => ({ className: reasonLook(c).className, icon: reasonLook(c).icon })} afterCodes={(c) => <span data-testid="picked">{c}</span>} onSubmit={async () => {}} />,
     );
     const group = await screen.findByRole('radiogroup');
     const options = group.querySelectorAll('label[data-code]');
@@ -71,11 +71,14 @@ describe('ReasonDialog with code colours (tag dialog)', () => {
       const code = o.getAttribute('data-code')!;
       expect(o.className).toContain(reasonLook(code).className);
       expect(o.className).toMatch(/\bfos-tag-box\b/);
-      expect(o.querySelector('[data-testid="reason-swatch"]')?.className).toMatch(/\bfos-tag-swatch\b/);
+      const swatch = o.querySelector('[data-testid="reason-swatch"]');
+      expect(swatch?.className).toMatch(/\bfos-tag-swatch\b/);
+      expect(swatch?.querySelector('svg')).not.toBeNull();
     });
     expect(screen.getByTestId('picked')).toHaveTextContent('plan_ended_unpaid');
     fireEvent.click(within(group).getByRole('radio', { name: 'absconded' }));
     expect(within(group).getByRole('radio', { name: 'absconded' })).toBeChecked();
+    expect(group.querySelector('label[data-code="absconded"]')?.className).toMatch(/\bfos-tag-picked\b/);
     expect(screen.getByTestId('picked')).toHaveTextContent('absconded');
   });
 

@@ -121,7 +121,7 @@ export function TagTab({ customerId, customer: c }: { customerId: string; custom
         codes={(open === 'untag' ? UNTAG_CODES : TAG_CODES).map((k) => [k, t(`codes.${k}`)] as [string, string])}
         confirmLabel={open === 'untag' ? t('untagAction') : t('tagAction')}
         destructive={open === 'tag'}
-        codeLook={open === 'tag' ? (code) => ({ className: reasonLook(code).className }) : undefined}
+        codeLook={open === 'tag' ? (code) => { const l = reasonLook(code); return { className: l.className, icon: l.icon }; } : undefined}
         afterCodes={open === 'tag' ? (code) => <TagPreview severity={severity} reasonCode={code} /> : undefined}
         onSubmit={async (v) => {
           await setTag.mutateAsync({ state: open === 'untag' ? 'none' : 'tagged', severity: open === 'tag' ? severity : undefined, reasonCode: v.reasonCode as never, reason: v.reason });

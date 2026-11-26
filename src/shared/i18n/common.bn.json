@@ -294,13 +294,12 @@
     "one": "বাছাই করা কর্মী"
   },
   "tagLook": {
-    "bad": "খারাপ ট্যাগ",
-    "planEndedUnpaid": "মেয়াদ শেষ, বকেয়া",
-    "repeatedBrokenPromise": "বারবার কথা ভঙ্গ",
-    "refusedToPay": "দিতে অস্বীকার",
     "absconded": "পলাতক",
-    "fraudSuspected": "প্রতারণার সন্দেহ",
     "legal": "আইনি ব্যবস্থা",
-    "other": "খারাপ: অন্য কারণ"
+    "refused_to_pay": "দিতে অস্বীকার",
+    "other": "খারাপ ট্যাগ",
+    "fraud_suspected": "প্রতারণার সন্দেহ",
+    "repeated_broken_promise": "বারবার কথা ভঙ্গ",
+    "plan_ended_unpaid": "মেয়াদ শেষ, বকেয়া"
   }
 }

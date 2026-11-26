@@ -43,10 +43,10 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/attendance/leave`), holidays and shifts (`/attendance/calendar`, shift in the user form) and notices with read tracking (`/notices`) are done on contract 1.12.0 with journeys and axe. Left: day-sheet planner, SMS logs.
 
 ## Status notes (2026-11-26, bad-tag borders)
-- ☑ Bad-tag borders and reason chips on the customers table and cards, drawer and detail headers, map list and customer picker; tag dialog with colour swatches and preview (FR-W-072, ADR-W30). Unit, component and e2e (390/1440 px, axe) green.
+- ☑ Bad-tag frames and chips on the customers table and cards, drawer and detail headers, map list and customer picker; tag dialog with swatches and preview (FR-W-072, ADR-W30). Unit, component and e2e (390/1440 px, axe) green.
 - ☑ Tokens v1.2: `shadow.sm` / `shadow.md` (light only), same values as staff-app.
-- ◐ Tokens v1.3 `status.tag.<key>`: implemented with **provisional** values; waiting for the final names and values from the coordinator.
-- ☐ ⌘K search results: no tag in the search contract (needs field-api). Map list: generic colour only (`MapPin.tagged`).
+- ☑ Tokens v1.3 `status.tag.<reasonCode | legal>` and `action.*`: final values from staff-app PR #61, identical in `tokens.css`, 03 §2 and `design-tokens.json`.
+- ☐ ⌘K search results and per-kind map list colours: waiting for contract 1.52.0 (`TagSummary` on search, `MapPin.tag`). Runaway-visit rule not mirrored (no visit outcome on list items).
 - Known, older a11y findings seen by the new axe checks (not caused by this change): the < 640 px DataTable card is a `role=button` holding the name link (nested-interactive); the customer drawer body has a definition-list structure finding.
 
 ## Status notes (2026-11-24, batch 1124)

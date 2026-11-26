@@ -21,7 +21,7 @@ export function TagChip({ tag, look: given, className }: { tag?: TagLike | null;
   );
 }
 
-/** The `fos-tag fos-tag-box` classes for a card/list item of a customer with this tag ('' when it has none). */
+/** The `fos-tag fos-tag--<kind> fos-tag-box` classes for a card/list item of a customer with this tag ('' when it has none). */
 export function tagBoxClass(tag: TagLike | null | undefined): string {
   const look = tagLookOf(tag);
   return look ? `${look.className} fos-tag-box` : '';

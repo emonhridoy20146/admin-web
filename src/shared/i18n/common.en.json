@@ -294,13 +294,12 @@
     "one": "Chosen staff member"
   },
   "tagLook": {
-    "bad": "Tagged bad",
-    "planEndedUnpaid": "Plan over, unpaid",
-    "repeatedBrokenPromise": "Broken promises",
-    "refusedToPay": "Refuses to pay",
     "absconded": "Absconded",
-    "fraudSuspected": "Fraud suspected",
     "legal": "Legal action",
-    "other": "Bad: other reason"
+    "refused_to_pay": "Refuses to pay",
+    "other": "Tagged bad",
+    "fraud_suspected": "Fraud suspected",
+    "repeated_broken_promise": "Broken promises",
+    "plan_ended_unpaid": "Plan over, unpaid"
   }
 }

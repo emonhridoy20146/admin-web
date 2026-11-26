@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from './button';
 import { Field, Select, Textarea } from './form';
 import { Dialog } from './overlay';
@@ -21,6 +22,8 @@ export interface ReasonValue {
 export interface CodeLook {
   /** classes that set the option's colour (e.g. `fos-tag fos-tag--absconded`) */
   className: string;
+  /** shown in the swatch, in the option's colour on its tint */
+  icon?: LucideIcon;
 }
 
 export function ReasonDialog({
@@ -120,12 +123,14 @@ export function ReasonDialog({
                     className={cn(
                       'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm text-fg fos-tag-box',
                       look.className,
-                      on ? 'bg-surface-hover font-medium' : 'bg-surface',
+                      on ? 'fos-tag-picked font-medium' : 'bg-surface',
                     )}
                     data-code={v}
                   >
                     <input type="radio" name="reason-code" value={v} checked={on} onChange={() => setCode(v)} className="size-4 shrink-0 accent-[var(--tag-c)]" />
-                    <span className="fos-tag-swatch size-3.5 shrink-0 rounded-xs" aria-hidden data-testid="reason-swatch" />
+                    <span className="fos-tag-swatch grid size-7 shrink-0 place-items-center rounded-sm" aria-hidden data-testid="reason-swatch">
+                      {look.icon && <look.icon className="size-4" strokeWidth={2.25} />}
+                    </span>
                     <span className="min-w-0 flex-1">{l}</span>
                   </label>
                 );
