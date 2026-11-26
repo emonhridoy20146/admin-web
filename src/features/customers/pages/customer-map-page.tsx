@@ -18,7 +18,7 @@ import { PageHeader } from '@/shared/ui/page';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { FilterChip, Segmented } from '@/shared/ui/primitives';
 import { ReturnedMark } from '@/shared/ui/badge';
-import { returnedMark } from '@/shared/ui/status';
+import { opensCustomer, returnedMark } from '@/shared/ui/status';
 import { TagChip } from '@/shared/ui/tag-chip';
 import { pinTagLook } from '@/shared/ui/tag-look';
 import { MoneyText } from '@/shared/ui/money';
@@ -98,8 +98,10 @@ export function CustomerMapPage() {
           const s = payStateOf(p);
           // FR-W-074: a customer with returned invoices gets a corner mark on the pin and says so in the pin's label
           const ret = returnedMark(p);
-          const retLabel = ret ? ` · ${tc(`status.${ret.status}`, { n: fmt(ret.n) })}` : '';
-          return { id: p.id!, lat: p.lat!, lng: p.lng!, token: psToken(s, 'pin'), title: `${p.name ?? ''} · ${payLabel(t, s, p.missedCount)}${retLabel}`, strong: p.id === drawerId, pin: { ...payLook(s, p.missedCount, fmt), ...(ret ? { corner: RETURNED_CORNER } : {}) }, z: PAY_STATES.length - payRank(s) };
+          // and an only-returned customer's pin does not open (owner decision 2026-11-26): its tooltip says why
+          const inert = !opensCustomer(p);
+          const retLabel = inert ? ` · ${tc('status.only_returned_hint')}` : ret ? ` · ${tc(`status.${ret.status}`, { n: fmt(ret.n) })}` : '';
+          return { id: p.id!, lat: p.lat!, lng: p.lng!, token: psToken(s, 'pin'), title: `${p.name ?? ''} · ${payLabel(t, s, p.missedCount)}${retLabel}`, strong: p.id === drawerId, pin: { ...payLook(s, p.missedCount, fmt), ...(ret ? { corner: RETURNED_CORNER } : {}) }, z: PAY_STATES.length - payRank(s), inert };
         }),
     [pins, drawerId, t, tc, fmt],
   );
@@ -134,12 +136,14 @@ export function CustomerMapPage() {
   const open = useCallback(
     (id: string) => {
       if (isBranchMarker(id)) return;
+      // FR-W-074: an only-returned customer does not open (its pin takes no click; this guards any other caller)
+      if (pins.some((p) => p.id === id && !opensCustomer(p))) return;
       // the drawer lives outside the map box, so full screen gives way to it
       exitFull();
       // a layer marker carries its layer id (`place:6752…`); a customer pin is a bare id
       if (!openLayer(id)) url.set({ drawer: `customer:${id}` }, { push: true });
     },
-    [url, openLayer, exitFull],
+    [url, openLayer, exitFull, pins],
   );
   const zoomTo = useCallback((c: { lat: number; lng: number }) => setFit({ minLat: c.lat - 0.012, maxLat: c.lat + 0.012, minLng: c.lng - 0.016, maxLng: c.lng + 0.016 }), []);
   const sorted = useMemo(() => [...pins].sort((a, b) => payRank(payStateOf(a)) - payRank(payStateOf(b)) || (b.outstandingPoisha ?? 0) - (a.outstandingPoisha ?? 0)), [pins]);
@@ -257,9 +261,8 @@ export function CustomerMapPage() {
               <ul className="divide-y divide-line">
                 {sorted.slice(0, LIST_MAX).map((p) => {
                   const tag = pinTagLook(p);
-                  return (
-                  <li key={p.id} className={cn(tag && 'px-2 py-1')}>
-                    <button type="button" onClick={() => open(p.id!)} className={cn('flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start hover:bg-surface-hover', p.id === drawerId && 'bg-surface-hover', tag && `${tag.className} fos-tag-box px-2.5`)} data-tag-border={tag ? 'true' : undefined}>
+                  const body = (
+                    <>
                       <span className="min-w-0">
                         <span className="flex min-w-0 items-center gap-1.5">
                           <span className="block truncate text-sm font-medium text-fg" lang={locale}>{p.name}</span>
@@ -268,7 +271,22 @@ export function CustomerMapPage() {
                         <span className="mt-0.5 flex flex-wrap items-center gap-1"><PayStateBadge state={payStateOf(p)} missed={p.missedCount} /><ReturnedMark of={p} /></span>
                       </span>
                       <MoneyText poisha={p.outstandingPoisha ?? 0} className="shrink-0 text-sm font-medium" />
-                    </button>
+                    </>
+                  );
+                  const box = cn('flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start', p.id === drawerId && 'bg-surface-hover', tag && `${tag.className} fos-tag-box px-2.5`);
+                  return (
+                  <li key={p.id} className={cn(tag && 'px-2 py-1')}>
+                    {opensCustomer(p) ? (
+                      <button type="button" onClick={() => open(p.id!)} className={cn(box, 'hover:bg-surface-hover')} data-tag-border={tag ? 'true' : undefined}>
+                        {body}
+                      </button>
+                    ) : (
+                      // FR-W-074 (owner decision 2026-11-26): an only-returned customer stays listed with its marker but does not open
+                      <div className={box} data-tag-border={tag ? 'true' : undefined} aria-disabled="true" title={tc('status.only_returned_hint')} data-inert="true">
+                        {body}
+                        <span className="sr-only">{tc('status.only_returned_hint')}</span>
+                      </div>
+                    )}
                   </li>
                   );
                 })}

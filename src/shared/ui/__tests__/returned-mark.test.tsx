@@ -2,7 +2,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { initI18n, i18n } from '@/shared/i18n';
 import { ReturnedMark, StatusBadge } from '../badge';
-import { returnedMark, STATUS } from '../status';
+import { opensCustomer, returnedMark, STATUS } from '../status';
 import { pinIconHtml } from '../../map/pin-icon';
 
 beforeAll(() => {
@@ -27,6 +27,25 @@ describe('returnedMark', () => {
       expect(STATUS[s]?.icon).toBeTruthy();
       expect(STATUS[s]?.label).toBe(`status.${s}`);
     }
+  });
+});
+
+/** FR-W-074 (owner decision 2026-11-26): an only-returned customer does not open in admin either. */
+describe('opensCustomer', () => {
+  it('opens customers without returned invoices, with some returned, and from older servers', () => {
+    expect(opensCustomer(undefined)).toBe(true);
+    expect(opensCustomer({})).toBe(true);
+    expect(opensCustomer({ returnedInvoiceCount: 2, onlyReturned: false })).toBe(true);
+  });
+  it('does not open a customer whose every invoice was returned', () => {
+    expect(opensCustomer({ returnedInvoiceCount: 1, onlyReturned: true })).toBe(false);
+  });
+  it('has the reason in both languages', async () => {
+    await i18n.changeLanguage('en');
+    expect(i18n.t('status.only_returned_hint')).toBe('Returned product customer: no open invoices');
+    await i18n.changeLanguage('bn');
+    expect(i18n.t('status.only_returned_hint')).toBe('ফেরত পণ্যের customer: কোনো খোলা চালান নেই');
+    await i18n.changeLanguage('en');
   });
 });
 

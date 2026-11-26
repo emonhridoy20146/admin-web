@@ -306,6 +306,8 @@ tr.fos-tag > td:first-child:last-child {
 /* Pins (shared/map/pin-icon.tsx): body = state colour, dark outline so yellow still stands out on light tiles,
    white face with a glyph that repeats what the colour says. */
 .fos-pin { display: block; line-height: 0; cursor: pointer; filter: drop-shadow(0 1px 1.5px var(--pin-shadow)); }
+/* FR-W-074: a pin that does not open (only-returned customer) keeps its tooltip but no pointer cursor */
+.fos-marker-inert.leaflet-interactive, .fos-marker-inert .fos-pin { cursor: default; }
 .fos-pin.is-selected { filter: drop-shadow(0 3px 5px var(--pin-shadow)); }
 .fos-pin-body { fill: var(--pin-fill); stroke: var(--pin-edge); stroke-width: 1.25; }
 .fos-pin-face { fill: var(--neutral-0); }

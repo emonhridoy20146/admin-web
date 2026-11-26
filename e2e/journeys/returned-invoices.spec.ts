@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
+import commonEn from '../../src/shared/i18n/common.en.json' with { type: 'json' };
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import { login } from '../fixtures';
 
@@ -8,6 +9,10 @@ import { login } from '../fixtures';
  * FR-W-074 (owner request 2026-11-26; contract 1.53.0, field-api FR-CUS-024 / ADR-071): invoices returned in the ERP are
  * shown again, marked, and never counted. Mock data: the customer with mixed invoices owns the returned invoice
  * INV-91018 next to counted ones; "রহিমা খাতুন" has only the returned invoice INV-R77001.
+ *
+ * Owner decision 2026-11-26 (reverses the coordinator's choice in PR #44, ADR-W31): as in the staff app, an only-returned
+ * customer's row, card, map pin and ⌘K hit do not open; they stay listed with the marker and say why. A mixed customer
+ * still opens everywhere; a direct `/customers/{id}/` link still works.
  */
 const MIXED_INVOICE = 'INV-91018';
 const ONLY_NAME = 'রহিমা খাতুন';
@@ -25,6 +30,13 @@ async function seriousAxe(page: Page, include?: string) {
 }
 /** The customer rows: the table at ≥ 640 px, the card list below. */
 const listOf = (page: Page, width: number): Locator => (width < 640 ? page.locator('ul.sm\\:hidden > li') : page.locator('table tbody tr'));
+/** Opens the first row: the card's open button below 640 px (data-card-open, #43), the table row above. */
+async function openRow(rows: Locator, width: number) {
+  if (width < 640) await rows.first().locator('button[data-card-open]').click();
+  else await rows.first().click({ position: { x: 8, y: 8 } });
+}
+/** The customer's id, from the table row (rendered at every width; hidden below 640 px). */
+const rowId = async (page: Page) => (await page.locator('table tbody tr').first().getAttribute('data-row-key'))!;
 
 for (const width of [390, 1440]) {
   test.describe(`returned invoices at ${width} px`, () => {
@@ -43,6 +55,14 @@ for (const width of [390, 1440]) {
       await expect(mark.locator('svg')).toHaveCount(1);
       await settle(page);
       expect(await seriousAxe(page)).toEqual([]);
+
+      // a mixed customer still opens: the row (≥ 640 px) or the card's open button (< 640 px) opens the drawer
+      await expect(rows.first()).not.toHaveAttribute('aria-disabled', 'true');
+      await openRow(rows, width);
+      await expect(page).toHaveURL(/drawer=customer/);
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
 
       const href = await rows.first().locator('a[href^="/customers/"]').first().getAttribute('href');
       expect(href).toBeTruthy();
@@ -77,45 +97,109 @@ for (const width of [390, 1440]) {
       expect(await seriousAxe(page)).toEqual([]);
     });
 
-    test('only-returned customer: marker in the list and the map, stays clickable in admin; found by ⌘K invoice search', async ({ page }) => {
+    test('only-returned customer: marker everywhere, never opens from row, card, pin or ⌘K; direct link works', async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await login(page);
       await page.goto(`/customers/?q=${encodeURIComponent(ONLY_NAME)}`);
       const rows = listOf(page, width);
       await expect(rows).toHaveCount(1);
-      const mark = rows.first().getByTestId('returned-mark');
+      const row = rows.first();
+      const mark = row.getByTestId('returned-mark');
       await expect(mark).toHaveAttribute('data-status', 'only_returned');
       await expect(mark).toHaveText(commonBn.status.only_returned);
-      // coordinator decision 2026-11-26: in admin the row stays clickable (the staff app does not open it)
-      // < 640 px: the card's one open button (data-card-open, #43); ≥ 640 px: the table row
-      if (width < 640) await rows.first().locator('button[data-card-open]').click();
-      else await rows.first().click({ position: { x: 8, y: 8 } });
-      await expect(page).toHaveURL(/drawer=customer/);
-      await expect(page.getByRole('dialog')).toBeVisible();
-      await page.keyboard.press('Escape');
 
-      // the customer page: nothing counted, the returned invoice listed apart
-      const href = await rows.first().locator('a[href^="/customers/"]').first().getAttribute('href');
-      await page.goto(`${href}?tab=invoices`);
+      // owner decision 2026-11-26: the row / card stays listed, says why, and does not open
+      const box = width < 640 ? row.locator('[data-inert="true"]') : row;
+      await expect(box).toHaveAttribute('aria-disabled', 'true');
+      await expect(box).toHaveAttribute('title', commonBn.status.only_returned_hint);
+      await expect(row.locator('button[data-card-open]')).toHaveCount(0);
+      await expect(row.locator('a[href^="/customers/"]')).toHaveCount(0);
+      if (width >= 640) await expect(row).not.toHaveAttribute('tabindex');
+      await row.click({ position: { x: 8, y: 8 }, force: true });
+      await row.getByTestId('returned-mark').click({ force: true });
+      await page.waitForTimeout(300);
+      await expect(page).not.toHaveURL(/drawer=customer/);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      // keyboard: Tab never lands on the row or card as an action (no row focus, no open button, no customer link);
+      // the cells' own info tooltips (work marks) stay reachable, and Enter on them opens nothing
+      await page.locator('body').focus();
+      for (let i = 0; i < 40; i++) {
+        await page.keyboard.press('Tab');
+        const where = await page.evaluate(() => {
+          const el = document.activeElement as HTMLElement | null;
+          if (!el) return 'none';
+          if (el.matches('[data-inert]')) return 'row';
+          if (el.closest('[data-inert]') && el.matches('button[data-card-open], a[href^="/customers/"]')) return 'open';
+          return el.closest('[data-inert]') ? 'inside' : 'outside';
+        });
+        expect(where).not.toBe('row');
+        expect(where).not.toBe('open');
+        if (where === 'inside') {
+          await page.keyboard.press('Enter');
+          await expect(page).not.toHaveURL(/drawer=customer/);
+        }
+      }
+      await expect(page).not.toHaveURL(/drawer=customer/);
+      await settle(page);
+      expect(await seriousAxe(page)).toEqual([]);
+
+      // the reason in English too (Bangla is one tap away; English is the default)
+      expect(commonEn.status.only_returned_hint).toBe('Returned product customer: no open invoices');
+
+      // GET /customers/{id} is untouched: a direct link still opens the page, nothing counted, the returned invoice apart
+      const id = await rowId(page);
+      await page.goto(`/customers/${id}/?tab=invoices`);
       await expect(page.getByTestId('returned-invoice').filter({ hasText: ONLY_INVOICE })).toBeVisible();
       await expect(page.getByText(custBn.invoice.none)).toHaveCount(0);
 
-      // map: the pin has the corner mark and the list says "returned product customer"
+      // map: the pin has the corner mark and takes no click; the list item says why and is not a button
       await page.goto('/map/?at=22.70620,90.37360,16');
       const item = page.getByRole('region', { name: custBn.map.inView }).getByRole('listitem').filter({ hasText: ONLY_NAME });
       await expect(item.getByTestId('returned-mark')).toHaveText(commonBn.status.only_returned);
-      await expect(page.locator('.fos-pin .fos-pin-corner').first()).toBeAttached();
+      await expect(item.getByRole('button')).toHaveCount(0);
+      const inertItem = item.locator('[data-inert="true"]');
+      await expect(inertItem).toHaveAttribute('aria-disabled', 'true');
+      await expect(inertItem).toHaveAttribute('title', commonBn.status.only_returned_hint);
+      await inertItem.click({ force: true });
+      const pin = page.locator('.leaflet-marker-icon.fos-marker-inert').first();
+      await expect(pin).toHaveAttribute('aria-disabled', 'true');
+      await expect(pin.locator('.fos-pin-corner')).toBeAttached();
+      await pin.click({ force: true });
+      await page.waitForTimeout(300);
+      await expect(page).not.toHaveURL(/drawer=customer/);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      // a pin that opens (another customer in view) still does
+      await expect(page.locator('.leaflet-marker-icon:not(.fos-marker-inert) .fos-pin').first()).toBeAttached();
       await settle(page);
       expect(await seriousAxe(page, 'section')).toEqual([]);
 
-      // ⌘K: the returned invoice number finds the customer, with the marker; the hit still opens
+      // ⌘K: the returned invoice number finds the customer, with the marker; the hit is disabled and does not open
       await page.getByRole('button', { name: commonBn.search.placeholder }).first().click();
       const palette = page.getByRole('dialog');
       await palette.getByRole('combobox').fill(ONLY_INVOICE);
       const hit = palette.locator('[cmdk-item]').filter({ hasText: ONLY_NAME });
       await expect(hit.getByTestId('returned-mark')).toHaveText(commonBn.status.only_returned);
+      await expect(hit).toHaveAttribute('aria-disabled', 'true');
+      await expect(hit).toHaveAttribute('title', commonBn.status.only_returned_hint);
       await settle(page);
       expect(await seriousAxe(page, '[role=dialog]')).toEqual([]);
+      const before = page.url();
+      await hit.click({ force: true });
+      await palette.getByRole('combobox').press('Enter');
+      await page.waitForTimeout(300);
+      expect(page.url()).toBe(before);
+      await expect(page).not.toHaveURL(/\/customers\/[^/]+\/$/);
+    });
+
+    test('mixed customer: the ⌘K hit still opens the customer page', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await login(page);
+      await page.getByRole('button', { name: commonBn.search.placeholder }).first().click();
+      const palette = page.getByRole('dialog');
+      await palette.getByRole('combobox').fill(MIXED_INVOICE);
+      const hit = palette.locator('[cmdk-item]').filter({ has: page.getByTestId('returned-mark') }).first();
+      await expect(hit.getByTestId('returned-mark')).toHaveAttribute('data-status', 'returned_count');
+      await expect(hit).not.toHaveAttribute('aria-disabled', 'true');
       await hit.click();
       await expect(page).toHaveURL(/\/customers\/[^/]+\/$/);
     });

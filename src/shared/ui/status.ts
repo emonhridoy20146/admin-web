@@ -118,3 +118,12 @@ export function returnedMark(x: ReturnedLike | null | undefined): { status: 'onl
   if (x?.onlyReturned) return { status: 'only_returned', n };
   return n > 0 ? { status: 'returned_count', n } : null;
 }
+
+/**
+ * FR-W-074 (owner decision 2026-11-26, contract 1.53.0): a customer whose invoices were all returned (`onlyReturned`)
+ * does not open — not its row, card, map pin or ⌘K hit — same as the staff app. It stays listed with its marker and says
+ * why (`status.only_returned_hint`). `GET /customers/{id}` is untouched: a direct link still opens the page.
+ */
+export function opensCustomer(x: ReturnedLike | null | undefined): boolean {
+  return !x?.onlyReturned;
+}

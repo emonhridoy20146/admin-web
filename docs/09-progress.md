@@ -44,7 +44,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 
 ## Status notes (2026-11-26, contract 1.53.0: returned invoices shown, never counted)
 - ☑ Contract **1.53.0** pinned (FR-CUS-024, ADR-071).
-- ☑ "Returned ×N" / "Returned product customer" marker on the Customers table and cards, map list and pins, ⌘K results (FR-W-074, ADR-W31). Only-returned rows stay clickable in admin (coordinator decision, flip noted in the PR).
+- ☑ "Returned ×N" / "Returned product customer" marker on the Customers table and cards, map list and pins, ⌘K results (FR-W-074, ADR-W31). Only-returned rows, cards, pins and ⌘K hits do **not** open (owner decision 2026-11-26, reverses PR #44): listed with the marker, `aria-disabled` + "Returned product customer: no open invoices"; a direct link still works.
 - ☑ Customer page "Returned invoices" section with payments, returned viewer mode; "returned invoice" tag in the payment list, viewer and timeline. Nothing returned is summed client-side.
 - ☑ Mock: mixed and only-returned customers, returned invoice numbers searchable. Unit, component and e2e (390/1440 px, axe) green.
 
