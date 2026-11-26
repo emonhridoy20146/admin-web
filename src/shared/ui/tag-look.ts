@@ -77,7 +77,11 @@ export function tagLookOf(tag: TagLike | null | undefined): TagLook | null {
   return reasonLook(tag!.reasonCode);
 }
 
-/** Map pins carry only `tagged: boolean` until contract 1.52.0 (`MapPin.tag`): the generic look (`other`). */
-export function pinTagLook(tagged: boolean | null | undefined): TagLook | null {
-  return tagged ? lookFor('other') : null;
+/**
+ * Map pins: `MapPin.tag` (contract 1.52.0, a `TagSummary`) decides like any other list. An older server sends only
+ * `tagged: boolean`; then a tagged pin gets the generic look (`other`).
+ */
+export function pinTagLook(pin: { tag?: TagLike | null; tagged?: boolean | null } | null | undefined): TagLook | null {
+  if (pin?.tag) return tagLookOf(pin.tag);
+  return pin?.tagged ? lookFor('other') : null;
 }

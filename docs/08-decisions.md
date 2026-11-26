@@ -86,7 +86,7 @@ Only with `NEXT_PUBLIC_API_MOCK=1`: the MSW mock stores the signed-in demo user 
 - **Palette (staff-app's):** a red family for absconded, legal, refused and other, plus magenta (fraud), violet (broken promises) and orange (plan over). Chip text ≥ 4.6:1 in both themes. Colour is never alone: the chip carries an icon and a word; absconded also has a 2 px frame and a filled chip.
 - **Drawing:** table rows use inset shadows on the cells (a `<tr>` cannot hold a border in the separated table); cards, list items and headers use `fos-tag-box`. `DataTable` takes `rowBorderClass` so any list can use it.
 - **Runaway visits:** staff-app also frames a customer whose latest visit outcome is `runaway` as absconded. Admin list items carry no visit outcome and fetching each detail would be an N+1, so the panel skips it.
-- **Gaps (contract):** ⌘K search results carry no tag and map pins carry only `tagged: boolean` in the pinned contract; field-api 1.52.0 adds `TagSummary` to both and they will be wired then. We do not fetch each result's detail to work around it.
+- **Search and map (contract 1.52.0):** ⌘K customer results and map pins carry a `TagSummary` and go through the same mapper; a pin from an older server with only `tagged: true` gets `other`. We never fetch each result's detail to find its tag.
 - **Alternatives rejected:** a colour per severity only (the owner wants the reason visible); a native `<select>` in the dialog (options cannot show a frame or swatch); provisional admin-only values (replaced by staff-app's final set the same day).
 
 ## ADR-W29 — Requests inbox: "My queue" by permission, branch from the header, tiles into views

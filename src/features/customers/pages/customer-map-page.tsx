@@ -249,7 +249,7 @@ export function CustomerMapPage() {
             ) : (
               <ul className="divide-y divide-line">
                 {sorted.slice(0, LIST_MAX).map((p) => {
-                  const tag = pinTagLook(p.tagged);
+                  const tag = pinTagLook(p);
                   return (
                   <li key={p.id} className={cn(tag && 'px-2 py-1')}>
                     <button type="button" onClick={() => open(p.id!)} className={cn('flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start hover:bg-surface-hover', p.id === drawerId && 'bg-surface-hover', tag && `${tag.className} fos-tag-box px-2.5`)} data-tag-border={tag ? 'true' : undefined}>

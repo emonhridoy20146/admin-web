@@ -67,6 +67,21 @@ for (const width of [390, 1440]) {
       expect(await tokenColour(page, '--st-tag-legal-fg')).not.toBe(colour);
       expect(await tokenColour(page, '--st-tag-other-fg')).not.toBe(colour);
 
+      // ⌘K global search (contract 1.52.0 `SearchResult.tag`): the same customer's result is framed with its chip
+      if (width >= 640) {
+        const code = (await absconded.locator('.font-mono').first().innerText()).trim();
+        await page.keyboard.press('Control+k');
+        const palette = page.getByRole('dialog');
+        await palette.getByRole('combobox').fill(code);
+        const hit = palette.locator('[cmdk-item][data-tag-border="true"]').first();
+        await expect(hit.getByTestId('tag-chip')).toHaveText(commonBn.tagLook.absconded);
+        expect(await hit.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(colour);
+        await settle(page);
+        expect(await seriousAxe(page, '[role=dialog]')).toEqual([]);
+        await page.keyboard.press('Escape');
+        await expect(palette).toBeHidden();
+      }
+
       await settle(page);
       // Known, older than this change and not caused by it (reported in the PR): below 640 px the DataTable card is a
       // role=button that holds the name link (axe nested-interactive, on every card). Everything else must be clean.

@@ -64,9 +64,12 @@ describe('tagLookOf', () => {
     expect(tagLookOf({ state: 'tagged', severity: 'bad' })?.token).toBe('status.tag.other');
   });
 
-  it('map pins (tagged boolean only) get the generic look', () => {
-    expect(pinTagLook(true)?.key).toBe('other');
-    expect(pinTagLook(false)).toBeNull();
+  it('map pins use MapPin.tag (1.52.0) and fall back to `tagged` from an older server', () => {
+    expect(pinTagLook({ tagged: true, tag: { state: 'tagged', severity: 'bad', reasonCode: 'fraud_suspected' } })?.key).toBe('fraud_suspected');
+    expect(pinTagLook({ tagged: true, tag: { state: 'tagged', severity: 'watch', reasonCode: 'absconded' } })).toBeNull();
+    expect(pinTagLook({ tagged: false, tag: { state: 'none' } })).toBeNull();
+    expect(pinTagLook({ tagged: true })?.key).toBe('other');
+    expect(pinTagLook({ tagged: false })).toBeNull();
     expect(pinTagLook(undefined)).toBeNull();
   });
 });

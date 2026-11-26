@@ -2,11 +2,16 @@
 
 ## [Unreleased]
 
+### Changed (contract 1.52.0: tags on search results and map pins)
+- Contract: field-api **1.52.0** (field-api PR #50, FR-TAG-009; admin branch `claude/contract-1-52` 6bb0ac1, pinned by the coordinator, merged into this branch). `pnpm gen:api` from `contract/openapi.yaml` reproduces the committed `schema.d.ts`. Adds `TagSummary` `{ state, severity, reasonCode }` as `SearchResult.tag` (customer hits) and `MapPin.tag`. 1.51.0 (descriptions only: staff-app device binding, logout scope) needs no admin change.
+- ⌘K search: customer results with a bad tag are framed and show the chip (FR-W-072). Customer map list: per-kind colours from `MapPin.tag`; an older server's `tagged` falls back to `other`.
+- Mock: `/search` customer hits and `/customers/map` pins carry `tag`.
+
 ### Added (owner request 2026-11-26: bad-tag borders — FR-W-072, ADR-W30)
 - A customer with a bad tag (state `tagged`, severity not `watch`; a missing or unknown severity counts as bad) has a frame in its kind's colour and a chip (icon + word) next to the name: Customers table rows and the < 640 px cards, the customer drawer header, the detail page header, the customer map list and the customer picker. **Absconded (পলাতক)** is the strongest (2 px frame, filled chip); **legal** has its own colour; unknown or missing reason codes use `other`. `watch` and `pending` get no frame. The staff-app rule "latest visit `runaway` counts as absconded" is not mirrored: admin list items carry no visit outcome.
 - Tag dialog: the reasons are a radio list, each with its frame and a swatch (the kind's icon on its tint); the picked one takes the tint; a live line previews the chip the customer will get.
 - Shared: `shared/ui/tag-look.ts` (reason → token mapper), `<TagChip>`, `DataTable` `rowBorderClass`, `Drawer` `headerClassName`, `ReasonDialog` `codeLook` / `afterCodes`.
-- Not framed yet: ⌘K search results (no tag in the pinned contract) and per-kind colours on the map list (`MapPin` has only `tagged`, so it uses `other`). field-api 1.52.0 (`TagSummary` on search results, `MapPin.tag`) will close both.
+- ⌘K search results and per-kind map list colours came with contract 1.52.0 (above).
 - Mock: tagged customers get every reason and severity (deterministic, per branch).
 - Tests: mapper unit tests (incl. the unknown fallback), component tests (row border, card border, chip, dialog swatches), e2e `tag-borders.spec.ts` at 390 and 1440 px with axe.
 
