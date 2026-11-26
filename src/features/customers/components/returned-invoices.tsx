@@ -25,7 +25,7 @@ export function ReturnedInvoices({ plans, onOpen, className }: { plans: Plan[]; 
     <section aria-labelledby="returned-invoices-title" className={cn('space-y-3', className)} data-testid="returned-invoices">
       <div>
         <h2 id="returned-invoices-title" className="flex items-center gap-2 text-md font-semibold text-fg">
-          <Undo2 className="size-4 text-info" aria-hidden />
+          <Undo2 className="size-4 text-st-returned" aria-hidden />
           {t('returned.title')}
         </h2>
         <p className="mt-0.5 text-sm text-fg-secondary">{t('returned.note')}</p>

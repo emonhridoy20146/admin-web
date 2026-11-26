@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "source": "admin-web/docs/03-design-guide.md §2 (canonical); must equal staff-app copy",
   "color": {
     "brand": {
@@ -113,6 +113,13 @@
         "fgDark": "#A9B1BF",
         "bgDark": "#1A2030",
         "icon": "cloud-upload"
+      },
+      "returned": {
+        "fg": "#0F766E",
+        "bg": "#E3F5F2",
+        "fgDark": "#2DD4BF",
+        "bgDark": "#0B2624",
+        "icon": "package-return"
       },
       "mock": {
         "fg": "#9D174D",

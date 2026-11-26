@@ -15,11 +15,11 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 6. **Reversible by default.** Confirm only destructive or money actions; everything else is undoable or audited.
 7. **Bilingual parity.** Every layout tested with Bangla (longer, taller glyphs) and English.
 
-## 2. Shared design tokens v1.3 (identical in staff-app)
+## 2. Shared design tokens v1.4 (identical in staff-app)
 
 > Canonical source: this section. `staff-app/docs/03-design-guide.md §2` must hold the same values. Token changes bump the version in both files and both CHANGELOGs.
 >
-> **v1.2 (2026-11-26, from staff-app ADR-M41):** adds the `shadow.sm` / `shadow.md` group (§2.6), light theme only. **v1.3 (2026-11-26, FR-W-072, ADR-W30; staff-app FR-M-081, PR #61):** adds the bad-tag kinds `status.tag.<reasonCode | legal>` (§2.3b) and the action tones `action.*` (§2.3c). Final values, identical to `staff-app/docs/03-design-guide.md §2` and `docs/design-tokens.json` 1.3.0.
+> **v1.2 (2026-11-26, from staff-app ADR-M41):** adds the `shadow.sm` / `shadow.md` group (§2.6), light theme only. **v1.3 (2026-11-26, FR-W-072, ADR-W30; staff-app FR-M-081, PR #61):** adds the bad-tag kinds `status.tag.<reasonCode | legal>` (§2.3b) and the action tones `action.*` (§2.3c). Final values, identical to `staff-app/docs/03-design-guide.md §2` and `docs/design-tokens.json` 1.3.0. **v1.4 (2026-11-26, FR-W-073, ADR-W31; staff-app PR #63):** adds `status.returned` (§2.3) for invoices returned in the ERP; `docs/design-tokens.json` 1.4.0.
 
 ### 2.1 Colour — brand
 | Token | Hex | Use |
@@ -69,6 +69,7 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 | `status.tagged` | `#FFFFFF` on `#7F1D1D` | `#7F1D1D` | `#FFFFFF` on `#B91C1C` | — | flag (filled) | tagged bad |
 | `status.pending` | `#475569` | `#EEF1F5` | `#A9B1BF` | `#1A2030` | cloud-upload | pending in ERP / queued |
 | `status.mock` | `#9D174D` | `#FCE7F3` | `#F472B6` | `#2E1020` | shield-alert | mock GPS / fraud flag |
+| `status.returned` (v1.4) | `#0F766E` | `#E3F5F2` | `#2DD4BF` | `#0B2624` | package-return (admin: lucide 0.460 has none → `undo-2`; `package-x` on "Returned product customer") | invoice returned in the ERP: shown, never counted |
 
 All fg/bg pairs meet WCAG AA 4.5:1, most ≥ 6:1 (computed values in `07-test-plan.md §4`). `brand.400` (3.6:1 on white) is for dark mode and large graphics only, never body text on light surfaces.
 
@@ -266,7 +267,7 @@ The sidebar has **8 items**; related pages are tabs of one section. The list liv
 Primary (brand.600 bg, white), Secondary (white bg, neutral.300 border), Ghost, Destructive (danger), Link. Sizes: sm 32, md 40, lg 44. One primary per view region. Icon-only buttons have tooltip + aria-label.
 
 ### 5.4 Badges & chips
-Badge height 22, radius 4, 12 px medium, icon 14 px. Returned marker (`<ReturnedMark>`, FR-W-073): an `info`-tone StatusBadge with its own icon — `returned_count` "Returned ×N" (Undo2), `only_returned` "Returned product customer" (PackageX), `returned` chip on a returned invoice, `returned_payment` "Returned invoice" tag on a payment; returned invoices are listed apart and never counted. Filter chips height 32, radius full; selected = brand.50 bg + brand.700 text + check icon. Bad-tag chip (`<TagChip>`, FR-W-072): badge size, kind fg on kind bg with a 1 px fg hairline, the kind's icon; absconded is filled (bg on fg). A row that needs a frame passes `rowBorderClass` to `DataTable`, which draws it around the row (inset shadows on the cells) and around the card below 640 px.
+Badge height 22, radius 4, 12 px medium, icon 14 px. Returned marker (`<ReturnedMark>`, FR-W-073): a `status.returned` (v1.4) StatusBadge with its own icon — `returned_count` "Returned ×N" (Undo2), `only_returned` "Returned product customer" (PackageX), `returned` chip on a returned invoice, `returned_payment` "Returned invoice" tag on a payment; returned invoices are listed apart and never counted. Filter chips height 32, radius full; selected = brand.50 bg + brand.700 text + check icon. Bad-tag chip (`<TagChip>`, FR-W-072): badge size, kind fg on kind bg with a 1 px fg hairline, the kind's icon; absconded is filled (bg on fg). A row that needs a frame passes `rowBorderClass` to `DataTable`, which draws it around the row (inset shadows on the cells) and around the card below 640 px.
 
 ### 5.5 KPI cards
 Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/last month (▲ success / ▼ danger with text "+12%") · sparkline (7 days) · click → filtered list. "as of" timestamp in footer.
@@ -277,7 +278,7 @@ Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/
 ### 5.7 Maps (react-leaflet)
 - Tile layer from `TileProvider` config (`/meta/app-config`); attribution always visible bottom-right.
 - Custom SVG pins 28 px with glyph; selected pin 36 px with halo.
-- A pin may carry a corner mark (`PinLook.corner`, top right, r 4.6 of the 28×40 box, token fill + `--neutral-0` ring and arrow): used for customers with returned invoices (FR-W-073). The pin's colour and glyph keep saying the pay state.
+- A pin may carry a corner mark (`PinLook.corner`, top right, r 4.6 of the 28×40 box, `status.returned` fg fill + `--neutral-0` ring and arrow): used for customers with returned invoices (FR-W-073). The pin's colour and glyph keep saying the pay state.
 - Clustering (`leaflet.markercluster` or supercluster) below zoom 14.
 - Legend toggleable; layer switcher (customers / staff / areas / routes).
 - Route polyline 4 px brand.600, gaps dashed neutral.400, stops as numbered circles; scrubber syncs a moving marker.

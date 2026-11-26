@@ -113,6 +113,8 @@
   --color-st-tag-plan-ended-unpaid-bg: var(--st-tag-plan-ended-unpaid-bg);
   --color-st-pending: var(--st-pending-fg);
   --color-st-pending-bg: var(--st-pending-bg);
+  --color-st-returned: var(--st-returned-fg);
+  --color-st-returned-bg: var(--st-returned-bg);
   --color-st-mock: var(--st-mock-fg);
   --color-st-mock-bg: var(--st-mock-bg);
   --color-ps-bad: var(--ps-bad-fg);

@@ -98,7 +98,7 @@ export function InvoiceViewer({ c, plan, onBack, returned = false }: { c: Custom
         </dl>
 
         {returned && (
-          <p className="mt-3 flex gap-2 rounded-md bg-info-bg px-3 py-2 text-sm text-info" data-testid="returned-note">
+          <p className="mt-3 flex gap-2 rounded-md bg-st-returned-bg px-3 py-2 text-sm text-st-returned" data-testid="returned-note">
             <Undo2 className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>{t('returned.viewerNote')}</span>
           </p>

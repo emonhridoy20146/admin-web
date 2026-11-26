@@ -1739,10 +1739,20 @@ customers.forEach((c, ci) => {
   setReturned(c, returned);
 });
 // a customer whose only invoice was returned ("returned product customer"): listed, on the map, found by the invoice no.
+// An existing paid-up customer of Barishal that nothing else refers to takes this role, so the customer count (400),
+// pages and every money total stay as they were.
 {
   const b = branches[0]!;
-  const tpl = customers.find((x) => x.branchId === b.id && x.item.tag?.state !== 'tagged' && x.item.location?.status === 'ok')!;
-  const id = oid('6740');
+  const used = new Set<string>([
+    ...collections.map((x) => x.customer?.id ?? ''),
+    ...promises.map((x) => x.row.customerId ?? x.row.customer?.id ?? ''),
+    ...visits.map((x) => x.row.customerId ?? x.row.customer?.id ?? ''),
+    ...requests.map((x) => x.customerId ?? ''),
+  ]);
+  const c = [...customers].reverse().find(
+    (x) => x.branchId === b.id && x.item.tag?.state !== 'tagged' && x.item.location?.status === 'ok' && (x.item.totalOutstandingPoisha ?? 0) === 0 &&
+      !x.item.openPromise && !(x.detail.returnedPlans ?? []).length && !used.has(x.item.id ?? ''),
+  )!;
   const sale = now().minus({ days: 95 }).toISODate()!;
   const plan: S['Plan'] = {
     erpPlanId: 'P-77001', kind: 'installment', invoiceNo: RETURNED_DEMO.onlyInvoiceNo, product: 'Refrigerator 252 L', saleDate: sale, startDate: sale, finalDueDate: dDate(sale).plus({ months: 10 }).toISODate()!,
@@ -1752,19 +1762,12 @@ customers.forEach((c, ci) => {
   derivePlan(plan, b.id);
   const pays = returnedPayments(plan, 'ret-only');
   const returned: S['Plan'] = { ...plan, returned: true, collectable: false, payments: pays };
-  const item: S['CustomerListItem'] = {
-    ...structuredClone(tpl.item), id, erpCustomerId: RETURNED_DEMO.onlyErpId, code: `${b.code}-777001`, name: { ...RETURNED_DEMO.onlyName }, phone: '01711777001',
-    location: { lat: (b.lat ?? 22.7) + 0.004, lng: (b.lng ?? 90.37) + 0.004, status: 'ok', source: 'erp' },
-    installmentPoisha: null, overduePoisha: 0, totalOutstandingPoisha: 0, nextDueDate: null, daysOverdue: 0, badges: [], tag: { state: 'none' }, openPromise: null,
-    lastVisitAt: null, lastVisitByName: null, pendingFieldPoisha: 0, payState: 'paid_off', missedCount: 0, openInvoices: { installment: 0, credit: 0 },
+  const fields: Partial<S['CustomerListItem']> = {
+    erpCustomerId: RETURNED_DEMO.onlyErpId, name: { ...RETURNED_DEMO.onlyName }, location: { lat: (b.lat ?? 22.7) + 0.004, lng: (b.lng ?? 90.37) + 0.004, status: 'ok', source: 'erp' },
+    installmentPoisha: null, overduePoisha: 0, totalOutstandingPoisha: 0, nextDueDate: null, daysOverdue: 0, badges: [], openPromise: null, pendingFieldPoisha: 0,
+    payState: 'paid_off', missedCount: 0, openInvoices: { installment: 0, credit: 0 },
   };
-  const detail: S['CustomerDetail'] = {
-    ...structuredClone(tpl.detail), ...item, phones: [item.phone!], plans: [], payments: pays, pendingCollections: [], recentNotes: [], badSuggestion: null, erpRisk: undefined,
-    detailedAddress: undefined, directions: undefined, version: 1,
-  };
-  const c: MockCustomer = { item, detail, branchId: b.id!, areaId: tpl.areaId, tagHistory: [] };
+  Object.assign(c.item, fields);
+  Object.assign(c.detail, fields, { plans: [], payments: pays, pendingCollections: [], badSuggestion: null });
   setReturned(c, [returned]);
-  customers.push(c);
-  const area = areas.find((a) => a.id === tpl.areaId);
-  if (area) area.customerCount = (area.customerCount ?? 0) + 1;
 }

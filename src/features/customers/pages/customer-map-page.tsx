@@ -30,7 +30,7 @@ import { payLabel, PayLegend, PayStateBadge } from '../components/pay-state';
 
 const LIST_MAX = 60;
 /** Corner mark of a pin whose customer has returned invoices (FR-W-073), in the returned badge's tone. */
-const RETURNED_CORNER = { fill: '--info-fg', edge: '--neutral-0' } as const;
+const RETURNED_CORNER = { fill: '--st-returned-fg', edge: '--neutral-0' } as const;
 const KINDS = ['all', 'installment', 'credit'] as const;
 type Start = MapViewpoint;
 

@@ -36,7 +36,7 @@ describe('<ReturnedMark>', () => {
     render(<ReturnedMark of={{ returnedInvoiceCount: 3 }} />);
     const mark = screen.getByTestId('returned-mark');
     expect(mark).toHaveTextContent('Returned ×3');
-    expect(mark.className).toMatch(/bg-info-bg/);
+    expect(mark.className).toMatch(/bg-st-returned-bg/);
     expect(mark.querySelector('svg')).not.toBeNull();
     expect(mark.dataset.status).toBe('returned_count');
   });
@@ -64,9 +64,9 @@ describe('map pin corner mark', () => {
   it('draws the corner mark from tokens only when asked', () => {
     const plain = pinIconHtml({ fill: '--ps-on-track-pin', edge: '--ps-on-track-fg', glyph: 'check' });
     expect(plain).not.toContain('fos-pin-corner');
-    const marked = pinIconHtml({ fill: '--ps-on-track-pin', edge: '--ps-on-track-fg', glyph: 'check', corner: { fill: '--info-fg', edge: '--neutral-0' } });
+    const marked = pinIconHtml({ fill: '--ps-on-track-pin', edge: '--ps-on-track-fg', glyph: 'check', corner: { fill: '--st-returned-fg', edge: '--neutral-0' } });
     expect(marked).toContain('fos-pin-corner');
-    expect(marked).toContain('--pin-corner-fill:var(--info-fg)');
+    expect(marked).toContain('--pin-corner-fill:var(--st-returned-fg)');
     expect(marked).not.toMatch(/#[0-9a-f]{3,6}\b/i);
   });
 });
