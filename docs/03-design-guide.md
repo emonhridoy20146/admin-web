@@ -1,4 +1,4 @@
-# 03 — Design Guide (admin-web) and Shared Design Tokens v1.1
+# 03 — Design Guide (admin-web) and Shared Design Tokens v1.3
 
 Design intent: **calm, dense, trustworthy.** This is a money-and-people control room used for hours a day. It should feel like Linear / Stripe Dashboard quality: quiet neutrals, one confident brand colour, status colours that carry meaning, generous but efficient spacing, crisp tables, zero decoration that does not inform. Bangla is a first-class script, not a translation afterthought.
 
@@ -15,9 +15,11 @@ Stack for UI: Tailwind CSS 4 + shadcn/ui (Radix primitives) + lucide-react icons
 6. **Reversible by default.** Confirm only destructive or money actions; everything else is undoable or audited.
 7. **Bilingual parity.** Every layout tested with Bangla (longer, taller glyphs) and English.
 
-## 2. Shared design tokens v1.1 (identical in staff-app)
+## 2. Shared design tokens v1.3 (identical in staff-app)
 
 > Canonical source: this section. `staff-app/docs/03-design-guide.md §2` must hold the same values. Token changes bump the version in both files and both CHANGELOGs.
+>
+> **v1.2 (2026-11-26, from staff-app ADR-M41):** adds the `shadow.sm` / `shadow.md` group (§2.6), light theme only. **v1.3 (2026-11-26, FR-W-072, ADR-W30; staff-app FR-M-081, PR #61):** adds the bad-tag kinds `status.tag.<reasonCode | legal>` (§2.3b) and the action tones `action.*` (§2.3c). Final values, identical to `staff-app/docs/03-design-guide.md §2` and `docs/design-tokens.json` 1.3.0.
 
 ### 2.1 Colour — brand
 | Token | Hex | Use |
@@ -86,6 +88,32 @@ The colour of a customer's map pin and pay-state badge (field-api `PayState`, AD
 
 Fg on bg ≥ 4.6:1 in both themes. The pin body takes the pin colour with a 1.25 px outline in the fg colour (so yellow still stands out on light tiles; dark mode mixes the pin colour with `neutral.950`), a white face and a glyph in the fg colour (`neutral.900` in dark mode).
 
+### 2.3b Colour — bad-tag kinds (v1.3, FR-W-072)
+A **bad tag** is a tag whose state is `tagged` and whose severity is anything but `watch` (a missing or unknown severity counts as bad). Such a customer has a **frame in its kind's colour** wherever customers are listed (DataTable row and < 640 px card, drawer and detail header, map list, ⌘K search results, customer picker) and a **chip** (icon + short word) next to the name. `watch`, `pending` and `none` get no frame. Keys are the contract's `reasonCode` values plus `legal` (the severity). fg = frame, icon and chip text; bg = chip tint. CSS `--st-tag-<key>-fg|bg` (kebab case); Tailwind `st-tag-<key>` / `st-tag-<key>-bg`; mapper `shared/ui/tag-look.ts` (`tagLookOf`, `reasonLook`).
+
+| Token | Fg (light) | Bg (light) | Fg (dark) | Bg (dark) | Icon (web) | Kind |
+|---|---|---|---|---|---|---|
+| `status.tag.absconded` | `#7F1D1D` | `#FBDADA` | `#EF4444` | `#2D1212` | footprints | পলাতক — **strongest**: 2 px frame, filled chip (fg as fill, bg as text) |
+| `status.tag.legal` | `#991B1B` | `#FDE3E3` | `#F87171` | `#2D1212` | gavel | severity `legal`, whatever the reason |
+| `status.tag.refused_to_pay` | `#B91C1C` | `#FDECEC` | `#FCA5A5` | `#2D1212` | ban | refuses to pay |
+| `status.tag.other` | `#D42020` | `#FEF2F2` | `#FECACA` | `#2D1212` | flag (filled) | other; **generic bad = fallback** for an unknown or missing code (there is no `bad` token) |
+| `status.tag.fraud_suspected` | `#9D174D` | `#FCE7F3` | `#F472B6` | `#2E1020` | shield-alert | fraud suspected |
+| `status.tag.repeated_broken_promise` | `#6D28D9` | `#F1EAFE` | `#A78BFA` | `#1F1536` | heart-crack | repeated broken promises |
+| `status.tag.plan_ended_unpaid` | `#C2410C` | `#FFF1E8` | `#FB923C` | `#2E1A0C` | calendar-x | plan over, balance unpaid |
+
+**Precedence:** absconded → legal → the reason → `other`. Staff-app also counts a latest visit outcome `runaway` (no later visit or collection) as absconded; admin list items carry no visit outcome, so the panel does not (ADR-W30). **Frame:** 1.5 px, absconded 2 px, +0.5 px with `prefers-contrast: more`. **Chip:** fg on bg with a 1 px fg hairline; absconded is filled. **Contrast:** chip text ≥ 4.6:1 in both themes (light 4.69–7.70, dark 4.62–12.0); frames ≥ 4.3:1 on surface, raised and the selected row. Never colour alone: the chip says the kind with an icon and a word. The tag dialog shows every reason with its frame and a swatch (the kind's icon in fg on its bg); the picked one takes the tint, and a live line shows the chip the customer will get (watch → no frame). ⌘K customer results (`SearchResult.tag`) and the map list (`MapPin.tag`, contract 1.52.0) are framed the same way; a pin with only `tagged: true` (older server) uses `other`.
+
+### 2.3c Colour — action tones (v1.3, shared set)
+Tonal containers for shortcut icons in staff-app (bg = 40 px circle/square, fg = icon). admin-web keeps them in `tokens.css` (`--action-<key>-fg|bg`) for parity but does not use them yet.
+
+| Token | Fg (light) | Bg (light) | Fg (dark) | Bg (dark) | Meaning |
+|---|---|---|---|---|---|
+| `action.brand` | `#2437A6` | `#DCE5FF` | `#B9C6FF` | `#1B2757` | duty and the office |
+| `action.teal` | `#115E59` | `#D5F3F0` | `#5EEAD4` | `#0E2F2D` | the field and people |
+| `action.green` | `#166534` | `#DDF3E4` | `#4ADE80` | `#0F2A1A` | money |
+| `action.violet` | `#5B21B6` | `#EBE5FD` | `#C4B5FD` | `#251A45` | goals |
+| `action.amber` | `#92400E` | `#FEF0C7` | `#FBBF24` | `#2E2208` | time and notices |
+
 ### 2.4 Chart palette (categorical, colour-blind safe order)
 `#2C44CC` · `#0EA5A4` · `#F59E0B` · `#DB2777` · `#7C3AED` · `#65A30D` · `#0284C7` · `#EA580C`. Payment methods fixed: cash `#2C44CC`, bKash `#DB2777`, Nagad `#EA580C`, Rocket `#7C3AED`, bank `#0EA5A4`, other `#64748B`.
 
@@ -115,6 +143,7 @@ Type scale (web, px / line-height). Bangla text uses line-height × 1.15 automat
 - **Spacing (4-pt grid):** `0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64` px → tokens `space.0 … space.64`.
 - **Radius:** `xs 4` (badges) · `sm 6` (inputs, buttons) · `md 8` (cards, menus) · `lg 12` (dialogs, drawers) · `xl 16` (app sheets) · `full`.
 - **Elevation (light):** `e0` none; `e1` `0 1px 2px rgb(16 24 40 / .06)`; `e2` `0 2px 8px rgb(16 24 40 / .08)` (popover, card hover); `e3` `0 12px 32px rgb(16 24 40 / .14)` (dialog, drawer). Dark mode uses surface steps instead of shadows.
+- **Shadow (v1.2, shared with staff-app):** `shadow.sm` `0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08)` (cards) · `shadow.md` `0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04)` (summary cards). Light theme only: dark mode has no shadow (`none`), depth comes from the surface steps and the 1 px border. CSS `--sh-sm` / `--sh-md`, Tailwind `shadow-sm` / `shadow-md`.
 - **Motion:** `fast 120ms`, `base 200ms`, `slow 300ms`; easing `standard cubic-bezier(.2,0,0,1)`, `emphasized cubic-bezier(.3,0,0,1)`. Respect `prefers-reduced-motion`: no slide, fade only, and colour/opacity transitions are instant.
 - **Focus ring:** 2 px `brand.600` + 2 px offset white (dark: `brand.400` with `neutral.950` offset). Never removed.
 - **Z-index:** base 0 · sticky 10 · header 20 · drawer 40 · dialog 50 · toast 60 · tooltip 70.
@@ -237,7 +266,7 @@ The sidebar has **8 items**; related pages are tabs of one section. The list liv
 Primary (brand.600 bg, white), Secondary (white bg, neutral.300 border), Ghost, Destructive (danger), Link. Sizes: sm 32, md 40, lg 44. One primary per view region. Icon-only buttons have tooltip + aria-label.
 
 ### 5.4 Badges & chips
-Badge height 22, radius 4, 12 px medium, icon 14 px. Filter chips height 32, radius full; selected = brand.50 bg + brand.700 text + check icon.
+Badge height 22, radius 4, 12 px medium, icon 14 px. Filter chips height 32, radius full; selected = brand.50 bg + brand.700 text + check icon. Bad-tag chip (`<TagChip>`, FR-W-072): badge size, kind fg on kind bg with a 1 px fg hairline, the kind's icon; absconded is filled (bg on fg). A row that needs a frame passes `rowBorderClass` to `DataTable`, which draws it around the row (inset shadows on the cells) and around the card below 640 px.
 
 ### 5.5 KPI cards
 Label (13 px secondary) · value (30 px semibold tabular) · delta vs yesterday/last month (▲ success / ▼ danger with text "+12%") · sparkline (7 days) · click → filtered list. "as of" timestamp in footer.

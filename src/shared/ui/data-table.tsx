@@ -56,7 +56,7 @@ const prioClass: Record<number, string> = {
 
 export function DataTable<T>({
   tableId, columns, rows, rowKey, loading, error, onRetry, onRowClick, sort, onSortChange, empty, pager,
-  selectable, selection, onSelectionChange, bulkBar, activeRowKey, caption,
+  selectable, selection, onSelectionChange, bulkBar, activeRowKey, caption, rowBorderClass,
 }: {
   tableId: string;
   columns: Column<T>[];
@@ -76,6 +76,11 @@ export function DataTable<T>({
   bulkBar?: React.ReactNode;
   activeRowKey?: string | null;
   caption: string;
+  /**
+   * Classes that give a row a coloured border (the bad-tag border, FR-W-072: `fos-tag fos-tag--<reason>`).
+   * The table draws it around the row; the < 640 px card list draws it around the card.
+   */
+  rowBorderClass?: (r: T) => string | null | undefined;
 }) {
   const { t } = useTranslation();
   const density = useUi((s) => s.density);
@@ -218,11 +223,13 @@ export function DataTable<T>({
                 : table.getRowModel().rows.map((row) => {
                     const k = row.id;
                     const sel = selection?.has(k);
+                    const border = rowBorderClass?.(row.original);
                     return (
                       <tr
                         key={k}
                         className={cn(
                           rowH,
+                          border,
                           'group transition-colors duration-[var(--dur-fast)]',
                           onRowClick && 'cursor-pointer',
                           sel || activeRowKey === k ? 'bg-primary-subtle' : 'hover:bg-surface-hover',
@@ -236,6 +243,7 @@ export function DataTable<T>({
                         }}
                         tabIndex={onRowClick ? 0 : undefined}
                         data-row-key={k}
+                        data-tag-border={border ? 'true' : undefined}
                       >
                         {selectable && (
                           <td className="border-b border-line ps-4">
@@ -277,8 +285,9 @@ export function DataTable<T>({
             : (rows ?? []).map((r) => {
                 const by = (role: Column<T>['mobile']) => columns.filter((c) => c.mobile === role);
                 const k = rowKey(r);
+                const border = rowBorderClass?.(r);
                 return (
-                  <li key={k}>
+                  <li key={k} className={cn(border && 'px-2 py-1.5')}>
                     <div
                       role={onRowClick ? 'button' : undefined}
                       tabIndex={onRowClick ? 0 : undefined}
@@ -287,7 +296,8 @@ export function DataTable<T>({
                         onRowClick?.(r);
                       }}
                       onKeyDown={(e) => e.key === 'Enter' && onRowClick?.(r)}
-                      className={cn('flex min-h-14 items-start gap-3 px-4 py-3 active:bg-surface-hover', selection?.has(k) && 'bg-primary-subtle')}
+                      className={cn('flex min-h-14 items-start gap-3 px-4 py-3 active:bg-surface-hover', selection?.has(k) && 'bg-primary-subtle', border && `${border} fos-tag-box px-2.5`)}
+                      data-tag-border={border ? 'true' : undefined}
                     >
                       {selectable && <Checkbox className="mt-1" aria-label={t('table.selectRow')} checked={!!selection?.has(k)} onCheckedChange={() => toggleRow(k)} />}
                       <div className="min-w-0 flex-1">

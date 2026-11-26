@@ -39,7 +39,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 }
 
 /** Row detail drawer (03 §5.6): 480 px side panel on desktop, full screen on mobile; Esc closes, focus returns. */
-export function Drawer({ open, onOpenChange, title, subtitle, headerExtra, children, footer, width = 480, flush }: { open: boolean; onOpenChange: (o: boolean) => void; title: React.ReactNode; subtitle?: React.ReactNode; headerExtra?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; width?: number; flush?: boolean }) {
+export function Drawer({ open, onOpenChange, title, subtitle, headerExtra, children, footer, width = 480, flush, headerClassName }: { open: boolean; onOpenChange: (o: boolean) => void; title: React.ReactNode; subtitle?: React.ReactNode; headerExtra?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; width?: number; flush?: boolean; /** e.g. the bad-tag border (FR-W-072) */ headerClassName?: string }) {
   const { t } = useTranslation();
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
@@ -49,7 +49,7 @@ export function Drawer({ open, onOpenChange, title, subtitle, headerExtra, child
           style={{ ['--drawer-w' as string]: `${width}px` }}
           className="fixed inset-0 z-40 flex flex-col bg-surface-raised shadow-e3 animate-drawer focus:outline-none lg:inset-y-0 lg:start-auto lg:end-0 lg:w-[var(--drawer-w)] lg:max-w-[100vw] lg:border-s lg:border-line"
         >
-          <div className="flex items-start gap-3 border-b border-line px-5 py-4" data-drawer-header>
+          <div className={cn('flex items-start gap-3 border-b border-line px-5 py-4', headerClassName && cn('m-2 mb-0 px-3 py-3', headerClassName))} data-drawer-header>
             <div className="min-w-0 flex-1">
               <D.Title className="truncate text-md font-semibold text-fg">{title}</D.Title>
               {subtitle ? <D.Description className="mt-0.5 text-sm text-fg-tertiary">{subtitle}</D.Description> : <D.Description className="sr-only">{typeof title === 'string' ? title : ''}</D.Description>}

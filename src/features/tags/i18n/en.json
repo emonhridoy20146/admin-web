@@ -29,5 +29,8 @@
   "to": "To",
   "source": { "web": "Web", "app": "App", "system": "System" },
   "noPermission": "You can see the tag but not change it.",
-  "cleared": "This customer has cleared the balance. Review whether the tag should stay."
+  "cleared": "This customer has cleared the balance. Review whether the tag should stay.",
+  "preview": "In the lists:",
+  "previewNone": "No border (watch only)",
+  "colourHint": "Each reason has its own border colour in the customer lists."
 }

@@ -7,6 +7,8 @@ import { pickText } from '../lib/format';
 import { useUi } from '../lib/ui-store';
 import { useBranchId } from '../lib/ui-store';
 import { api, unwrap } from '../api/client';
+import { cn } from '../lib/cn';
+import { TagChip, tagBoxClass } from './tag-chip';
 
 interface Props {
   id?: string;
@@ -75,10 +77,11 @@ export function CustomerPicker({ id, value, displayName, onChange }: Props) {
             <li className="px-3 py-2 text-sm text-fg-tertiary">{t('search.hint')}</li>
           )}
           {items.map((c) => (
-            <li key={c.id}>
+            <li key={c.id} className={cn(tagBoxClass(c.tag) && 'px-1.5 py-1')}>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-surface-hover"
+                className={cn('flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-surface-hover', tagBoxClass(c.tag))}
+                data-tag-border={tagBoxClass(c.tag) ? 'true' : undefined}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onChange(c.id!, pickText(c.name, locale));
@@ -87,7 +90,10 @@ export function CustomerPicker({ id, value, displayName, onChange }: Props) {
                 }}
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium" lang={locale}>{pickText(c.name, locale)}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="block truncate font-medium" lang={locale}>{pickText(c.name, locale)}</span>
+                    <TagChip tag={c.tag} />
+                  </span>
                   <span className="block font-mono text-xs text-fg-tertiary">{c.code}</span>
                 </span>
               </button>

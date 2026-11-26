@@ -292,5 +292,14 @@
     "label": "কর্মী",
     "all": "সব কর্মী",
     "one": "বাছাই করা কর্মী"
+  },
+  "tagLook": {
+    "absconded": "পলাতক",
+    "legal": "আইনি ব্যবস্থা",
+    "refused_to_pay": "দিতে অস্বীকার",
+    "other": "খারাপ ট্যাগ",
+    "fraud_suspected": "প্রতারণার সন্দেহ",
+    "repeated_broken_promise": "বারবার কথা ভঙ্গ",
+    "plan_ended_unpaid": "মেয়াদ শেষ, বকেয়া"
   }
 }

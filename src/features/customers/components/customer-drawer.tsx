@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Drawer } from '@/shared/ui/overlay';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { AsOf } from '@/shared/ui/page';
+import { tagBoxClass } from '@/shared/ui/tag-chip';
 import { useCustomer } from '../api/customers';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from './customer-parts';
 import { MonthActivity } from './work-marks';
@@ -18,6 +19,7 @@ export function CustomerDrawer({ id, onClose, footer }: { id: string | null; onC
       open={!!id}
       onOpenChange={(o) => !o && onClose()}
       width={520}
+      headerClassName={tagBoxClass(c?.tag) || undefined}
       title={c ? <CustomerTitle c={c} /> : <Skeleton className="h-5 w-48" />}
       headerExtra={c ? <CustomerStatusRow c={c} /> : null}
       footer={footer}

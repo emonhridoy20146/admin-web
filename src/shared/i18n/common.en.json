@@ -292,5 +292,14 @@
     "label": "Staff",
     "all": "All staff",
     "one": "Chosen staff member"
+  },
+  "tagLook": {
+    "absconded": "Absconded",
+    "legal": "Legal action",
+    "refused_to_pay": "Refuses to pay",
+    "other": "Tagged bad",
+    "fraud_suspected": "Fraud suspected",
+    "repeated_broken_promise": "Broken promises",
+    "plan_ended_unpaid": "Plan over, unpaid"
   }
 }

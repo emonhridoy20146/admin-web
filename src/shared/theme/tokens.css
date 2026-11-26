@@ -1,5 +1,5 @@
 /*
- * Shared design tokens v1.1 — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
+ * Shared design tokens v1.3 — canonical source: docs/03-design-guide.md §2 (mirrored in docs/design-tokens.json).
  * Any change here must also be applied to staff-app/docs/03-design-guide.md §2 and both CHANGELOGs.
  * Components never use raw hex values: they use the semantic variables below via the Tailwind theme.
  */
@@ -98,6 +98,34 @@
   --st-mock-fg: #9d174d;
   --st-mock-bg: #fce7f3;
 
+  /* bad-tag kinds (v1.3, identical in staff-app; 03 §2.3b): fg = frame, icon, chip text; bg = chip tint */
+  --st-tag-absconded-fg: #7f1d1d;
+  --st-tag-absconded-bg: #fbdada;
+  --st-tag-legal-fg: #991b1b;
+  --st-tag-legal-bg: #fde3e3;
+  --st-tag-refused-to-pay-fg: #b91c1c;
+  --st-tag-refused-to-pay-bg: #fdecec;
+  --st-tag-other-fg: #d42020;
+  --st-tag-other-bg: #fef2f2;
+  --st-tag-fraud-suspected-fg: #9d174d;
+  --st-tag-fraud-suspected-bg: #fce7f3;
+  --st-tag-repeated-broken-promise-fg: #6d28d9;
+  --st-tag-repeated-broken-promise-bg: #f1eafe;
+  --st-tag-plan-ended-unpaid-fg: #c2410c;
+  --st-tag-plan-ended-unpaid-bg: #fff1e8;
+
+  /* action tones (v1.3, shared set; staff-app shortcut icons, not used by admin-web yet) */
+  --action-brand-fg: #2437a6;
+  --action-brand-bg: #dce5ff;
+  --action-teal-fg: #115e59;
+  --action-teal-bg: #d5f3f0;
+  --action-green-fg: #166534;
+  --action-green-bg: #ddf3e4;
+  --action-violet-fg: #5b21b6;
+  --action-violet-bg: #ebe5fd;
+  --action-amber-fg: #92400e;
+  --action-amber-bg: #fef0c7;
+
   /* pay state (v1.1, ADR-W18): map pin fill / text and outline / soft background */
   --ps-bad-pin: #dc2626;
   --ps-bad-fg: #b91c1c;
@@ -122,6 +150,9 @@
   --e1: 0 1px 2px rgb(16 24 40 / 0.06);
   --e2: 0 2px 8px rgb(16 24 40 / 0.08);
   --e3: 0 12px 32px rgb(16 24 40 / 0.14);
+  /* shadow group (v1.2, same values as staff-app): cards (sm) and summary cards (md); light theme only */
+  --sh-sm: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --sh-md: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
   --pin-shadow: rgb(16 24 40 / 0.35);
 
   /* motion */
@@ -203,12 +234,41 @@
   --ps-paid-off-fg: #a9b1bf;
   --ps-paid-off-bg: #1a2030;
 
+  --st-tag-absconded-fg: #ef4444;
+  --st-tag-absconded-bg: #2d1212;
+  --st-tag-legal-fg: #f87171;
+  --st-tag-legal-bg: #2d1212;
+  --st-tag-refused-to-pay-fg: #fca5a5;
+  --st-tag-refused-to-pay-bg: #2d1212;
+  --st-tag-other-fg: #fecaca;
+  --st-tag-other-bg: #2d1212;
+  --st-tag-fraud-suspected-fg: #f472b6;
+  --st-tag-fraud-suspected-bg: #2e1020;
+  --st-tag-repeated-broken-promise-fg: #a78bfa;
+  --st-tag-repeated-broken-promise-bg: #1f1536;
+  --st-tag-plan-ended-unpaid-fg: #fb923c;
+  --st-tag-plan-ended-unpaid-bg: #2e1a0c;
+
+  --action-brand-fg: #b9c6ff;
+  --action-brand-bg: #1b2757;
+  --action-teal-fg: #5eead4;
+  --action-teal-bg: #0e2f2d;
+  --action-green-fg: #4ade80;
+  --action-green-bg: #0f2a1a;
+  --action-violet-fg: #c4b5fd;
+  --action-violet-bg: #251a45;
+  --action-amber-fg: #fbbf24;
+  --action-amber-bg: #2e2208;
+
   --chart-1: #5f7df7;
   --pay-cash: #5f7df7;
 
   --e1: 0 0 0 1px rgb(255 255 255 / 0.02);
   --e2: 0 4px 16px rgb(0 0 0 / 0.4);
   --e3: 0 16px 40px rgb(0 0 0 / 0.55);
+  /* v1.2: no shadow in dark mode; depth comes from the surface steps and the 1 px border */
+  --sh-sm: none;
+  --sh-md: none;
 
   color-scheme: dark;
 }

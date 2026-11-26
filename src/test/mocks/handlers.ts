@@ -322,6 +322,12 @@ function mockMobile(v: string): string | null {
   return /^01[3-9]\d{8}$/.test(d) ? d : null;
 }
 
+/** Contract 1.52.0 `TagSummary`: severity and reasonCode only when tagged. */
+function tagSummary(tag: S['Tag'] | undefined): S['TagSummary'] {
+  const state = tag?.state ?? 'none';
+  return state === 'tagged' ? { state, severity: tag?.severity, reasonCode: tag?.reasonCode } : { state };
+}
+
 export const handlers = [
   http.post(`${BASE}/auth/login`, async ({ request }) => {
     await lag();
@@ -596,7 +602,7 @@ export const handlers = [
     }
     return HttpResponse.json({
       clusters: [],
-      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged', payState: c.item.payState, missedCount: c.item.missedCount })),
+      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged', tag: tagSummary(c.item.tag), payState: c.item.payState, missedCount: c.item.missedCount })),
     });
   })),
   http.get(`${BASE}/location-proposals`, authed(({ ctx, url }) => {
@@ -1912,7 +1918,7 @@ export const handlers = [
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     if (q.length < 2) return problem(400, 'VALIDATION_FAILED', 'Query too short');
     const sc = scope(ctx, url);
-    const cs = db.customers.filter((c) => sc.includes(c.branchId) && `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code} ${c.item.phone}`.toLowerCase().includes(q)).slice(0, 6).map((c) => ({ type: 'customer', id: c.item.id, title: `${c.item.name?.bn} · ${c.item.name?.en}`, subtitle: `${c.item.code} · ${c.item.phone}` }));
+    const cs = db.customers.filter((c) => sc.includes(c.branchId) && `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code} ${c.item.phone}`.toLowerCase().includes(q)).slice(0, 6).map((c) => ({ type: 'customer', id: c.item.id, title: `${c.item.name?.bn} · ${c.item.name?.en}`, subtitle: `${c.item.code} · ${c.item.phone}`, tag: tagSummary(c.item.tag) }));
     const us = db.users.filter((u) => u.branchIds?.some((b) => sc.includes(b)) && `${u.name?.bn} ${u.name?.en} ${u.employeeCode}`.toLowerCase().includes(q)).slice(0, 4).map((u) => ({ type: 'user', id: u.id, title: `${u.name?.bn} · ${u.name?.en}`, subtitle: `${u.employeeCode} · ${u.role}` }));
     const rs = db.collections.filter((c) => c.receiptNo?.toLowerCase().includes(q)).slice(0, 4).map((c) => ({ type: 'receipt', id: c.id, title: c.receiptNo, subtitle: `${c.customer?.name?.en}` }));
     return HttpResponse.json([...cs, ...us, ...rs]);

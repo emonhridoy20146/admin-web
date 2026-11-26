@@ -18,6 +18,7 @@ import { SearchInput, Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
 import { StatusBadges } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { TagChip } from '@/shared/ui/tag-chip';
 import { CUSTOMER_PAGE_SIZES, useCustomerPage, type CustomerPageSize, type CustomerQuery } from '../api/customers';
 import { extraStatuses, toCustomerRow, type CustomerRowVM } from '../model/customer-row';
 import { PAY_STATES, PS_CLASS } from '../model/pay-state';
@@ -90,9 +91,12 @@ export function CustomersPage() {
         <div className="flex min-w-0 items-center gap-2.5">
           <span className={cn('h-8 w-[3px] shrink-0 rounded-full', PS_CLASS[r.payState].bar)} aria-hidden />
           <div className="min-w-0">
-            <Link href={`/customers/${r.id}/`} onClick={(e) => !(e.metaKey || e.ctrlKey) && e.preventDefault()} className="block max-w-[260px] truncate font-medium text-fg hover:text-primary" lang={locale}>
-              {r.name}
-            </Link>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Link href={`/customers/${r.id}/`} onClick={(e) => !(e.metaKey || e.ctrlKey) && e.preventDefault()} className="block max-w-[260px] min-w-0 truncate font-medium text-fg hover:text-primary" lang={locale}>
+                {r.name}
+              </Link>
+              <TagChip look={r.tagLook} />
+            </span>
             <span className="block max-w-[260px] truncate font-mono text-xs text-fg-tertiary">{r.code}</span>
           </div>
         </div>
@@ -279,6 +283,7 @@ export function CustomersPage() {
         error={query.error}
         onRetry={() => query.refetch()}
         activeRowKey={drawerId}
+        rowBorderClass={(r) => r.tagLook?.className}
         selectable={canAssign}
         selection={picked}
         onSelectionChange={setPicked}

@@ -17,6 +17,8 @@ import { PinIcon } from '@/shared/map/pin-icon';
 import { PageHeader } from '@/shared/ui/page';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { FilterChip, Segmented } from '@/shared/ui/primitives';
+import { TagChip } from '@/shared/ui/tag-chip';
+import { pinTagLook } from '@/shared/ui/tag-look';
 import { MoneyText } from '@/shared/ui/money';
 import { useCustomerMap } from '../api/customers';
 import { MAP_FILTERS, PIN_ZOOM } from '../model/map';
@@ -246,17 +248,23 @@ export function CustomerMapPage() {
               <p className="px-4 py-10 text-center text-sm text-fg-tertiary">{t('map.empty')}</p>
             ) : (
               <ul className="divide-y divide-line">
-                {sorted.slice(0, LIST_MAX).map((p) => (
-                  <li key={p.id}>
-                    <button type="button" onClick={() => open(p.id!)} className={cn('flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start hover:bg-surface-hover', p.id === drawerId && 'bg-surface-hover')}>
+                {sorted.slice(0, LIST_MAX).map((p) => {
+                  const tag = pinTagLook(p);
+                  return (
+                  <li key={p.id} className={cn(tag && 'px-2 py-1')}>
+                    <button type="button" onClick={() => open(p.id!)} className={cn('flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5 text-start hover:bg-surface-hover', p.id === drawerId && 'bg-surface-hover', tag && `${tag.className} fos-tag-box px-2.5`)} data-tag-border={tag ? 'true' : undefined}>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-fg" lang={locale}>{p.name}</span>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="block truncate text-sm font-medium text-fg" lang={locale}>{p.name}</span>
+                          <TagChip look={tag} />
+                        </span>
                         <span className="mt-0.5 block"><PayStateBadge state={payStateOf(p)} missed={p.missedCount} /></span>
                       </span>
                       <MoneyText poisha={p.outstandingPoisha ?? 0} className="shrink-0 text-sm font-medium" />
                     </button>
                   </li>
-                ))}
+                  );
+                })}
                 {sorted.length > LIST_MAX && <li className="px-4 py-3 text-center text-xs text-fg-tertiary">{t('map.more', { n: formatNumber(sorted.length - LIST_MAX) })}</li>}
               </ul>
             )}

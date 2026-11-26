@@ -11,6 +11,7 @@ import { useUi } from '@/shared/lib/ui-store';
 import { MoneyText } from '@/shared/ui/money';
 import { Badge, StatusBadge, StatusBadges } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/feedback';
+import { TagChip } from '@/shared/ui/tag-chip';
 import type { components } from '@/shared/api/schema';
 import { sortStatuses } from '../model/customer-row';
 import { currentPin } from '../model/pin';
@@ -28,7 +29,10 @@ export function CustomerTitle({ c, size = 'md' }: { c: CustomerDetail; size?: 'm
   const alt = locale === 'bn' ? c.name?.en : c.name?.bn;
   return (
     <div className="min-w-0">
-      <div className={cn('truncate font-semibold tracking-tight text-fg', size === 'lg' ? 'text-xl lg:text-2xl' : 'text-md')} lang={locale}>{main}</div>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <div className={cn('min-w-0 truncate font-semibold tracking-tight text-fg', size === 'lg' ? 'text-xl lg:text-2xl' : 'text-md')} lang={locale}>{main}</div>
+        <TagChip tag={c.tag} />
+      </div>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-fg-tertiary">
         {alt && <span lang={locale === 'bn' ? 'en' : 'bn'}>{alt}</span>}
         <span aria-hidden>·</span>

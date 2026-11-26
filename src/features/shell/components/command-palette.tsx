@@ -9,6 +9,9 @@ import { commands, navRoutes, navSections } from '@/shared/feature/registry';
 import { useGate } from '@/shared/feature/useGate';
 import { Kbd } from '@/shared/ui/primitives';
 import { Skeleton } from '@/shared/ui/feedback';
+import { TagChip } from '@/shared/ui/tag-chip';
+import { tagLookOf, type TagLike } from '@/shared/ui/tag-look';
+import { cn } from '@/shared/lib/cn';
 import { useSearch } from '../api/queries';
 
 function useDebounced<T>(v: T, ms: number) {
@@ -79,7 +82,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   return (
                     <Command.Group key={type} heading={g.label} className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-fg-tertiary">
                       {items.map((r) => (
-                        <Item key={r.id} onSelect={() => go(g.href(r.id!))} icon={g.icon} title={r.title!} subtitle={r.subtitle} />
+                        <Item key={r.id} onSelect={() => go(g.href(r.id!))} icon={g.icon} title={r.title!} subtitle={r.subtitle} tag={type === 'customer' ? r.tag : undefined} />
                       ))}
                     </Command.Group>
                   );
@@ -104,14 +107,23 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   );
 }
 
-function Item({ onSelect, icon: Icon, title, subtitle }: { onSelect: () => void; icon: typeof Search; title: string; subtitle?: string }) {
+/** A customer result with a bad tag is framed and shows its chip (FR-W-072, contract 1.52.0 `SearchResult.tag`). */
+function Item({ onSelect, icon: Icon, title, subtitle, tag }: { onSelect: () => void; icon: typeof Search; title: string; subtitle?: string; tag?: TagLike }) {
+  const look = tagLookOf(tag);
   return (
-    <Command.Item onSelect={onSelect} className="flex min-h-10 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-base text-fg data-[selected=true]:bg-primary-subtle data-[selected=true]:text-primary-subtle-fg [@media(pointer:coarse)]:min-h-11">
+    <Command.Item
+      onSelect={onSelect}
+      className={cn('flex min-h-10 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-base text-fg data-[selected=true]:bg-primary-subtle data-[selected=true]:text-primary-subtle-fg [@media(pointer:coarse)]:min-h-11', look && `${look.className} fos-tag-box my-1`)}
+      data-tag-border={look ? 'true' : undefined}
+    >
       <span className="grid size-7 shrink-0 place-items-center rounded-sm border border-line bg-surface text-fg-tertiary">
         <Icon className="size-4" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate">{title}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="block truncate">{title}</span>
+          <TagChip look={look} />
+        </span>
         {subtitle && <span className="block truncate text-xs text-fg-tertiary">{subtitle}</span>}
       </span>
     </Command.Item>

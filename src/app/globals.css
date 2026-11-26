@@ -97,6 +97,20 @@
   --color-st-bad-suggested-bg: var(--st-bad-suggested-bg);
   --color-st-tagged: var(--st-tagged-fg);
   --color-st-tagged-bg: var(--st-tagged-bg);
+  --color-st-tag-absconded: var(--st-tag-absconded-fg);
+  --color-st-tag-absconded-bg: var(--st-tag-absconded-bg);
+  --color-st-tag-legal: var(--st-tag-legal-fg);
+  --color-st-tag-legal-bg: var(--st-tag-legal-bg);
+  --color-st-tag-refused-to-pay: var(--st-tag-refused-to-pay-fg);
+  --color-st-tag-refused-to-pay-bg: var(--st-tag-refused-to-pay-bg);
+  --color-st-tag-other: var(--st-tag-other-fg);
+  --color-st-tag-other-bg: var(--st-tag-other-bg);
+  --color-st-tag-fraud-suspected: var(--st-tag-fraud-suspected-fg);
+  --color-st-tag-fraud-suspected-bg: var(--st-tag-fraud-suspected-bg);
+  --color-st-tag-repeated-broken-promise: var(--st-tag-repeated-broken-promise-fg);
+  --color-st-tag-repeated-broken-promise-bg: var(--st-tag-repeated-broken-promise-bg);
+  --color-st-tag-plan-ended-unpaid: var(--st-tag-plan-ended-unpaid-fg);
+  --color-st-tag-plan-ended-unpaid-bg: var(--st-tag-plan-ended-unpaid-bg);
   --color-st-pending: var(--st-pending-fg);
   --color-st-pending-bg: var(--st-pending-bg);
   --color-st-mock: var(--st-mock-fg);
@@ -134,6 +148,8 @@
   --shadow-e1: var(--e1);
   --shadow-e2: var(--e2);
   --shadow-e3: var(--e3);
+  --shadow-sm: var(--sh-sm);
+  --shadow-md: var(--sh-md);
   --ease-standard: var(--ease-standard);
   --ease-emphasized: var(--ease-emphasized);
 }
@@ -211,6 +227,50 @@
   /* colour and opacity changes (hover, a button turning enabled) happen at once */
   *, *::before, *::after { transition-duration: 0s !important; }
 }
+
+/*
+ * Bad-tag frame (FR-W-072, 03 §2.3b, shared tokens v1.3 `status.tag.*`): a customer tagged bad or legal gets a frame in
+ * its kind's fg wherever customers are listed, and a chip in fg on bg. `shared/ui/tag-look.ts` picks the modifier.
+ * Frame 1.5 px, absconded 2 px, +0.5 px in high contrast. Table rows draw it with inset shadows on the cells
+ * (a <tr> cannot take a border in a separated table).
+ */
+.fos-tag { --tag-c: var(--st-tag-other-fg); --tag-bg: var(--st-tag-other-bg); --tag-ring: 1.5px; }
+.fos-tag--absconded { --tag-c: var(--st-tag-absconded-fg); --tag-bg: var(--st-tag-absconded-bg); }
+.fos-tag--legal { --tag-c: var(--st-tag-legal-fg); --tag-bg: var(--st-tag-legal-bg); }
+.fos-tag--refused-to-pay { --tag-c: var(--st-tag-refused-to-pay-fg); --tag-bg: var(--st-tag-refused-to-pay-bg); }
+.fos-tag--other { --tag-c: var(--st-tag-other-fg); --tag-bg: var(--st-tag-other-bg); }
+.fos-tag--fraud-suspected { --tag-c: var(--st-tag-fraud-suspected-fg); --tag-bg: var(--st-tag-fraud-suspected-bg); }
+.fos-tag--repeated-broken-promise { --tag-c: var(--st-tag-repeated-broken-promise-fg); --tag-bg: var(--st-tag-repeated-broken-promise-bg); }
+.fos-tag--plan-ended-unpaid { --tag-c: var(--st-tag-plan-ended-unpaid-fg); --tag-bg: var(--st-tag-plan-ended-unpaid-bg); }
+.fos-tag--absconded { --tag-ring: 2px; }
+@media (prefers-contrast: more) {
+  .fos-tag { --tag-ring: 2px; }
+  .fos-tag--absconded { --tag-ring: 2.5px; }
+}
+tr.fos-tag > td {
+  box-shadow: inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+tr.fos-tag > td:first-child {
+  box-shadow: inset var(--tag-ring) 0 0 var(--tag-c), inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+tr.fos-tag > td:last-child {
+  box-shadow: inset calc(-1 * var(--tag-ring)) 0 0 var(--tag-c), inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+tr.fos-tag > td:first-child:last-child {
+  box-shadow: inset var(--tag-ring) 0 0 var(--tag-c), inset calc(-1 * var(--tag-ring)) 0 0 var(--tag-c), inset 0 var(--tag-ring) 0 var(--tag-c), inset 0 calc(-1 * var(--tag-ring)) 0 var(--tag-c);
+}
+/* cards, list items, drawer and page headers */
+.fos-tag-box {
+  border: var(--tag-ring) solid var(--tag-c);
+  border-radius: var(--radius-md);
+}
+/* swatch in the tag dialog: the kind's tint with a hairline in its colour */
+.fos-tag-swatch { background: var(--tag-bg); border: 1px solid var(--tag-c); color: var(--tag-c); }
+/* a picked reason in the tag dialog takes the kind's tint */
+.fos-tag-picked { background: var(--tag-bg); }
+/* chip: fg on bg with a 1 px fg hairline; absconded is filled (fg as fill, bg as text) */
+.fos-tag-chip { color: var(--tag-c); background: var(--tag-bg); border: 1px solid var(--tag-c); }
+.fos-tag-chip.fos-tag--absconded { color: var(--tag-bg); background: var(--tag-c); }
 
 /* Leaflet base (self-hosted, CSP-safe) is imported by the map module only. */
 
