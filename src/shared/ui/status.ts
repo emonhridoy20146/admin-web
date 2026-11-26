@@ -49,7 +49,7 @@ export const STATUS: Record<string, { tone: Tone; label: string; icon?: LucideIc
   current: { tone: 'current', label: 'status.current' },
   bad_suggested: { tone: 'badSuggested', label: 'status.bad_suggested' },
   tagged_bad: { tone: 'tagged', label: 'status.tagged_bad' },
-  // contract 1.53.0 (FR-CUS-024, FR-W-073): invoices returned in the ERP are shown again but never counted
+  // contract 1.53.0 (FR-CUS-024, FR-W-074): invoices returned in the ERP are shown again but never counted
   returned: { tone: 'returned', label: 'status.returned', icon: Undo2 },
   returned_count: { tone: 'returned', label: 'status.returned_count', icon: Undo2 },
   only_returned: { tone: 'returned', label: 'status.only_returned', icon: PackageX },
@@ -110,7 +110,7 @@ export interface ReturnedLike {
   onlyReturned?: boolean | null;
 }
 /**
- * FR-W-073: which returned marker a customer shows. Every invoice returned (`onlyReturned`) → "Returned product customer";
+ * FR-W-074: which returned marker a customer shows. Every invoice returned (`onlyReturned`) → "Returned product customer";
  * some returned → "Returned ×N"; none → nothing. Older servers omit both fields (= none).
  */
 export function returnedMark(x: ReturnedLike | null | undefined): { status: 'only_returned' | 'returned_count'; n: number } | null {

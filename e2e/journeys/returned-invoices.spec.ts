@@ -5,7 +5,7 @@ import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'jso
 import { login } from '../fixtures';
 
 /**
- * FR-W-073 (owner request 2026-11-26; contract 1.53.0, field-api FR-CUS-024 / ADR-071): invoices returned in the ERP are
+ * FR-W-074 (owner request 2026-11-26; contract 1.53.0, field-api FR-CUS-024 / ADR-071): invoices returned in the ERP are
  * shown again, marked, and never counted. Mock data: the customer with mixed invoices owns the returned invoice
  * INV-91018 next to counted ones; "রহিমা খাতুন" has only the returned invoice INV-R77001.
  */
@@ -42,9 +42,7 @@ for (const width of [390, 1440]) {
       await expect(mark).toHaveText(commonBn.status.returned_count.replace('{{n}}', '১'));
       await expect(mark.locator('svg')).toHaveCount(1);
       await settle(page);
-      // pre-existing, as in tag-borders.spec.ts: below 640 px the shared DataTable card is a role=button that holds the
-      // name link (axe nested-interactive on every card). Everything else must be clean.
-      expect((await seriousAxe(page)).filter((v) => !(width < 640 && v.startsWith('nested-interactive')))).toEqual([]);
+      expect(await seriousAxe(page)).toEqual([]);
 
       const href = await rows.first().locator('a[href^="/customers/"]').first().getAttribute('href');
       expect(href).toBeTruthy();
@@ -89,7 +87,9 @@ for (const width of [390, 1440]) {
       await expect(mark).toHaveAttribute('data-status', 'only_returned');
       await expect(mark).toHaveText(commonBn.status.only_returned);
       // coordinator decision 2026-11-26: in admin the row stays clickable (the staff app does not open it)
-      await rows.first().click({ position: { x: 8, y: 8 } });
+      // < 640 px: the card's one open button (data-card-open, #43); ≥ 640 px: the table row
+      if (width < 640) await rows.first().locator('button[data-card-open]').click();
+      else await rows.first().click({ position: { x: 8, y: 8 } });
       await expect(page).toHaveURL(/drawer=customer/);
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.keyboard.press('Escape');

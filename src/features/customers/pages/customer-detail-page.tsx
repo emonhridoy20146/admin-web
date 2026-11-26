@@ -145,7 +145,7 @@ export function CustomerDetailPage() {
                   {sortPlans(c.plans ?? []).map((p) => (
                     <PlanCard key={p.erpPlanId} plan={p} showSchedule onOpen={() => url.set({ tab: 'invoices', invoice: p.erpPlanId ?? null }, { push: true })} />
                   ))}
-                  {/* FR-W-073: returned invoices, shown and never counted */}
+                  {/* FR-W-074: returned invoices, shown and never counted */}
                   <ReturnedInvoices plans={returnedPlansOf(c)} onOpen={(id) => url.set({ tab: 'invoices', invoice: id }, { push: true })} className="pt-2" />
                 </div>
                 <div className="space-y-4">

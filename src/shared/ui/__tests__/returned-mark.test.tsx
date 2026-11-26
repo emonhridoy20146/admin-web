@@ -10,7 +10,7 @@ beforeAll(() => {
 });
 afterEach(cleanup);
 
-/** FR-W-073 (contract 1.53.0): the returned marker of customer rows, map pins and ⌘K hits. */
+/** FR-W-074 (contract 1.53.0): the returned marker of customer rows, map pins and ⌘K hits. */
 describe('returnedMark', () => {
   it('is nothing without returned invoices, also when an older server leaves the fields out', () => {
     expect(returnedMark(undefined)).toBeNull();

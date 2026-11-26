@@ -27,7 +27,7 @@ export function TimelineTab({ customerId }: { customerId: string }) {
         {items.map((it, i) => {
           const Icon = ICON[it.kind ?? ''] ?? Clock;
           const amount = typeof it.data?.amountPoisha === 'number' ? (it.data.amountPoisha as number) : null;
-          // FR-W-073 (1.53.0): an ERP payment to a returned invoice is tagged; the server's summary says so too
+          // FR-W-074 (1.53.0): an ERP payment to a returned invoice is tagged; the server's summary says so too
           const returned = it.kind === 'erp_payment' && it.data?.returned === true;
           return (
             <li key={`${it.refId}-${i}`} className="ms-6 pb-5 last:pb-0">

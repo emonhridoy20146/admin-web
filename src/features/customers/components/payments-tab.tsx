@@ -11,7 +11,7 @@ import type { CustomerDetail } from '../api/customers';
 
 /**
  * Payments: ERP-posted and field-pending are shown apart, never summed (03 §1.4). A payment to an invoice returned in
- * the ERP (`returned`, contract 1.53.0) is listed with a "Returned invoice" tag; it counts nowhere (FR-W-073).
+ * the ERP (`returned`, contract 1.53.0) is listed with a "Returned invoice" tag; it counts nowhere (FR-W-074).
  */
 export function PaymentsTab({ c }: { c: CustomerDetail }) {
   const { t } = useTranslation('customers');

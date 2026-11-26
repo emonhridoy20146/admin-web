@@ -83,9 +83,7 @@ for (const width of [390, 1440]) {
       }
 
       await settle(page);
-      // Known, older than this change and not caused by it (reported in the PR): below 640 px the DataTable card is a
-      // role=button that holds the name link (axe nested-interactive, on every card). Everything else must be clean.
-      expect((await seriousAxe(page)).filter((v) => !(width < 640 && v.startsWith('nested-interactive')))).toEqual([]);
+      expect(await seriousAxe(page)).toEqual([]);
 
       // the drawer header carries the same border and chip
       await absconded.click();
@@ -94,8 +92,7 @@ for (const width of [390, 1440]) {
       await expect(header).toHaveClass(/fos-tag--absconded/);
       expect(await header.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(colour);
       await settle(page);
-      // the header this change draws (the drawer body has an older definition-list finding, reported in the PR)
-      expect(await seriousAxe(page, '[data-drawer-header]')).toEqual([]);
+      expect(await seriousAxe(page, '[role=dialog]')).toEqual([]);
     });
   });
 }

@@ -20,7 +20,7 @@ import { PayStateBadge } from './pay-state';
 /**
  * FR-W-028: the customer's ERP invoices, filtered by kind (installment / credit) and state (open / paid / returned),
  * in the link (`?tab=invoices&invKind=credit&invoice=<id>`) so Back and shared links work. A row opens the viewer.
- * FR-W-073 (contract 1.53.0): invoices returned in the ERP (`returnedPlans`) are listed apart below, never counted in the
+ * FR-W-074 (contract 1.53.0): invoices returned in the ERP (`returnedPlans`) are listed apart below, never counted in the
  * filters' counts, and open in the same viewer in its returned mode.
  */
 export function InvoicesTab({ c }: { c: CustomerDetail }) {

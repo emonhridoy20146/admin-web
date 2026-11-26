@@ -27,7 +27,7 @@ export interface PinLook {
   /** `branch`: a branch / office pin (class `is-branch`), not a customer */
   variant?: 'branch';
   /**
-   * A small round mark on the pin's top right with a return arrow (FR-W-073: the customer has invoices returned in the
+   * A small round mark on the pin's top right with a return arrow (FR-W-074: the customer has invoices returned in the
    * ERP). `fill` / `edge` are tokens for the disc and for its ring and arrow. The pin's own colour and glyph are unchanged.
    */
   corner?: { fill: string; edge: string };

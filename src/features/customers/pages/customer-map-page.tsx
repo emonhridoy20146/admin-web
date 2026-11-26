@@ -29,7 +29,7 @@ import { CustomerDrawer } from '../components/customer-drawer';
 import { payLabel, PayLegend, PayStateBadge } from '../components/pay-state';
 
 const LIST_MAX = 60;
-/** Corner mark of a pin whose customer has returned invoices (FR-W-073), in the returned badge's tone. */
+/** Corner mark of a pin whose customer has returned invoices (FR-W-074), in the returned badge's tone. */
 const RETURNED_CORNER = { fill: '--st-returned-fg', edge: '--neutral-0' } as const;
 const KINDS = ['all', 'installment', 'credit'] as const;
 type Start = MapViewpoint;
@@ -96,7 +96,7 @@ export function CustomerMapPage() {
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => {
           const s = payStateOf(p);
-          // FR-W-073: a customer with returned invoices gets a corner mark on the pin and says so in the pin's label
+          // FR-W-074: a customer with returned invoices gets a corner mark on the pin and says so in the pin's label
           const ret = returnedMark(p);
           const retLabel = ret ? ` · ${tc(`status.${ret.status}`, { n: fmt(ret.n) })}` : '';
           return { id: p.id!, lat: p.lat!, lng: p.lng!, token: psToken(s, 'pin'), title: `${p.name ?? ''} · ${payLabel(t, s, p.missedCount)}${retLabel}`, strong: p.id === drawerId, pin: { ...payLook(s, p.missedCount, fmt), ...(ret ? { corner: RETURNED_CORNER } : {}) }, z: PAY_STATES.length - payRank(s) };

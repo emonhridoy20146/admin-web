@@ -4,7 +4,7 @@ import { initI18n } from '@/shared/i18n';
 import bn from '../i18n/bn.json';
 import en from '../i18n/en.json';
 
-/** FR-W-073 (contract 1.53.0): an ERP payment to a returned invoice is tagged on the timeline; the server's summary already says so. */
+/** FR-W-074 (contract 1.53.0): an ERP payment to a returned invoice is tagged on the timeline; the server's summary already says so. */
 vi.mock('../api/customers', async (orig) => ({
   ...(await orig<typeof import('../api/customers')>()),
   useTimeline: () => ({

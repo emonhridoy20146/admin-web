@@ -95,7 +95,7 @@
   --st-tagged-bg: #7f1d1d;
   --st-pending-fg: #475569;
   --st-pending-bg: #eef1f5;
-  /* v1.4 (FR-W-073, staff-app PR #63): invoices returned in the ERP */
+  /* v1.4 (FR-W-074, staff-app PR #63): invoices returned in the ERP */
   --st-returned-fg: #0f766e;
   --st-returned-bg: #e3f5f2;
   --st-mock-fg: #9d174d;

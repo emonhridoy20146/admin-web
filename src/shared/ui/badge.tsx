@@ -27,7 +27,7 @@ export function StatusBadge({ status, className, values, testId }: { status: str
 }
 
 /**
- * FR-W-073 (contract 1.53.0): the returned marker of a customer row, map pin or ⌘K hit: "Returned ×N", or
+ * FR-W-074 (contract 1.53.0): the returned marker of a customer row, map pin or ⌘K hit: "Returned ×N", or
  * "Returned product customer" when every invoice was returned. Nothing when none were.
  */
 export function ReturnedMark({ of, className }: { of: ReturnedLike | null | undefined; className?: string }) {

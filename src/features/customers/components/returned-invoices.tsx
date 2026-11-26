@@ -12,7 +12,7 @@ import { kindOf, returnedPaymentsOf } from '../model/invoice';
 type Plan = components['schemas']['Plan'];
 
 /**
- * FR-W-073 (contract 1.53.0): "Returned invoices" — the customer's invoices returned in the ERP, each with a Returned
+ * FR-W-074 (contract 1.53.0): "Returned invoices" — the customer's invoices returned in the ERP, each with a Returned
  * chip and the ERP payments that were posted against it. Display only: no collect or money action, and none of these
  * amounts is added to anything (CLAUDE.md §2.6). A row opens the same invoice viewer (`onOpen`).
  */

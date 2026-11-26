@@ -8,7 +8,7 @@ import en from '../i18n/en.json';
 import type { CustomerDetail } from '../api/customers';
 
 /**
- * FR-W-073 (contract 1.53.0, field-api FR-CUS-024 / ADR-071): invoices returned in the ERP are shown again, marked
+ * FR-W-074 (contract 1.53.0, field-api FR-CUS-024 / ADR-071): invoices returned in the ERP are shown again, marked
  * Returned, with their payments, and counted nowhere.
  */
 vi.mock('@/features/shell', () => ({ useBranches: () => ({ data: [] }) }));

@@ -111,7 +111,7 @@ export function CustomersPage() {
         <span className="inline-flex flex-wrap items-center gap-1">
           <PayStateBadge state={r.payState} missed={r.missedCount} />
           <StatusBadges statuses={extraStatuses(r.statuses)} max={1} />
-          {/* FR-W-073: returned invoices are shown, never counted; an only-returned row stays clickable in admin (coordinator 2026-11-26) */}
+          {/* FR-W-074: returned invoices are shown, never counted; an only-returned row stays clickable in admin (coordinator 2026-11-26) */}
           <ReturnedMark of={r.item} />
         </span>
       ),

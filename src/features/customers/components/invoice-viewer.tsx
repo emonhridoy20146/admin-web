@@ -26,7 +26,7 @@ const LINE_TONE: Record<LineState, Tone> = { paid: 'paid', paid_late: 'paid', pa
  * FR-W-028: one ERP invoice laid out to be read (and printed): what was sold, what it cost, what was paid, what is
  * left, and for installment sales every installment with its exact date, amount, what was paid on it and when.
  * ERP money is shown as the ERP sends it; field money not yet in the ERP is shown apart and labelled.
- * `returned` (FR-W-073, contract 1.53.0): an invoice returned in the ERP, from `returnedPlans`. It gets a Returned chip
+ * `returned` (FR-W-074, contract 1.53.0): an invoice returned in the ERP, from `returnedPlans`. It gets a Returned chip
  * and a note, no due date, schedule, terms or field money, its own `payments`, and no action besides print.
  */
 export function InvoiceViewer({ c, plan, onBack, returned = false }: { c: CustomerDetail; plan: Plan; onBack: () => void; returned?: boolean }) {

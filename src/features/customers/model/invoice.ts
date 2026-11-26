@@ -177,7 +177,7 @@ export function linesByPayment(rows: LineVM[]): Map<string, number[]> {
 }
 
 /**
- * FR-W-073 (contract 1.53.0, field-api FR-CUS-024 / ADR-071): the customer's invoices returned in the ERP, newest sale
+ * FR-W-074 (contract 1.53.0, field-api FR-CUS-024 / ADR-071): the customer's invoices returned in the ERP, newest sale
  * first. They come in `returnedPlans` only (never in `plans`), are shown marked as returned and are never counted: no
  * total, count, pay state, KPI or chart here adds them (the server's numbers already leave them out).
  */

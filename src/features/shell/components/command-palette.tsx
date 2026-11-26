@@ -84,7 +84,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   return (
                     <Command.Group key={type} heading={g.label} className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-fg-tertiary">
                       {items.map((r) => (
-                        // FR-W-073: an only-returned customer still opens in admin (coordinator decision 2026-11-26; the staff app does not)
+                        // FR-W-074: an only-returned customer still opens in admin (coordinator decision 2026-11-26; the staff app does not)
                         <Item key={r.id} onSelect={() => go(g.href(r.id!))} icon={g.icon} title={r.title!} subtitle={r.subtitle} tag={type === 'customer' ? r.tag : undefined} returned={type === 'customer' ? r : undefined} />
                       ))}
                     </Command.Group>
@@ -112,7 +112,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
 /**
  * A customer result with a bad tag is framed and shows its chip (FR-W-072, contract 1.52.0 `SearchResult.tag`); one with
- * returned invoices shows the returned marker (FR-W-073, contract 1.53.0).
+ * returned invoices shows the returned marker (FR-W-074, contract 1.53.0).
  */
 function Item({ onSelect, icon: Icon, title, subtitle, tag, returned }: { onSelect: () => void; icon: typeof Search; title: string; subtitle?: string; tag?: TagLike; returned?: ReturnedLike }) {
   const look = tagLookOf(tag);

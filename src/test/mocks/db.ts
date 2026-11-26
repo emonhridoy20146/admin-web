@@ -1698,7 +1698,7 @@ export const requests: MockRequest[] = [];
   }
 }
 
-// ---------- returned invoices shown, never counted (contract 1.53.0, field-api FR-CUS-024 / ADR-071; FR-W-073) ----------
+// ---------- returned invoices shown, never counted (contract 1.53.0, field-api FR-CUS-024 / ADR-071; FR-W-074) ----------
 // No random draws here, so everything above stays the same. Like field-api: a returned invoice is never in `plans` (and
 // so in no total, count, pay state or KPI); it is in `returnedPlans` with `returned: true`, `collectable: false`, an
 // empty schedule and its ERP payments, each `returned: true`. Those payments are also in the customer's `payments`.
