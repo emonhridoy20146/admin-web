@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed (owner request 2026-11-26: find a customer by invoice number or mobile number)
+- The customer search box and the global search say they take a mobile or invoice number: "নাম, কোড, মোবাইল বা ইনভয়েস নম্বর" / "Name, code, mobile or invoice no.". The matching is done by field-api `GET /customers?q=` (field-api PR #46: invoice numbers without separators, Bangla digits). The mock API follows the same rules.
+
 Contract: field-api **1.48.0** (field-api `main` 360ce85; merged from `claude/contract-1-48` fc7cd81, pinned by the coordinator). `pnpm gen:api` from `contract/openapi.yaml`; permission catalog **72 keys** (`request.create`, `request.view`, `request.manage`, `request.important.manage`), role `area_manager` with `neverFor` (user.manage, rbac.manage, flag.manage, settings.manage). `scripts/sync-contract.mjs` reads the role columns from the catalog header (coordinator's change).
 
 ### Added (owner request 2026-11-24, batch 1124 item D: requests inbox — FR-W-070, ADR-W29)

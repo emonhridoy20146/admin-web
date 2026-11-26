@@ -1,7 +1,7 @@
 {
   "title": "Customers",
   "subtitle": "Installment customers from the ERP, scoped to your branch.",
-  "search": "Name, code or phone",
+  "search": "Name, code, mobile or invoice no.",
   "filters": {
     "overdue": "Overdue",
     "due_today": "Due today",

@@ -1322,7 +1322,18 @@ export const handlers = [
     let all = db.customers.filter((c) => sc.includes(c.branchId)).filter(payFilter(url));
     if (areaId) all = all.filter((c) => c.areaId === areaId);
     if (assignedTo) all = all.filter((c) => c.item.assignee?.id === (assignedTo === 'me' ? ctx.user.id : assignedTo));
-    if (q) all = all.filter((c) => `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code} ${c.item.phone}`.toLowerCase().includes(q));
+    if (q) {
+      // Same rules as field-api: Bangla digits as ASCII, mobile by its last digits, invoice numbers without separators.
+      const term = q.replace(/[\u09E6-\u09EF]/g, (d) => String(d.charCodeAt(0) - 0x09e6));
+      const digits = term.replace(/\D/g, '');
+      const bare = (v: string) => v.toLowerCase().replace(/[\s\-_/.]/g, '');
+      all = all.filter(
+        (c) =>
+          `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code}`.toLowerCase().includes(term) ||
+          (digits.length >= 4 && (c.item.phone ?? '').replace(/\D/g, '').includes(digits.slice(-10))) ||
+          (c.detail.plans ?? []).some((p) => bare(p.invoiceNo ?? '').includes(bare(term))),
+      );
+    }
     for (const f of filters) {
       all = all.filter((c) => {
         const b = c.item.badges ?? [];

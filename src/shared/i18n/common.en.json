@@ -228,7 +228,7 @@
     "body": "Your role does not include access to this page."
   },
   "search": {
-    "placeholder": "Search customers, staff, receipts…",
+    "placeholder": "Search customers, mobile, invoice, staff, receipts…",
     "short": "Search",
     "empty": "No results for “{{q}}”.",
     "hint": "Type at least 2 characters",
