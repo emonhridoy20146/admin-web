@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed (axe findings seen while adding the bad-tag borders — FR-W-073)
+- **nested-interactive** (< 640 px, every card list): the `DataTable` card is no longer a `role=button` wrapping the cells (the customers name link sat inside it). The card is a plain container: a tap anywhere opens it, except on a cell's own button, checkbox or a navigating link (a link that cancels its plain click, like the customer name, opens the card). One real open button per card (the chevron, 44 px, named "Open" + the card title, `data-card-open`); its focus ring is drawn around the whole card.
+- **definition-list / dlitem** (customer drawer and detail page, contact list): `ContactCard` items were `div > svg + div > dt + dd`; now `div > dt (icon + label) + dd`, the icon placed in the `div`'s start padding. Same look.
+- Tests: `data-table-card.test.tsx` (no interactive element inside another, open-button names, tap / link / checkbox behaviour); `tag-borders.spec.ts` drops the 390 px `nested-interactive` filter and scans the whole drawer (`[role=dialog]`) again; `drawer-padding.spec.ts` opens mobile cards with `li button[data-card-open]`; `a11y.spec.ts` adds the customers list and drawer at 390 px, opened from the keyboard.
+- Docs: 02 FR-W-073, 03 §6 card list pattern.
+
 ### Changed (contract 1.52.0: tags on search results and map pins)
 - Contract: field-api **1.52.0** (field-api PR #50, FR-TAG-009; admin branch `claude/contract-1-52` 6bb0ac1, pinned by the coordinator, merged into this branch). `pnpm gen:api` from `contract/openapi.yaml` reproduces the committed `schema.d.ts`. Adds `TagSummary` `{ state, severity, reasonCode }` as `SearchResult.tag` (customer hits) and `MapPin.tag`. 1.51.0 (descriptions only: staff-app device binding, logout scope) needs no admin change.
 - ⌘K search: customer results with a bad tag are framed and show the chip (FR-W-072). Customer map list: per-kind colours from `MapPin.tag`; an older server's `tagged` falls back to `other`.
