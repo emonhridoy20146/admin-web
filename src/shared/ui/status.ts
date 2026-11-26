@@ -1,11 +1,11 @@
 import {
   AlarmClock, BadgeCheck, CalendarClock, CheckCircle2, CircleDot, CloudUpload, Flag, Handshake, Info,
-  ShieldAlert, TriangleAlert, OctagonX, type LucideIcon,
+  PackageX, ShieldAlert, TriangleAlert, OctagonX, Undo2, type LucideIcon,
 } from 'lucide-react';
 
 export type Tone =
   | 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'brand'
-  | 'overdue' | 'dueToday' | 'promised' | 'current' | 'paid' | 'badSuggested' | 'tagged' | 'pending' | 'mock';
+  | 'overdue' | 'dueToday' | 'promised' | 'current' | 'paid' | 'badSuggested' | 'tagged' | 'pending' | 'mock' | 'returned';
 
 export const toneClass: Record<Tone, string> = {
   success: 'bg-success-bg text-success',
@@ -23,23 +23,24 @@ export const toneClass: Record<Tone, string> = {
   tagged: 'bg-st-tagged-bg text-st-tagged',
   pending: 'bg-st-pending-bg text-st-pending',
   mock: 'bg-st-mock-bg text-st-mock',
+  returned: 'bg-st-returned-bg text-st-returned',
 };
 
 export const toneFg: Record<Tone, string> = {
   success: 'text-success', warning: 'text-warning', danger: 'text-danger', info: 'text-info', neutral: 'text-fg-tertiary',
   brand: 'text-primary', overdue: 'text-st-overdue', dueToday: 'text-st-due-today', promised: 'text-st-promised',
   current: 'text-st-current', paid: 'text-st-paid', badSuggested: 'text-st-bad-suggested', tagged: 'text-st-tagged-bg',
-  pending: 'text-st-pending', mock: 'text-st-mock',
+  pending: 'text-st-pending', mock: 'text-st-mock', returned: 'text-st-returned',
 };
 
 export const toneIcon: Record<Tone, LucideIcon> = {
   success: CheckCircle2, warning: TriangleAlert, danger: OctagonX, info: Info, neutral: CircleDot, brand: CircleDot,
   overdue: AlarmClock, dueToday: CalendarClock, promised: Handshake, current: CircleDot, paid: BadgeCheck,
-  badSuggested: Flag, tagged: Flag, pending: CloudUpload, mock: ShieldAlert,
+  badSuggested: Flag, tagged: Flag, pending: CloudUpload, mock: ShieldAlert, returned: Undo2,
 };
 
-/** Domain status → tone + common i18n label key. One table so every screen "says" the same thing. */
-export const STATUS: Record<string, { tone: Tone; label: string }> = {
+/** Domain status → tone + common i18n label key (+ its own icon when the tone's icon would not say it). One table so every screen "says" the same thing. */
+export const STATUS: Record<string, { tone: Tone; label: string; icon?: LucideIcon }> = {
   // customer
   overdue: { tone: 'overdue', label: 'status.overdue' },
   due_today: { tone: 'dueToday', label: 'status.due_today' },
@@ -48,6 +49,11 @@ export const STATUS: Record<string, { tone: Tone; label: string }> = {
   current: { tone: 'current', label: 'status.current' },
   bad_suggested: { tone: 'badSuggested', label: 'status.bad_suggested' },
   tagged_bad: { tone: 'tagged', label: 'status.tagged_bad' },
+  // contract 1.53.0 (FR-CUS-024, FR-W-074): invoices returned in the ERP are shown again but never counted
+  returned: { tone: 'returned', label: 'status.returned', icon: Undo2 },
+  returned_count: { tone: 'returned', label: 'status.returned_count', icon: Undo2 },
+  only_returned: { tone: 'returned', label: 'status.only_returned', icon: PackageX },
+  returned_payment: { tone: 'returned', label: 'status.returned_payment', icon: Undo2 },
   // collection
   received: { tone: 'pending', label: 'status.received' },
   posting: { tone: 'pending', label: 'status.posting' },
@@ -97,3 +103,18 @@ export const STATUS: Record<string, { tone: Tone; label: string }> = {
   active: { tone: 'success', label: 'status.active' },
   inactive: { tone: 'neutral', label: 'status.inactive' },
 };
+
+/** The fields of a customer row, map pin or search hit that say it has returned invoices (contract 1.53.0). */
+export interface ReturnedLike {
+  returnedInvoiceCount?: number | null;
+  onlyReturned?: boolean | null;
+}
+/**
+ * FR-W-074: which returned marker a customer shows. Every invoice returned (`onlyReturned`) → "Returned product customer";
+ * some returned → "Returned ×N"; none → nothing. Older servers omit both fields (= none).
+ */
+export function returnedMark(x: ReturnedLike | null | undefined): { status: 'only_returned' | 'returned_count'; n: number } | null {
+  const n = Math.max(0, x?.returnedInvoiceCount ?? 0);
+  if (x?.onlyReturned) return { status: 'only_returned', n };
+  return n > 0 ? { status: 'returned_count', n } : null;
+}

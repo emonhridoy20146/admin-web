@@ -71,6 +71,9 @@ for (const vp of [
     test(`no drawer text touches the edge (${vp.label} px)`, async ({ page }) => {
       test.setTimeout(180_000);
       await page.emulateMedia({ reducedMotion: 'reduce' });
+      // Collections opens on "today" and the mock records today's collections from 07:00 Dhaka: pin the clock to midday
+      // so every list has a row to open at any hour (CLAUDE.md §6).
+      await page.clock.setFixedTime(new Date('2026-11-22T12:00:00+06:00'));
       await login(page);
       const bad: string[] = [];
       for (const d of DRAWERS) {

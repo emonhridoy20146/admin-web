@@ -42,6 +42,12 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 
 Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/attendance/leave`), holidays and shifts (`/attendance/calendar`, shift in the user form) and notices with read tracking (`/notices`) are done on contract 1.12.0 with journeys and axe. Left: day-sheet planner, SMS logs.
 
+## Status notes (2026-11-26, contract 1.53.0: returned invoices shown, never counted)
+- ☑ Contract **1.53.0** pinned (FR-CUS-024, ADR-071).
+- ☑ "Returned ×N" / "Returned product customer" marker on the Customers table and cards, map list and pins, ⌘K results (FR-W-074, ADR-W31). Only-returned rows stay clickable in admin (coordinator decision, flip noted in the PR).
+- ☑ Customer page "Returned invoices" section with payments, returned viewer mode; "returned invoice" tag in the payment list, viewer and timeline. Nothing returned is summed client-side.
+- ☑ Mock: mixed and only-returned customers, returned invoice numbers searchable. Unit, component and e2e (390/1440 px, axe) green.
+
 ## Status notes (2026-11-26, bad-tag borders)
 - ☑ Bad-tag frames and chips on the customers table and cards, drawer and detail headers, map list, ⌘K search and customer picker; tag dialog with swatches and preview (FR-W-072, ADR-W30). Unit, component and e2e (390/1440 px, axe) green.
 - ☑ Tokens v1.2: `shadow.sm` / `shadow.md` (light only), same values as staff-app.

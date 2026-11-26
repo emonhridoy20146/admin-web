@@ -9,7 +9,10 @@ import { Badge, StatusBadge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/feedback';
 import type { CustomerDetail } from '../api/customers';
 
-/** Payments: ERP-posted and field-pending are shown apart, never summed (03 §1.4). */
+/**
+ * Payments: ERP-posted and field-pending are shown apart, never summed (03 §1.4). A payment to an invoice returned in
+ * the ERP (`returned`, contract 1.53.0) is listed with a "Returned invoice" tag; it counts nowhere (FR-W-074).
+ */
 export function PaymentsTab({ c }: { c: CustomerDetail }) {
   const { t } = useTranslation('customers');
   const { t: tc } = useTranslation();
@@ -53,7 +56,7 @@ export function PaymentsTab({ c }: { c: CustomerDetail }) {
               </thead>
               <tbody>
                 {c.payments.map((p) => (
-                  <tr key={p.erpPaymentId} className="border-t border-line">
+                  <tr key={p.erpPaymentId} className="border-t border-line" data-returned={p.returned ? 'true' : undefined}>
                     <td className="px-4 py-2 whitespace-nowrap">{formatDate(p.date!)}</td>
                     <td className="px-3 py-2 font-mono text-xs">{p.receiptNo}</td>
                     <td className="px-3 py-2">
@@ -64,11 +67,12 @@ export function PaymentsTab({ c }: { c: CustomerDetail }) {
                       <Badge tone={p.source === 'field' ? 'brand' : 'neutral'} icon={false}>{p.source === 'field' ? t('payments.fieldSource') : t('payments.office')}</Badge>
                       {p.advance && <Badge tone="info" icon={false} className="ms-1">{t('payments.advance')}</Badge>}
                       {p.reversed && <Badge tone="danger" className="ms-1">{t('payments.reversed')}</Badge>}
+                      {p.returned && <StatusBadge status="returned_payment" className="ms-1" testId="returned-payment-tag" />}
                       {p.collectorName && <span className="mt-0.5 block text-xs text-fg-tertiary">{t('payments.collector', { name: p.collectorName })}</span>}
                       {p.referrerName && p.referrerName !== p.collectorName && <span className="mt-0.5 block text-xs text-fg-tertiary">{t('payments.referrer', { name: p.referrerName })}</span>}
                     </td>
                     <td className="px-4 py-2 text-end">
-                      <MoneyText poisha={p.amountPoisha ?? 0} className={p.reversed ? 'font-medium text-fg-tertiary line-through' : 'font-medium'} />
+                      <MoneyText poisha={p.amountPoisha ?? 0} className={p.reversed ? 'font-medium text-fg-tertiary line-through' : p.returned ? 'font-medium text-fg-secondary' : 'font-medium'} />
                       {(p.discountPoisha ?? 0) > 0 && <span className="block text-xs whitespace-nowrap text-fg-tertiary">{t('payments.discount', { amount: formatMoney(p.discountPoisha ?? 0) })}</span>}
                     </td>
                   </tr>

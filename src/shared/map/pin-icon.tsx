@@ -26,7 +26,16 @@ export interface PinLook {
   glyph?: PinGlyph;
   /** `branch`: a branch / office pin (class `is-branch`), not a customer */
   variant?: 'branch';
+  /**
+   * A small round mark on the pin's top right with a return arrow (FR-W-074: the customer has invoices returned in the
+   * ERP). `fill` / `edge` are tokens for the disc and for its ring and arrow. The pin's own colour and glyph are unchanged.
+   */
+  corner?: { fill: string; edge: string };
 }
+
+/** Corner disc (centre 22.8, 5.2) and its return arrow. */
+const CORNER = { cx: 22.8, cy: 5.2, r: 4.6 };
+const CORNER_ARROW = 'M21 4.4h2.6a1.5 1.5 0 0 1 0 3h-1.4M22.4 3 21 4.4l1.4 1.4';
 
 /** Pixel size of a pin; `lg` marks the selected customer. */
 export function pinSize(large?: boolean): [number, number] {
@@ -47,6 +56,14 @@ function glyphSvg(g: PinGlyph | undefined): string {
   return `<text x="14" y="13.5" dy="0.36em" text-anchor="middle" font-size="${size}" font-weight="700" fill="currentColor">${esc(text)}</text>`;
 }
 
+function cornerSvg(c: PinLook['corner']): string {
+  if (!c) return '';
+  return (
+    `<g class="fos-pin-corner" style="--pin-corner-fill:${cssVar(c.fill)};--pin-corner-edge:${cssVar(c.edge)}">` +
+    `<circle cx="${CORNER.cx}" cy="${CORNER.cy}" r="${CORNER.r}"/><path d="${CORNER_ARROW}"/></g>`
+  );
+}
+
 /** HTML for a Leaflet `divIcon` (inline style is allowed by the CSP: `style-src 'unsafe-inline'`). */
 export function pinIconHtml(look: PinLook, large?: boolean): string {
   const [w, h] = pinSize(large);
@@ -54,7 +71,7 @@ export function pinIconHtml(look: PinLook, large?: boolean): string {
     `<span class="fos-pin${large ? ' is-selected' : ''}${look.variant === 'branch' ? ' is-branch' : ''}" style="--pin-fill:${cssVar(look.fill)};--pin-edge:${cssVar(look.edge)}">` +
     `<svg width="${w}" height="${h}" viewBox="0 0 ${PIN_W} ${PIN_H}" aria-hidden="true" focusable="false">` +
     `<path class="fos-pin-body" d="${PIN_PATH}"/><circle class="fos-pin-face" cx="14" cy="13.5" r="7.4"/>` +
-    `<g class="fos-pin-glyph">${glyphSvg(look.glyph)}</g></svg></span>`
+    `<g class="fos-pin-glyph">${glyphSvg(look.glyph)}</g>${cornerSvg(look.corner)}</svg></span>`
   );
 }
 
@@ -86,6 +103,12 @@ export function PinIcon({ look, size = 16, className }: { look: PinLook; size?: 
           </text>
         )}
       </g>
+      {look.corner && (
+        <g className="fos-pin-corner" style={{ ['--pin-corner-fill' as string]: cssVar(look.corner.fill), ['--pin-corner-edge' as string]: cssVar(look.corner.edge) }}>
+          <circle cx={CORNER.cx} cy={CORNER.cy} r={CORNER.r} />
+          <path d={CORNER_ARROW} />
+        </g>
+      )}
     </svg>
   );
 }

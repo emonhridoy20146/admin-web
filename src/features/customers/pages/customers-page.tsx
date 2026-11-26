@@ -16,7 +16,7 @@ import { EmptyState } from '@/shared/ui/feedback';
 import { FilterChip, Segmented, Tooltip } from '@/shared/ui/primitives';
 import { SearchInput, Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
-import { StatusBadges } from '@/shared/ui/badge';
+import { ReturnedMark, StatusBadges } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { TagChip } from '@/shared/ui/tag-chip';
 import { CUSTOMER_PAGE_SIZES, useCustomerPage, type CustomerPageSize, type CustomerQuery } from '../api/customers';
@@ -111,6 +111,8 @@ export function CustomersPage() {
         <span className="inline-flex flex-wrap items-center gap-1">
           <PayStateBadge state={r.payState} missed={r.missedCount} />
           <StatusBadges statuses={extraStatuses(r.statuses)} max={1} />
+          {/* FR-W-074: returned invoices are shown, never counted; an only-returned row stays clickable in admin (coordinator 2026-11-26) */}
+          <ReturnedMark of={r.item} />
         </span>
       ),
     },

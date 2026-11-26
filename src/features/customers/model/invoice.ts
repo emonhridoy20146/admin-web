@@ -175,3 +175,17 @@ export function linesByPayment(rows: LineVM[]): Map<string, number[]> {
   for (const r of rows) for (const p of r.payments) if (p.erpPaymentId) out.set(p.erpPaymentId, [...(out.get(p.erpPaymentId) ?? []), r.seq]);
   return out;
 }
+
+/**
+ * FR-W-074 (contract 1.53.0, field-api FR-CUS-024 / ADR-071): the customer's invoices returned in the ERP, newest sale
+ * first. They come in `returnedPlans` only (never in `plans`), are shown marked as returned and are never counted: no
+ * total, count, pay state, KPI or chart here adds them (the server's numbers already leave them out).
+ */
+export function returnedPlansOf(c: { returnedPlans?: Plan[] | null }): Plan[] {
+  return [...(c.returnedPlans ?? [])].sort((a, b) => (b.saleDate ?? b.startDate ?? '').localeCompare(a.saleDate ?? a.startDate ?? ''));
+}
+
+/** The ERP payments of a returned invoice: its own `payments` (each `returned: true`), newest first. */
+export function returnedPaymentsOf(plan: Plan): NonNullable<Plan['payments']> {
+  return [...(plan.payments ?? [])].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+}

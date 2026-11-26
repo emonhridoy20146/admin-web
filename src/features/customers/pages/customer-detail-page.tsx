@@ -25,6 +25,8 @@ import { ContactAttempts } from '../components/contact-attempts';
 import { BadSuggestionCallout, ContactCard, CustomerFigures, CustomerStatusRow, CustomerTitle, NotesList, PendingCallout, PlanCard } from '../components/customer-parts';
 import { MonthActivity } from '../components/work-marks';
 import { sortPlans } from '../model/plan';
+import { returnedPlansOf } from '../model/invoice';
+import { ReturnedInvoices } from '../components/returned-invoices';
 import { PaymentsTab } from '../components/payments-tab';
 import { InvoicesTab } from '../components/invoices-tab';
 import { TimelineTab } from '../components/timeline-tab';
@@ -143,6 +145,8 @@ export function CustomerDetailPage() {
                   {sortPlans(c.plans ?? []).map((p) => (
                     <PlanCard key={p.erpPlanId} plan={p} showSchedule onOpen={() => url.set({ tab: 'invoices', invoice: p.erpPlanId ?? null }, { push: true })} />
                   ))}
+                  {/* FR-W-074: returned invoices, shown and never counted */}
+                  <ReturnedInvoices plans={returnedPlansOf(c)} onOpen={(id) => url.set({ tab: 'invoices', invoice: id }, { push: true })} className="pt-2" />
                 </div>
                 <div className="space-y-4">
                   <Card className="h-fit p-4">

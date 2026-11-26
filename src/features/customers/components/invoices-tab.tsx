@@ -12,13 +12,16 @@ import { EmptyState } from '@/shared/ui/feedback';
 import { MoneyText } from '@/shared/ui/money';
 import { Segmented } from '@/shared/ui/primitives';
 import type { CustomerDetail } from '../api/customers';
-import { creditTerm, filterInvoices, INVOICE_KINDS, INVOICE_STATES, invoiceCounts, kindOf, missedOf, nextDue, planPayState, sortInvoices, stateOf } from '../model/invoice';
+import { creditTerm, filterInvoices, INVOICE_KINDS, INVOICE_STATES, invoiceCounts, kindOf, missedOf, nextDue, planPayState, returnedPlansOf, sortInvoices, stateOf } from '../model/invoice';
 import { InvoiceViewer } from './invoice-viewer';
+import { ReturnedInvoices } from './returned-invoices';
 import { PayStateBadge } from './pay-state';
 
 /**
  * FR-W-028: the customer's ERP invoices, filtered by kind (installment / credit) and state (open / paid / returned),
  * in the link (`?tab=invoices&invKind=credit&invoice=<id>`) so Back and shared links work. A row opens the viewer.
+ * FR-W-074 (contract 1.53.0): invoices returned in the ERP (`returnedPlans`) are listed apart below, never counted in the
+ * filters' counts, and open in the same viewer in its returned mode.
  */
 export function InvoicesTab({ c }: { c: CustomerDetail }) {
   const { t } = useTranslation('customers');
@@ -31,9 +34,21 @@ export function InvoicesTab({ c }: { c: CustomerDetail }) {
   const all = useMemo(() => sortInvoices(c.plans ?? [], today), [c.plans, today]);
   const counts = useMemo(() => invoiceCounts(all), [all]);
   const shown = filterInvoices(all, kind, state);
+  const returned = useMemo(() => returnedPlansOf(c), [c]);
   const selected = openId ? all.find((p) => p.erpPlanId === openId) : undefined;
+  const selectedReturned = openId && !selected ? returned.find((p) => p.erpPlanId === openId) : undefined;
 
   if (selected) return <InvoiceViewer c={c} plan={selected} onBack={() => url.set({ invoice: null })} />;
+  if (selectedReturned) return <InvoiceViewer c={c} plan={selectedReturned} returned onBack={() => url.set({ invoice: null })} />;
+  const returnedList = <ReturnedInvoices plans={returned} onOpen={(id) => url.set({ invoice: id }, { push: true })} className="pt-2" />;
+  // only returned invoices: nothing to filter, just the returned list
+  if (!all.length && returned.length)
+    return (
+      <div className="space-y-4">
+        {openId && <p className="rounded-md border border-line bg-surface-subtle px-3 py-2 text-sm text-fg-secondary">{t('invoice.notFound')}</p>}
+        {returnedList}
+      </div>
+    );
 
   return (
     <div className="space-y-4">
@@ -99,6 +114,7 @@ export function InvoicesTab({ c }: { c: CustomerDetail }) {
           })}
         </ul>
       )}
+      {returnedList}
     </div>
   );
 }

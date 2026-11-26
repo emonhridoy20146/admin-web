@@ -3673,6 +3673,10 @@ export interface components {
                 total?: number;
                 open?: number;
             };
+            /** @description Added in 1.53.0 (FR-CUS-024). Invoices of the customer returned in the ERP (not in `invoiceCount`, never counted in any number). 0 when none. Older servers omit it: treat as 0 */
+            returnedInvoiceCount?: number;
+            /** @description Added in 1.53.0 (FR-CUS-024). true when the customer has invoices and every one was returned (`returnedInvoiceCount` > 0 and `invoiceCount.total` = 0). Clients show the "returned product customer" marker and do not open the row; the customer is still listed and GET /customers/{id} still works. Older servers omit it: treat as false */
+            onlyReturned?: boolean;
             activity?: components["schemas"]["CustomerActivity"];
             /** Format: date-time */
             erpFetchedAt?: string;
@@ -3696,7 +3700,7 @@ export interface components {
              * @description Last visit of this month
              */
             lastVisitAt?: string | null;
-            /** @description ERP payments dated this month (office and field, removed ones left out), from the recent ERP payments */
+            /** @description ERP payments dated this month (office and field, removed ones left out), from the recent ERP payments. Since 1.53.0 payments to a returned invoice (`Payment.returned`) are left out too, also from `paidBy` and `lastPaidDate` */
             paidPoisha: number;
             /**
              * Format: date
@@ -3778,6 +3782,8 @@ export interface components {
         /**
          * @description One collectable ERP receivable. Since 1.13.0 this is documented as one ERP invoice
          *     (installment or credit sale); `erpPlanId` is the invoice id (ADR-033).
+         *     Since 1.53.0 the same shape is used for `CustomerDetail.returnedPlans` (invoices returned in the ERP), with
+         *     `returned: true`, `collectable: false` and `payments`; those are shown, never counted.
          */
         Plan: {
             erpPlanId?: string;
@@ -3792,7 +3798,7 @@ export interface components {
             paidPoisha?: number;
             outstandingPoisha?: number;
             /**
-             * @description `closed` = not collectable in the field (e.g. a cash sale with money left, a draft, or an invoice the ERP marks not collectable); closed and cancelled plans are not collectable and not counted in totals. Since 1.50.0 (FR-CUS-023) invoices returned in the ERP are not listed at all (see CustomerDetail.returnedPlanIds); the meaning of each value is unchanged
+             * @description `closed` = not collectable in the field (e.g. a cash sale with money left, a draft, or an invoice the ERP marks not collectable); closed and cancelled plans are not collectable and not counted in totals. Since 1.50.0 (FR-CUS-023) invoices returned in the ERP are not in `CustomerDetail.plans`; since 1.53.0 they are in `CustomerDetail.returnedPlans` with status `closed` and `returned: true`. The meaning of each value is unchanged
              * @enum {string}
              */
             status?: "active" | "completed" | "closed" | "defaulted" | "cancelled";
@@ -3917,6 +3923,12 @@ export interface components {
                 enabled?: boolean;
                 rate?: string;
             };
+            /** @description Added in 1.53.0 (FR-CUS-024). true on `CustomerDetail.returnedPlans` items: the invoice was returned in the ERP. Absent on `plans` items */
+            returned?: boolean;
+            /** @description Added in 1.53.0 (FR-CUS-024). false on `CustomerDetail.returnedPlans` items: nothing can be collected on it and it is in no total. Absent on `plans` items (use `status` as before) */
+            collectable?: boolean;
+            /** @description Added in 1.53.0 (FR-CUS-024). Returned invoices only: the ERP payments posted against this invoice, each with `returned: true` (the cached recent payments, then payments known only from schedule allocations, summed per payment). Shown, never counted. `schedule` of a returned invoice is empty, as for every closed invoice */
+            payments?: components["schemas"]["Payment"][];
         };
         Payment: {
             erpPaymentId?: string;
@@ -3942,6 +3954,8 @@ export interface components {
             advance?: boolean;
             /** @description Added in 1.13.0. Settlement discount given with the payment */
             discountPoisha?: number;
+            /** @description Added in 1.53.0 (FR-CUS-024). true when the payment went to an invoice returned in the ERP (`erpPlanId` is a returned invoice). Shown (in `payments`, on the returned invoice and in the timeline), but never counted: not in `activity.paidPoisha` / `paidBy`, the paid-this-month filter or promise evaluation. Absent otherwise; a payment without `erpPlanId` is never marked */
+            returned?: boolean;
         };
         CustomerDetail: components["schemas"]["CustomerListItem"] & {
             /** @description ERP numbers first (ERP order), then the numbers added in FOS (1.23.0). Indexes of ERP numbers do not change */
@@ -3965,10 +3979,12 @@ export interface components {
                 maxDaysLate?: number;
                 computedAt?: string | null;
             };
-            /** @description Every invoice of the customer FOS shows, complete (replace the stored list, do not merge). Since 1.50.0 (FR-CUS-023) invoices returned in the ERP are never in this list */
+            /** @description Every counted invoice of the customer, complete (replace the stored list, do not merge). Since 1.50.0 (FR-CUS-023) invoices returned in the ERP are never in this list (see `returnedPlans`, 1.53.0) */
             plans?: components["schemas"]["Plan"][];
-            /** @description Added in 1.50.0 (FR-CUS-023, ADR-068). erpPlanIds of the customer's invoices that were returned in the ERP. They are not in `plans` and never shown; a client that already stored one of them (before 1.50.0) deletes it, with its schedule. Empty when none. Older servers omit it */
+            /** @description Added in 1.50.0 (FR-CUS-023, ADR-068). erpPlanIds of the customer's invoices that were returned in the ERP (since 1.53.0 the same ids as `returnedPlans`). They are never in `plans`; a 1.50–1.52 client deletes stored plans with these ids. A 1.53 client may ignore it. Empty when none. Older servers omit it */
             returnedPlanIds?: string[];
+            /** @description Added in 1.53.0 (FR-CUS-024, ADR-071). The customer's invoices returned in the ERP, complete (replace the stored list): `Plan` with `returned: true`, `collectable: false`, status `closed`, empty `schedule` and their `payments`. Show them marked as returned; never count them (they are in no total, count, pay state, KPI or collectable list). Empty when none. Older servers omit it */
+            returnedPlans?: components["schemas"]["Plan"][];
             payments?: components["schemas"]["Payment"][];
             pendingCollections?: components["schemas"]["Collection"][];
             badSuggestion?: {
@@ -3995,6 +4011,10 @@ export interface components {
             payState?: components["schemas"]["PayState"];
             /** @description Added in 1.14.0 */
             missedCount?: number;
+            /** @description Added in 1.53.0 (FR-CUS-024). See CustomerListItem.returnedInvoiceCount */
+            returnedInvoiceCount?: number;
+            /** @description Added in 1.53.0 (FR-CUS-024). See CustomerListItem.onlyReturned (draw the returned marker; do not open the customer from the pin) */
+            onlyReturned?: boolean;
         };
         /** @description One GET /search hit (schema named in 1.52.0; the fields before `tag` are unchanged). */
         SearchResult: {
@@ -4005,6 +4025,10 @@ export interface components {
             subtitle?: string;
             /** @description Added in 1.52.0. Customer items only (`type: customer`); absent on user and receipt items and from older servers */
             tag?: components["schemas"]["TagSummary"];
+            /** @description Added in 1.53.0 (FR-CUS-024). Customer items only. See CustomerListItem.returnedInvoiceCount */
+            returnedInvoiceCount?: number;
+            /** @description Added in 1.53.0 (FR-CUS-024). Customer items only. See CustomerListItem.onlyReturned (a hit found by a returned invoice number shows the marker and is not opened) */
+            onlyReturned?: boolean;
         };
         TimelineItem: {
             /** @enum {string} */
@@ -4017,6 +4041,7 @@ export interface components {
             };
             summary?: components["schemas"]["I18nText"];
             refId?: string;
+            /** @description Kind-specific. `erp_payment`: receiptNo, method, reversed, erpPlanId (1.53.0) and `returned: true` (1.53.0, FR-CUS-024) when the payment went to a returned invoice (the summary says so too) */
             data?: {
                 [key: string]: unknown;
             };
@@ -5165,7 +5190,8 @@ export interface components {
             id?: string;
             /**
              * @description Present for op=upsert. Shape per entity (1.2.0 documents the mapping; values unchanged):
-             *     customer → CustomerDetail (1.50.0: `plans` is the full list without returned invoices; `returnedPlanIds` = ids to delete) · collection → Collection · visit → Visit · note → Note · promise → Promise ·
+             *     customer → CustomerDetail (1.50.0: `plans` is the full list without returned invoices; `returnedPlanIds` = ids to delete;
+             *     1.53.0: `returnedPlans` = the returned invoices to store flagged and never count, `returnedInvoiceCount`, `onlyReturned`) · collection → Collection · visit → Visit · note → Note · promise → Promise ·
              *     tag → Tag (with customerId) · handover → Handover · assignment → Assignment · area → Area · deposit → Deposit ·
              *     attendance_day → AttendanceDay · notification → Notification · broadcast → Broadcast · setting → { key, value } ·
              *     contact_attempt → ContactAttempt · location_proposal → OwnLocationProposal (1.7.0; sent only to the staff member who proposed, on create and on the manager's decision) ·
@@ -6110,7 +6136,7 @@ export interface components {
         PayStateFilter: components["schemas"]["PayState"][];
         /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
         InvoiceKind: "installment" | "credit";
-        /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
+        /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out; since 1.53.0 also payments to a returned invoice, FR-CUS-024) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
         PaidThisMonth: "yes" | "no";
         Limit: number;
         Cursor: string;
@@ -7231,7 +7257,7 @@ export interface operations {
                 assignedTo?: string;
                 branchId?: components["parameters"]["BranchId"];
                 areaId?: string;
-                /** @description Name (bn/en), customer code, ERP id, mobile number (last digits, 4 or more) or invoice number (separators ignored, e.g. S24052 finds S-24052). Bangla digits are accepted (2026-11-26). */
+                /** @description Name (bn/en), customer code, ERP id, mobile number (last digits, 4 or more) or invoice number (separators ignored, e.g. S24052 finds S-24052). Bangla digits are accepted (2026-11-26). Since 1.53.0 (FR-CUS-024) a returned invoice number finds its customer too; the row carries `returnedInvoiceCount` / `onlyReturned`. */
                 q?: string;
                 near?: string;
                 radiusM?: number;
@@ -7248,7 +7274,7 @@ export interface operations {
                 payState?: components["parameters"]["PayStateFilter"];
                 /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
                 invoiceKind?: components["parameters"]["InvoiceKind"];
-                /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
+                /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out; since 1.53.0 also payments to a returned invoice, FR-CUS-024) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
                 paidThisMonth?: components["parameters"]["PaidThisMonth"];
             };
             header?: never;
@@ -7280,7 +7306,7 @@ export interface operations {
                 payState?: components["parameters"]["PayStateFilter"];
                 /** @description Added in 1.14.0 (FR-CUS-013). Only customers with an open (balance due, not returned or cancelled) invoice of this kind. Cash invoices (1.44.0) are never open, so there is no `cash` value */
                 invoiceKind?: components["parameters"]["InvoiceKind"];
-                /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
+                /** @description Added in 1.29.0 (FR-CUS-019). `yes` = paid something in the current Asia/Dhaka month: an ERP payment dated this month (removed ones left out; since 1.53.0 also payments to a returned invoice, FR-CUS-024) or a field collection of this month still waiting for the ERP; `no` = neither. The same two sources as the row's `activity.paidPoisha` / `activity.pendingPoisha`, so the filter agrees with the row's money mark. Narrows with AND like the other parameters */
                 paidThisMonth?: components["parameters"]["PaidThisMonth"];
             };
             header?: never;

@@ -86,6 +86,9 @@ async function expectNoControlsOnPaper(page: Page) {
 }
 
 test('every list prints its data without buttons, search boxes, filters or checkboxes (FR-W-051)', async ({ page }) => {
+  // Collections opens on "today" and the mock records today's collections from 07:00 Dhaka: pin the clock to midday so
+  // the list has rows at any hour (CLAUDE.md §6: freeze time to Asia/Dhaka in tests that show dates).
+  await page.clock.setFixedTime(new Date('2026-11-22T12:00:00+06:00'));
   await login(page);
   for (const [title, section] of [[custBn.title, S.customers], [colBn.title, S.collections], [cashBn.title, S.collections], [promBn.title, S.field]] as const) {
     await nav(page, title, section);

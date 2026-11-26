@@ -17,6 +17,8 @@ import { PinIcon } from '@/shared/map/pin-icon';
 import { PageHeader } from '@/shared/ui/page';
 import { ErrorBanner, Skeleton } from '@/shared/ui/feedback';
 import { FilterChip, Segmented } from '@/shared/ui/primitives';
+import { ReturnedMark } from '@/shared/ui/badge';
+import { returnedMark } from '@/shared/ui/status';
 import { TagChip } from '@/shared/ui/tag-chip';
 import { pinTagLook } from '@/shared/ui/tag-look';
 import { MoneyText } from '@/shared/ui/money';
@@ -27,6 +29,8 @@ import { CustomerDrawer } from '../components/customer-drawer';
 import { payLabel, PayLegend, PayStateBadge } from '../components/pay-state';
 
 const LIST_MAX = 60;
+/** Corner mark of a pin whose customer has returned invoices (FR-W-074), in the returned badge's tone. */
+const RETURNED_CORNER = { fill: '--st-returned-fg', edge: '--neutral-0' } as const;
 const KINDS = ['all', 'installment', 'credit'] as const;
 type Start = MapViewpoint;
 
@@ -92,9 +96,12 @@ export function CustomerMapPage() {
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => {
           const s = payStateOf(p);
-          return { id: p.id!, lat: p.lat!, lng: p.lng!, token: psToken(s, 'pin'), title: `${p.name ?? ''} · ${payLabel(t, s, p.missedCount)}`, strong: p.id === drawerId, pin: payLook(s, p.missedCount, fmt), z: PAY_STATES.length - payRank(s) };
+          // FR-W-074: a customer with returned invoices gets a corner mark on the pin and says so in the pin's label
+          const ret = returnedMark(p);
+          const retLabel = ret ? ` · ${tc(`status.${ret.status}`, { n: fmt(ret.n) })}` : '';
+          return { id: p.id!, lat: p.lat!, lng: p.lng!, token: psToken(s, 'pin'), title: `${p.name ?? ''} · ${payLabel(t, s, p.missedCount)}${retLabel}`, strong: p.id === drawerId, pin: { ...payLook(s, p.missedCount, fmt), ...(ret ? { corner: RETURNED_CORNER } : {}) }, z: PAY_STATES.length - payRank(s) };
         }),
-    [pins, drawerId, t, fmt],
+    [pins, drawerId, t, tc, fmt],
   );
   const places = useMemo(() => branchMarkers(branches.data, { selectedId: branchId, locale, title: (name) => tc('map.branch', { name }) }), [branches.data, branchId, locale, tc]);
   const shown = useMemo(() => [...places, ...host.markers, ...markers], [places, host.markers, markers]);
@@ -258,7 +265,7 @@ export function CustomerMapPage() {
                           <span className="block truncate text-sm font-medium text-fg" lang={locale}>{p.name}</span>
                           <TagChip look={tag} />
                         </span>
-                        <span className="mt-0.5 block"><PayStateBadge state={payStateOf(p)} missed={p.missedCount} /></span>
+                        <span className="mt-0.5 flex flex-wrap items-center gap-1"><PayStateBadge state={payStateOf(p)} missed={p.missedCount} /><ReturnedMark of={p} /></span>
                       </span>
                       <MoneyText poisha={p.outstandingPoisha ?? 0} className="shrink-0 text-sm font-medium" />
                     </button>

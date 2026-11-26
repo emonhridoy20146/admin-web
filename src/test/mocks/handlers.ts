@@ -235,7 +235,8 @@ function mockActivity(c: db.MockCustomer): Pick<S['CustomerListItem'], 'activity
   const id = c.item.id;
   const visits = db.visits.filter((v) => v.row.customer?.id === id && db.dhakaDate(v.row.checkInAt ?? '').startsWith(month));
   const lastVisitAt = visits.map((v) => v.row.checkInAt ?? '').sort().pop() ?? null;
-  const paid = (c.detail.payments ?? []).filter((p) => !p.reversed && (p.date ?? '').startsWith(month));
+  // 1.53.0 (FR-CUS-024): payments to a returned invoice are shown, never counted
+  const paid = (c.detail.payments ?? []).filter((p) => !p.reversed && !p.returned && (p.date ?? '').startsWith(month));
   const pending = db.collections.filter((x) => x.customer?.id === id && ['received', 'posting', 'posting_failed', 'conflict'].includes(x.status ?? '') && db.dhakaDate(x.recordedAt ?? '').startsWith(month));
   const promises = db.promises.filter((p) => p.row.customer?.id === id);
   const due = promises.filter((p) => (p.row.promisedDate ?? '').startsWith(month));
@@ -602,7 +603,7 @@ export const handlers = [
     }
     return HttpResponse.json({
       clusters: [],
-      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged', tag: tagSummary(c.item.tag), payState: c.item.payState, missedCount: c.item.missedCount })),
+      pins: inBox.slice(0, 2000).map((c) => ({ id: c.item.id, lat: c.item.location!.lat!, lng: c.item.location!.lng!, status: worst(c.item.badges) as S['CustomerStatus'], name: (request.headers.get('Accept-Language') === 'bn' ? c.item.name?.bn : c.item.name?.en) ?? '', outstandingPoisha: c.item.totalOutstandingPoisha, tagged: c.item.tag?.state === 'tagged', tag: tagSummary(c.item.tag), payState: c.item.payState, missedCount: c.item.missedCount, returnedInvoiceCount: c.item.returnedInvoiceCount ?? 0, onlyReturned: !!c.item.onlyReturned })),
     });
   })),
   http.get(`${BASE}/location-proposals`, authed(({ ctx, url }) => {
@@ -1337,7 +1338,8 @@ export const handlers = [
         (c) =>
           `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code}`.toLowerCase().includes(term) ||
           (digits.length >= 4 && (c.item.phone ?? '').replace(/\D/g, '').includes(digits.slice(-10))) ||
-          (c.detail.plans ?? []).some((p) => bare(p.invoiceNo ?? '').includes(bare(term))),
+          // 1.53.0: a returned invoice number finds its customer too
+          [...(c.detail.plans ?? []), ...(c.detail.returnedPlans ?? [])].some((p) => bare(p.invoiceNo ?? '').includes(bare(term))),
       );
     }
     for (const f of filters) {
@@ -1388,7 +1390,8 @@ export const handlers = [
   http.get(`${BASE}/customers/:id/timeline`, authed(({ params, url }) => {
     const c = db.customerById(params.id!)!;
     const items: S['TimelineItem'][] = [
-      ...(c.detail.payments ?? []).slice(0, 12).map((p) => ({ kind: 'erp_payment' as const, at: `${p.date}T06:00:00Z`, actor: { name: p.source === 'field' ? c.item.assignee?.name : 'Office' }, summary: { bn: `ERP পেমেন্ট ${p.receiptNo}`, en: `ERP payment ${p.receiptNo}` }, refId: p.erpPaymentId, data: { amountPoisha: p.amountPoisha, method: p.method, source: p.source } })),
+      // 1.53.0: a payment to a returned invoice is on the timeline too, marked, with the summary saying so
+      ...(c.detail.payments ?? []).filter((p, i) => i < 12 || p.returned).map((p) => ({ kind: 'erp_payment' as const, at: `${p.date}T06:00:00Z`, actor: { name: p.source === 'field' ? c.item.assignee?.name : 'Office' }, summary: p.returned ? { bn: `ERP পেমেন্ট ${p.receiptNo} (ফেরত চালান)`, en: `ERP payment ${p.receiptNo} (returned invoice)` } : { bn: `ERP পেমেন্ট ${p.receiptNo}`, en: `ERP payment ${p.receiptNo}` }, refId: p.erpPaymentId, data: { amountPoisha: p.amountPoisha, method: p.method, source: p.source, receiptNo: p.receiptNo, reversed: !!p.reversed, erpPlanId: p.erpPlanId, ...(p.returned ? { returned: true } : {}) } })),
       ...(c.detail.pendingCollections ?? []).map((col) => ({ kind: 'collection' as const, at: col.recordedAt, actor: col.collector, summary: { bn: `মাঠে আদায় ${col.receiptNo}`, en: `Field collection ${col.receiptNo}` }, refId: col.id, data: { amountPoisha: col.amountPoisha, method: col.method, status: col.status } })),
       ...(c.detail.recentNotes ?? []).map((n) => ({ kind: 'note' as const, at: n.createdAt, actor: n.author, summary: { bn: n.text, en: n.text }, refId: n.id, data: { category: n.category } })),
       ...c.tagHistory.map((e) => ({ kind: 'tag' as const, at: e.at, actor: e.actor, summary: { bn: e.next?.state === 'tagged' ? 'খারাপ গ্রাহক হিসেবে ট্যাগ' : 'ট্যাগ সরানো হয়েছে', en: e.next?.state === 'tagged' ? 'Tagged as bad customer' : 'Tag removed' }, refId: e.id, data: { reason: e.reason } })),
@@ -1918,7 +1921,13 @@ export const handlers = [
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     if (q.length < 2) return problem(400, 'VALIDATION_FAILED', 'Query too short');
     const sc = scope(ctx, url);
-    const cs = db.customers.filter((c) => sc.includes(c.branchId) && `${c.item.name?.bn} ${c.item.name?.en} ${c.item.code} ${c.item.phone}`.toLowerCase().includes(q)).slice(0, 6).map((c) => ({ type: 'customer', id: c.item.id, title: `${c.item.name?.bn} · ${c.item.name?.en}`, subtitle: `${c.item.code} · ${c.item.phone}`, tag: tagSummary(c.item.tag) }));
+    // invoice numbers without separators, returned ones included (1.53.0, FR-CUS-024)
+    const bare = (v: string) => v.toLowerCase().replace(/[\s\-_/.]/g, '');
+    const byInvoice = (c: db.MockCustomer) => bare(q).length >= 4 && [...(c.detail.plans ?? []), ...(c.detail.returnedPlans ?? [])].some((p) => bare(p.invoiceNo ?? '').includes(bare(q)));
+    const cs = db.customers
+      .filter((c) => sc.includes(c.branchId) && (`${c.item.name?.bn} ${c.item.name?.en} ${c.item.code} ${c.item.phone}`.toLowerCase().includes(q) || byInvoice(c)))
+      .slice(0, 6)
+      .map((c) => ({ type: 'customer', id: c.item.id, title: `${c.item.name?.bn} · ${c.item.name?.en}`, subtitle: `${c.item.code} · ${c.item.phone}`, tag: tagSummary(c.item.tag), returnedInvoiceCount: c.item.returnedInvoiceCount ?? 0, onlyReturned: !!c.item.onlyReturned }));
     const us = db.users.filter((u) => u.branchIds?.some((b) => sc.includes(b)) && `${u.name?.bn} ${u.name?.en} ${u.employeeCode}`.toLowerCase().includes(q)).slice(0, 4).map((u) => ({ type: 'user', id: u.id, title: `${u.name?.bn} · ${u.name?.en}`, subtitle: `${u.employeeCode} · ${u.role}` }));
     const rs = db.collections.filter((c) => c.receiptNo?.toLowerCase().includes(q)).slice(0, 4).map((c) => ({ type: 'receipt', id: c.id, title: c.receiptNo, subtitle: `${c.customer?.name?.en}` }));
     return HttpResponse.json([...cs, ...us, ...rs]);

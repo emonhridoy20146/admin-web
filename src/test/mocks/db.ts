@@ -1697,3 +1697,76 @@ export const requests: MockRequest[] = [];
     });
   }
 }
+
+// ---------- returned invoices shown, never counted (contract 1.53.0, field-api FR-CUS-024 / ADR-071; FR-W-074) ----------
+// No random draws here, so everything above stays the same. Like field-api: a returned invoice is never in `plans` (and
+// so in no total, count, pay state or KPI); it is in `returnedPlans` with `returned: true`, `collectable: false`, an
+// empty schedule and its ERP payments, each `returned: true`. Those payments are also in the customer's `payments`.
+/** E2E handles: the only-returned demo customer and its returned invoice number. */
+export const RETURNED_DEMO = { onlyName: { bn: 'রহিমা খাতুন', en: 'Rahima Khatun' }, onlyInvoiceNo: 'INV-R77001', onlyErpId: 'C-777001' } as const;
+function returnedPayments(p: S['Plan'], base: string): S['Payment'][] {
+  const sale = p.saleDate ?? p.startDate ?? today();
+  const down = p.downPaymentPoisha ?? 0;
+  const rest = Math.max(0, (p.paidPoisha ?? 0) - down);
+  const rows: [string, number][] = [[sale, down], [dDate(sale).plus({ days: 30 }).toISODate()!, rest]];
+  return rows
+    .filter(([, amount]) => amount > 0)
+    .map(([date, amount], i) => {
+      payNo += 1;
+      return { erpPaymentId: `${base}-${i + 1}`, receiptNo: receiptOf(date, payNo), date, amountPoisha: amount, method: i ? 'bkash' : 'cash', methodLabel: i ? METHOD_LABEL.bkash : METHOD_LABEL.cash, source: 'office' as const, reversed: false, erpPlanId: p.erpPlanId, referrerName: OFFICE_REFERRER, advance: i === 0, returned: true };
+    })
+    .sort((a, b) => (b.date! < a.date! ? -1 : 1));
+}
+function setReturned(c: MockCustomer, returned: S['Plan'][]) {
+  const only = returned.length > 0 && !(c.detail.plans ?? []).some((p) => p.status !== 'cancelled');
+  for (const x of [c.item, c.detail]) Object.assign(x, { returnedInvoiceCount: returned.length, onlyReturned: only });
+  Object.assign(c.detail, { returnedPlans: returned, returnedPlanIds: returned.map((p) => p.erpPlanId!) });
+}
+// customers with mixed invoices: the returned LED TV sale (ci % 25 === 18) leaves `plans` for `returnedPlans`
+customers.forEach((c, ci) => {
+  const d = c.detail;
+  const moved = (d.plans ?? []).filter((p) => p.status === 'closed' && p.erpPlanId === `P-${91000 + ci}`);
+  if (!moved.length) {
+    setReturned(c, []);
+    return;
+  }
+  d.plans = (d.plans ?? []).filter((p) => !moved.includes(p));
+  const returned = moved.map((p) => {
+    const pays = returnedPayments(p, `ret-${ci}`);
+    return { ...p, status: 'closed' as const, returned: true, collectable: false, schedule: [], payments: pays };
+  });
+  d.payments = [...(d.payments ?? []), ...returned.flatMap((p) => p.payments ?? [])].sort((a, b) => ((a.date ?? '') < (b.date ?? '') ? 1 : -1));
+  setReturned(c, returned);
+});
+// a customer whose only invoice was returned ("returned product customer"): listed, on the map, found by the invoice no.
+// An existing paid-up customer of Barishal with no collection, promise or request takes this role (past visits are fine), so the customer count (400),
+// pages and every money total stay as they were.
+{
+  const b = branches[0]!;
+  const used = new Set<string>([
+    ...collections.map((x) => x.customer?.id ?? ''),
+    ...promises.map((x) => x.row.customerId ?? x.row.customer?.id ?? ''),
+    ...requests.map((x) => x.customerId ?? ''),
+  ]);
+  const c = [...customers].reverse().find(
+    (x) => x.branchId === b.id && x.item.tag?.state !== 'tagged' && x.item.location?.status === 'ok' && (x.item.totalOutstandingPoisha ?? 0) === 0 &&
+      !x.item.openPromise && !(x.detail.returnedPlans ?? []).length && !used.has(x.item.id ?? ''),
+  )!;
+  const sale = now().minus({ days: 95 }).toISODate()!;
+  const plan: S['Plan'] = {
+    erpPlanId: 'P-77001', kind: 'installment', invoiceNo: RETURNED_DEMO.onlyInvoiceNo, product: 'Refrigerator 252 L', saleDate: sale, startDate: sale, finalDueDate: dDate(sale).plus({ months: 10 }).toISODate()!,
+    installmentCount: 10, totalPayablePoisha: 5_600_000, downPaymentPoisha: 1_000_000, paidPoisha: 1_460_000, outstandingPoisha: 4_140_000, status: 'closed', badSuggested: false, frequency: 'monthly',
+    items: [{ name: 'Refrigerator', model: '252 L', qty: 1, serials: ['SN77001R'] }], schedule: [],
+  };
+  derivePlan(plan, b.id);
+  const pays = returnedPayments(plan, 'ret-only');
+  const returned: S['Plan'] = { ...plan, returned: true, collectable: false, payments: pays };
+  const fields: Partial<S['CustomerListItem']> = {
+    erpCustomerId: RETURNED_DEMO.onlyErpId, name: { ...RETURNED_DEMO.onlyName }, location: { lat: (b.lat ?? 22.7) + 0.004, lng: (b.lng ?? 90.37) + 0.004, status: 'ok', source: 'erp' },
+    installmentPoisha: null, overduePoisha: 0, totalOutstandingPoisha: 0, nextDueDate: null, daysOverdue: 0, badges: [], openPromise: null, pendingFieldPoisha: 0,
+    payState: 'paid_off', missedCount: 0, openInvoices: { installment: 0, credit: 0 },
+  };
+  Object.assign(c.item, fields);
+  Object.assign(c.detail, fields, { plans: [], payments: pays, pendingCollections: [], badSuggestion: null });
+  setReturned(c, [returned]);
+}

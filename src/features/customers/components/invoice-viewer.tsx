@@ -1,6 +1,6 @@
 'use client';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, CalendarClock, CircleCheck, CloudUpload, Receipt, UserRound } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CircleCheck, CloudUpload, Receipt, Undo2, UserRound } from 'lucide-react';
 import { useBranches } from '@/features/shell';
 import { cn } from '@/shared/lib/cn';
 import { formatDate, formatMoney, formatNumber, pickText, formatDaySpan } from '@/shared/lib/format';
@@ -14,7 +14,7 @@ import { PrintButton } from '@/shared/ui/print';
 import type { Tone } from '@/shared/ui/status';
 import type { components } from '@/shared/api/schema';
 import type { CustomerDetail } from '../api/customers';
-import { creditTerm, kindOf, lineRows, linesByPayment, missedOf, nextDue, penaltyPercent, planPayState, stateOf, usualInstallment, type LineState, type LineVM } from '../model/invoice';
+import { creditTerm, kindOf, lineRows, linesByPayment, missedOf, nextDue, penaltyPercent, planPayState, returnedPaymentsOf, stateOf, usualInstallment, type LineState, type LineVM } from '../model/invoice';
 import { frequencyLabel, guarantorPhones, itemLabel } from '../model/plan';
 import { PayStateBadge } from './pay-state';
 
@@ -26,8 +26,10 @@ const LINE_TONE: Record<LineState, Tone> = { paid: 'paid', paid_late: 'paid', pa
  * FR-W-028: one ERP invoice laid out to be read (and printed): what was sold, what it cost, what was paid, what is
  * left, and for installment sales every installment with its exact date, amount, what was paid on it and when.
  * ERP money is shown as the ERP sends it; field money not yet in the ERP is shown apart and labelled.
+ * `returned` (FR-W-074, contract 1.53.0): an invoice returned in the ERP, from `returnedPlans`. It gets a Returned chip
+ * and a note, no due date, schedule, terms or field money, its own `payments`, and no action besides print.
  */
-export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Plan; onBack: () => void }) {
+export function InvoiceViewer({ c, plan, onBack, returned = false }: { c: CustomerDetail; plan: Plan; onBack: () => void; returned?: boolean }) {
   const { t } = useTranslation('customers');
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
@@ -40,10 +42,10 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
   const pay = planPayState(plan, today);
   const rows = lineRows(plan, today);
   const branch = branches.data?.find((b) => b.id === plan.branchId);
-  const pending = (c.pendingCollections ?? []).filter((p) => p.erpPlanId === plan.erpPlanId && (p.amountPoisha ?? 0) > 0);
+  const pending = returned ? [] : (c.pendingCollections ?? []).filter((p) => p.erpPlanId === plan.erpPlanId && (p.amountPoisha ?? 0) > 0);
   const pendingPoisha = pending.reduce((s, p) => s + (p.amountPoisha ?? 0), 0);
-  const next = state === 'open' ? nextDue(plan, today) : null;
-  const term = credit ? creditTerm(plan, today) : null;
+  const next = state === 'open' && !returned ? nextDue(plan, today) : null;
+  const term = credit && !returned ? creditTerm(plan, today) : null;
   const no = plan.invoiceNo ?? plan.erpPlanId ?? '';
 
   return (
@@ -64,9 +66,10 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
             <p className="mt-0.5 text-base text-fg">{plan.product}</p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+            {returned && <StatusBadge status="returned" testId="returned-chip" />}
             {cash && <span data-testid="cash-sale-badge"><Badge tone="neutral">{t('invoice.kindCash')}</Badge></span>}
-            {pay && <PayStateBadge state={pay} missed={missedOf(plan, today)} />}
-            {state === 'closed' && !cash && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
+            {pay && !returned && <PayStateBadge state={pay} missed={missedOf(plan, today)} />}
+            {state === 'closed' && !cash && !returned && <Badge tone="neutral">{t(`planStatus.${plan.status}`)}</Badge>}
             {plan.badSuggested && <StatusBadge status="bad_suggested" />}
             {plan.status === 'defaulted' && <Badge tone="danger">{t('planStatus.defaulted')}</Badge>}
           </div>
@@ -89,11 +92,17 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
             {cash ? (
               <span className="text-lg font-semibold text-fg-secondary">{t('invoice.nothingDue')}</span>
             ) : (
-              <MoneyText poisha={plan.outstandingPoisha ?? 0} className={cn('text-lg font-semibold', state === 'open' && (plan.missedCount ?? 0) > 0 && 'text-st-overdue')} />
+              <MoneyText poisha={plan.outstandingPoisha ?? 0} className={cn('text-lg font-semibold', returned && 'text-fg-secondary', !returned && state === 'open' && (plan.missedCount ?? 0) > 0 && 'text-st-overdue')} />
             )}
           </Figure>
         </dl>
 
+        {returned && (
+          <p className="mt-3 flex gap-2 rounded-md bg-st-returned-bg px-3 py-2 text-sm text-st-returned" data-testid="returned-note">
+            <Undo2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{t('returned.viewerNote')}</span>
+          </p>
+        )}
         {cash && (
           <p className="mt-3 flex items-center gap-2 text-sm text-fg-secondary" data-testid="cash-sale-note">
             <CircleCheck className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
@@ -117,17 +126,29 @@ export function InvoiceViewer({ c, plan, onBack }: { c: CustomerDetail; plan: Pl
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] print:grid-cols-1">
         <div className="min-w-0 space-y-4">
-          {kind === 'installment' && <ScheduleCard plan={plan} rows={rows} />}
+          {kind === 'installment' && !returned && <ScheduleCard plan={plan} rows={rows} />}
           <ItemsCard plan={plan} />
-          <PaymentsCard c={c} plan={plan} rows={rows} />
+          <PaymentsCard c={c} plan={plan} rows={rows} returned={returned} />
         </div>
         <div className="space-y-4">
-          <MoneyCard plan={plan} credit={kind !== 'installment'} cash={cash} pendingPoisha={pendingPoisha} />
-          {kind === 'installment' && <TermsCard plan={plan} today={today} />}
+          <MoneyCard plan={plan} credit={kind !== 'installment'} cash={cash || returned} pendingPoisha={pendingPoisha} />
+          {kind === 'installment' && !returned && <TermsCard plan={plan} today={today} />}
           <GuarantorCard plan={plan} />
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * A table that may scroll sideways on a phone: keyboard users must be able to reach and scroll it (axe
+ * scrollable-region-focusable), so the box is a named, focusable region with a visible focus ring.
+ */
+function ScrollBox({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div role="region" aria-label={label} tabIndex={0} className={cn('scrollbar-thin overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-solid', className)}>
+      {children}
+    </div>
   );
 }
 
@@ -176,7 +197,7 @@ function ScheduleCard({ plan, rows }: { plan: Plan; rows: LineVM[] }) {
         <p className="px-4 py-6 text-sm text-fg-tertiary">{t('invoice.noSchedule')}</p>
       ) : (
         <>
-          <div className="scrollbar-thin hidden overflow-x-auto sm:block print:block">
+          <ScrollBox label={t('invoice.schedule')} className="hidden sm:block print:block">
             <table className="w-full text-sm">
               <caption className="sr-only">{t('invoice.schedule')} · {plan.invoiceNo}</caption>
               <thead className="bg-surface-subtle text-xs text-fg-secondary">
@@ -213,7 +234,7 @@ function ScheduleCard({ plan, rows }: { plan: Plan; rows: LineVM[] }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollBox>
           {/* phones: one card per installment */}
           <ol className="divide-y divide-line sm:hidden print:hidden" aria-label={t('invoice.schedule')}>
             {rows.map((r) => (
@@ -277,7 +298,7 @@ function ItemsCard({ plan }: { plan: Plan }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader title={t('items')} />
-      <div className="scrollbar-thin overflow-x-auto">
+      <ScrollBox label={t('items')}>
         <table className="w-full text-sm">
           <caption className="sr-only">{t('items')}</caption>
           <thead className="bg-surface-subtle text-xs text-fg-secondary">
@@ -305,7 +326,7 @@ function ItemsCard({ plan }: { plan: Plan }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollBox>
     </Card>
   );
 }
@@ -384,10 +405,11 @@ function TermsCard({ plan, today }: { plan: Plan; today: string }) {
   );
 }
 
-function PaymentsCard({ c, plan, rows }: { c: CustomerDetail; plan: Plan; rows: LineVM[] }) {
+function PaymentsCard({ c, plan, rows, returned }: { c: CustomerDetail; plan: Plan; rows: LineVM[]; returned?: boolean }) {
   const { t } = useTranslation('customers');
   const { t: tc } = useTranslation();
-  const list = (c.payments ?? []).filter((p) => p.erpPlanId === plan.erpPlanId);
+  // a returned invoice carries its own payments (1.53.0); the others are found in the customer's payment list
+  const list = returned ? returnedPaymentsOf(plan) : (c.payments ?? []).filter((p) => p.erpPlanId === plan.erpPlanId && !p.returned);
   const bySeq = linesByPayment(rows);
   return (
     <Card className="overflow-hidden">
@@ -398,7 +420,7 @@ function PaymentsCard({ c, plan, rows }: { c: CustomerDetail; plan: Plan; rows: 
           {t('invoice.noPayments')}
         </p>
       ) : (
-        <div className="scrollbar-thin overflow-x-auto">
+        <ScrollBox label={t('invoice.payments')}>
           <table className="w-full text-sm">
             <caption className="sr-only">{t('invoice.payments')}</caption>
             <thead className="bg-surface-subtle text-xs text-fg-secondary">
@@ -420,6 +442,7 @@ function PaymentsCard({ c, plan, rows }: { c: CustomerDetail; plan: Plan; rows: 
                       {p.receiptNo}
                       {p.reversed && <Badge tone="danger" className="ms-1">{t('payments.reversed')}</Badge>}
                       {p.advance && <Badge tone="info" icon={false} className="ms-1">{t('payments.advance')}</Badge>}
+                      {p.returned && <StatusBadge status="returned_payment" className="ms-1" testId="returned-payment-tag" />}
                     </td>
                     <td className="px-3 py-2">
                       {tc(`method.${p.method}`, { defaultValue: p.method })}
@@ -436,7 +459,7 @@ function PaymentsCard({ c, plan, rows }: { c: CustomerDetail; plan: Plan; rows: 
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollBox>
       )}
     </Card>
   );

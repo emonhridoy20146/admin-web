@@ -71,7 +71,11 @@
     "accepted": "গৃহীত",
     "cancelled": "বাতিল",
     "expired": "মেয়াদোত্তীর্ণ",
-    "reverted": "ফেরত গেছে"
+    "reverted": "ফেরত গেছে",
+    "returned": "ফেরত",
+    "returned_count": "ফেরত ×{{n}}",
+    "only_returned": "ফেরত পণ্যের customer",
+    "returned_payment": "ফেরত চালান"
   },
   "severity": {
     "critical": "জরুরি",
