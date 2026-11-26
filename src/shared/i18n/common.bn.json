@@ -75,6 +75,7 @@
     "returned": "ফেরত",
     "returned_count": "ফেরত ×{{n}}",
     "only_returned": "ফেরত পণ্যের customer",
+    "only_returned_hint": "ফেরত পণ্যের customer: কোনো খোলা চালান নেই",
     "returned_payment": "ফেরত চালান"
   },
   "severity": {

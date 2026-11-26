@@ -10,7 +10,7 @@ import { useGate } from '@/shared/feature/useGate';
 import { Kbd } from '@/shared/ui/primitives';
 import { Skeleton } from '@/shared/ui/feedback';
 import { ReturnedMark } from '@/shared/ui/badge';
-import type { ReturnedLike } from '@/shared/ui/status';
+import { opensCustomer, type ReturnedLike } from '@/shared/ui/status';
 import { TagChip } from '@/shared/ui/tag-chip';
 import { tagLookOf, type TagLike } from '@/shared/ui/tag-look';
 import { cn } from '@/shared/lib/cn';
@@ -84,8 +84,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   return (
                     <Command.Group key={type} heading={g.label} className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-fg-tertiary">
                       {items.map((r) => (
-                        // FR-W-074: an only-returned customer still opens in admin (coordinator decision 2026-11-26; the staff app does not)
-                        <Item key={r.id} onSelect={() => go(g.href(r.id!))} icon={g.icon} title={r.title!} subtitle={r.subtitle} tag={type === 'customer' ? r.tag : undefined} returned={type === 'customer' ? r : undefined} />
+                        // FR-W-074 (owner decision 2026-11-26, as the staff app): an only-returned customer is listed but does not open
+                        <Item key={r.id} onSelect={() => go(g.href(r.id!))} icon={g.icon} title={r.title!} subtitle={r.subtitle} tag={type === 'customer' ? r.tag : undefined} returned={type === 'customer' ? r : undefined} inert={type === 'customer' && !opensCustomer(r) ? t('status.only_returned_hint') : undefined} />
                       ))}
                     </Command.Group>
                   );
@@ -112,14 +112,19 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
 /**
  * A customer result with a bad tag is framed and shows its chip (FR-W-072, contract 1.52.0 `SearchResult.tag`); one with
- * returned invoices shows the returned marker (FR-W-074, contract 1.53.0).
+ * returned invoices shows the returned marker (FR-W-074, contract 1.53.0). An `inert` hit (an only-returned customer,
+ * FR-W-074) is a disabled item: the arrow keys skip it, Enter and clicks do nothing, and `inert` is its title and
+ * screen-reader text.
  */
-function Item({ onSelect, icon: Icon, title, subtitle, tag, returned }: { onSelect: () => void; icon: typeof Search; title: string; subtitle?: string; tag?: TagLike; returned?: ReturnedLike }) {
+function Item({ onSelect, icon: Icon, title, subtitle, tag, returned, inert }: { onSelect: () => void; icon: typeof Search; title: string; subtitle?: string; tag?: TagLike; returned?: ReturnedLike; inert?: string }) {
   const look = tagLookOf(tag);
   return (
     <Command.Item
-      onSelect={onSelect}
-      className={cn('flex min-h-10 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-base text-fg data-[selected=true]:bg-primary-subtle data-[selected=true]:text-primary-subtle-fg [@media(pointer:coarse)]:min-h-11', look && `${look.className} fos-tag-box my-1`)}
+      onSelect={inert ? undefined : onSelect}
+      disabled={!!inert}
+      title={inert}
+      data-inert={inert ? 'true' : undefined}
+      className={cn('flex min-h-10 items-center gap-3 rounded-sm px-2 py-1.5 text-base text-fg data-[selected=true]:bg-primary-subtle data-[selected=true]:text-primary-subtle-fg [@media(pointer:coarse)]:min-h-11', inert ? 'cursor-default' : 'cursor-pointer', look && `${look.className} fos-tag-box my-1`)}
       data-tag-border={look ? 'true' : undefined}
     >
       <span className="grid size-7 shrink-0 place-items-center rounded-sm border border-line bg-surface text-fg-tertiary">
@@ -132,6 +137,7 @@ function Item({ onSelect, icon: Icon, title, subtitle, tag, returned }: { onSele
           <ReturnedMark of={returned} className="shrink-0" />
         </span>
         {subtitle && <span className="block truncate text-xs text-fg-tertiary">{subtitle}</span>}
+        {inert && <span className="sr-only">{inert}</span>}
       </span>
     </Command.Item>
   );

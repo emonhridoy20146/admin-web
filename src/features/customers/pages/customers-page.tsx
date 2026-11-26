@@ -17,6 +17,7 @@ import { FilterChip, Segmented, Tooltip } from '@/shared/ui/primitives';
 import { SearchInput, Select } from '@/shared/ui/form';
 import { MoneyText } from '@/shared/ui/money';
 import { ReturnedMark, StatusBadges } from '@/shared/ui/badge';
+import { opensCustomer } from '@/shared/ui/status';
 import { Button } from '@/shared/ui/button';
 import { TagChip } from '@/shared/ui/tag-chip';
 import { CUSTOMER_PAGE_SIZES, useCustomerPage, type CustomerPageSize, type CustomerQuery } from '../api/customers';
@@ -34,6 +35,7 @@ const PAID_MONTH = ['all', 'yes', 'no'] as const;
 
 export function CustomersPage() {
   const { t } = useTranslation('customers');
+  const { t: tc } = useTranslation();
   const locale = useUi((s) => s.locale);
   useUi((s) => s.bnDigits);
   const url = useUrlState();
@@ -92,9 +94,14 @@ export function CustomersPage() {
           <span className={cn('h-8 w-[3px] shrink-0 rounded-full', PS_CLASS[r.payState].bar)} aria-hidden />
           <div className="min-w-0">
             <span className="flex min-w-0 items-center gap-1.5">
-              <Link href={`/customers/${r.id}/`} onClick={(e) => !(e.metaKey || e.ctrlKey) && e.preventDefault()} className="block max-w-[260px] min-w-0 truncate font-medium text-fg hover:text-primary" lang={locale}>
-                {r.name}
-              </Link>
+              {opensCustomer(r.item) ? (
+                <Link href={`/customers/${r.id}/`} onClick={(e) => !(e.metaKey || e.ctrlKey) && e.preventDefault()} className="block max-w-[260px] min-w-0 truncate font-medium text-fg hover:text-primary" lang={locale}>
+                  {r.name}
+                </Link>
+              ) : (
+                // FR-W-074: an only-returned customer does not open, so its name is not a link
+                <span className="block max-w-[260px] min-w-0 truncate font-medium text-fg" lang={locale} data-testid="customer-name">{r.name}</span>
+              )}
               <TagChip look={r.tagLook} />
             </span>
             <span className="block max-w-[260px] truncate font-mono text-xs text-fg-tertiary">{r.code}</span>
@@ -111,7 +118,7 @@ export function CustomersPage() {
         <span className="inline-flex flex-wrap items-center gap-1">
           <PayStateBadge state={r.payState} missed={r.missedCount} />
           <StatusBadges statuses={extraStatuses(r.statuses)} max={1} />
-          {/* FR-W-074: returned invoices are shown, never counted; an only-returned row stays clickable in admin (coordinator 2026-11-26) */}
+          {/* FR-W-074: returned invoices are shown, never counted; an only-returned row keeps its marker but does not open (owner 2026-11-26) */}
           <ReturnedMark of={r.item} />
         </span>
       ),
@@ -302,6 +309,8 @@ export function CustomersPage() {
                 url.set({ sort: allowed.includes(next) ? next : null, page: null });
         }}
         onRowClick={(r) => url.set({ drawer: `customer:${r.id}` }, { push: true })}
+        // FR-W-074 (owner decision 2026-11-26, as the staff app): an only-returned customer's row and card do not open
+        rowInert={(r) => (opensCustomer(r.item) ? null : tc('status.only_returned_hint'))}
         pager={{
           page,
           hasPrev: page > 1,

@@ -56,7 +56,7 @@ const prioClass: Record<number, string> = {
 
 export function DataTable<T>({
   tableId, columns, rows, rowKey, loading, error, onRetry, onRowClick, sort, onSortChange, empty, pager,
-  selectable, selection, onSelectionChange, bulkBar, activeRowKey, caption, rowBorderClass,
+  selectable, selection, onSelectionChange, bulkBar, activeRowKey, caption, rowBorderClass, rowInert,
 }: {
   tableId: string;
   columns: Column<T>[];
@@ -81,6 +81,12 @@ export function DataTable<T>({
    * The table draws it around the row; the < 640 px card list draws it around the card.
    */
   rowBorderClass?: (r: T) => string | null | undefined;
+  /**
+   * A row that does not open (FR-W-074: an only-returned customer) returns why. It stays listed but takes no click, no
+   * Enter and no focus as an action (no open button on its card); it carries `aria-disabled` and the reason as its
+   * title and as screen-reader text. Selection checkboxes and the cells' own controls are unaffected.
+   */
+  rowInert?: (r: T) => string | null | undefined;
 }) {
   const { t } = useTranslation();
   const density = useUi((s) => s.density);
@@ -224,6 +230,8 @@ export function DataTable<T>({
                     const k = row.id;
                     const sel = selection?.has(k);
                     const border = rowBorderClass?.(row.original);
+                    const inert = onRowClick ? rowInert?.(row.original) : null;
+                    const open = inert ? undefined : onRowClick;
                     return (
                       <tr
                         key={k}
@@ -231,17 +239,20 @@ export function DataTable<T>({
                           rowH,
                           border,
                           'group transition-colors duration-[var(--dur-fast)]',
-                          onRowClick && 'cursor-pointer',
+                          open && 'cursor-pointer',
                           sel || activeRowKey === k ? 'bg-primary-subtle' : 'hover:bg-surface-hover',
                         )}
                         onClick={(e) => {
                           if ((e.target as HTMLElement).closest('button,a,input,[role=checkbox]')) return;
-                          onRowClick?.(row.original);
+                          open?.(row.original);
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && e.target === e.currentTarget) onRowClick?.(row.original);
+                          if (e.key === 'Enter' && e.target === e.currentTarget) open?.(row.original);
                         }}
-                        tabIndex={onRowClick ? 0 : undefined}
+                        tabIndex={open ? 0 : undefined}
+                        aria-disabled={inert ? true : undefined}
+                        title={inert || undefined}
+                        data-inert={inert ? 'true' : undefined}
                         data-row-key={k}
                         data-tag-border={border ? 'true' : undefined}
                       >
@@ -263,6 +274,7 @@ export function DataTable<T>({
                               )}
                             >
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              {inert && i === 0 && <span className="sr-only"> {inert}</span>}
                             </td>
                           );
                         })}
@@ -284,6 +296,7 @@ export function DataTable<T>({
               ))
             : (rows ?? []).map((r) => {
                 const k = rowKey(r);
+                const inert = onRowClick ? rowInert?.(r) : null;
                 return (
                   <MobileCard
                     key={k}
@@ -291,7 +304,8 @@ export function DataTable<T>({
                     columns={columns}
                     border={rowBorderClass?.(r)}
                     selected={!!selection?.has(k)}
-                    onOpen={onRowClick}
+                    onOpen={inert ? undefined : onRowClick}
+                    inert={inert}
                     onToggle={selectable ? () => toggleRow(k) : undefined}
                   />
                 );
@@ -322,8 +336,10 @@ export function DataTable<T>({
  * a link that handles its own plain click (calls preventDefault, like the customer name) opens the card too, while a
  * link that navigates (or a ⌘/Ctrl-click) is left alone.
  */
-function MobileCard<T>({ row, columns, border, selected, onOpen, onToggle }: {
+function MobileCard<T>({ row, columns, border, selected, onOpen, onToggle, inert }: {
   row: T;
+  /** why the card does not open (`rowInert`): no tap action, no open button, `aria-disabled` + title + screen-reader text */
+  inert?: string | null;
   columns: Column<T>[];
   border?: string | null;
   selected: boolean;
@@ -350,11 +366,17 @@ function MobileCard<T>({ row, columns, border, selected, onOpen, onToggle }: {
           border && `${border} fos-tag-box px-2.5`,
         )}
         data-tag-border={border ? 'true' : undefined}
+        aria-disabled={inert ? true : undefined}
+        title={inert || undefined}
+        data-inert={inert ? 'true' : undefined}
       >
         {onToggle && <Checkbox className="mt-1" aria-label={t('table.selectRow')} checked={selected} onCheckedChange={onToggle} />}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div id={titleId} className="min-w-0 truncate font-medium text-fg">{by('title').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>
+            <div id={titleId} className="min-w-0 truncate font-medium text-fg">
+              {by('title').map((c) => <span key={c.id}>{c.cell(row)}</span>)}
+              {inert && <span className="sr-only"> {inert}</span>}
+            </div>
             <div className="tabular shrink-0 text-end font-medium">{by('amount').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>
           </div>
           {by('subtitle').length > 0 && <div className="mt-0.5 truncate text-sm text-fg-tertiary">{by('subtitle').map((c) => <span key={c.id}>{c.cell(row)}</span>)}</div>}

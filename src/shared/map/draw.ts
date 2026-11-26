@@ -21,11 +21,13 @@ export function drawMarker(lf: typeof Leaflet, group: Leaflet.LayerGroup, m: Map
   }
   if (m.pin) {
     const [w, h] = pinSize(m.strong);
-    const icon = lf.divIcon({ className: '', iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4], html: pinIconHtml(m.pin, m.strong) });
-    const mk = lf.marker([m.lat, m.lng], { icon, keyboard: false, interactive, riseOnHover: interactive, title: m.label ? m.title : '', zIndexOffset: (m.z ?? 0) * 1000 + (m.strong ? 10_000 : 0) })
+    // an inert pin stays hoverable (its tooltip says why) but takes no click
+    const icon = lf.divIcon({ className: m.inert ? 'fos-marker-inert' : '', iconSize: [w, h], iconAnchor: [w / 2, h], tooltipAnchor: [0, -h + 4], html: pinIconHtml(m.pin, m.strong) });
+    const mk = lf.marker([m.lat, m.lng], { icon, keyboard: false, interactive, riseOnHover: interactive && !m.inert, title: m.label ? m.title : '', zIndexOffset: (m.z ?? 0) * 1000 + (m.strong ? 10_000 : 0) })
       .bindTooltip(m.label ?? m.title, m.label ? { permanent: true, direction: 'right', offset: [w / 2 - 2, -h / 2], className: 'fos-map-label' } : { direction: 'top' });
-    if (interactive) mk.on('click', click);
+    if (interactive && !m.inert) mk.on('click', click);
     mk.addTo(group);
+    if (m.inert) mk.getElement()?.setAttribute('aria-disabled', 'true');
     return;
   }
   const color = token(m.token);

@@ -65,3 +65,47 @@ describe('DataTable card list', () => {
     expect(within(list()).queryByRole('button', { name: /^Open / })).toBeNull();
   });
 });
+
+/** FR-W-074 (owner decision 2026-11-26): a row that does not open (`rowInert`) stays listed, takes no click, Enter or focus. */
+describe('DataTable rowInert', () => {
+  const why = 'Returned product customer: no open invoices';
+  const inert = (r: Row) => (r.id === 'b' ? why : null);
+
+  it('the table row takes no click or Enter, is not focusable, and says why', () => {
+    const onRowClick = vi.fn();
+    const { container } = render(<DataTable tableId="t" caption="Customers" columns={columns()} rows={rows} rowKey={(r) => r.id} onRowClick={onRowClick} rowInert={inert} />);
+    const tr = container.querySelector('tr[data-row-key="b"]') as HTMLElement;
+    expect(tr).toHaveAttribute('aria-disabled', 'true');
+    expect(tr).toHaveAttribute('title', why);
+    expect(tr).not.toHaveAttribute('tabindex');
+    expect(tr.className).not.toMatch(/cursor-pointer/);
+    expect(tr).toHaveTextContent(why);
+    fireEvent.click(tr.querySelector('td')!);
+    fireEvent.keyDown(tr, { key: 'Enter' });
+    expect(onRowClick).not.toHaveBeenCalled();
+
+    const ok = container.querySelector('tr[data-row-key="a"]') as HTMLElement;
+    expect(ok).toHaveAttribute('tabindex', '0');
+    expect(ok).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(ok.querySelector('td')!);
+    expect(onRowClick).toHaveBeenCalledWith(rows[0]);
+  });
+
+  it('the card has no open button, takes no tap, stays listed and says why', () => {
+    const onRowClick = vi.fn();
+    render(<DataTable tableId="t" caption="Customers" columns={columns()} rows={rows} rowKey={(r) => r.id} onRowClick={onRowClick} rowInert={inert} />);
+    const ul = list();
+    expect(within(ul).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(ul).getAllByRole('button', { name: /^Open / })).toHaveLength(1);
+    expect(within(ul).queryByRole('button', { name: 'Open Lima' })).toBeNull();
+    const card = ul.querySelector('[data-inert="true"]') as HTMLElement;
+    expect(card).toHaveAttribute('aria-disabled', 'true');
+    expect(card).toHaveAttribute('title', why);
+    expect(card).toHaveTextContent(why);
+    expect(card.className).not.toMatch(/cursor-pointer/);
+    fireEvent.click(within(card).getByText('Act:'));
+    expect(onRowClick).not.toHaveBeenCalled();
+    fireEvent.click(within(ul).getByRole('button', { name: 'Open Ali' }));
+    expect(onRowClick).toHaveBeenCalledWith(rows[0]);
+  });
+});

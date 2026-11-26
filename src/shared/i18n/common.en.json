@@ -75,6 +75,7 @@
     "returned": "Returned",
     "returned_count": "Returned ×{{n}}",
     "only_returned": "Returned product customer",
+    "only_returned_hint": "Returned product customer: no open invoices",
     "returned_payment": "Returned invoice"
   },
   "severity": {

@@ -30,6 +30,11 @@ export interface MapMarker extends LatLng {
   tile?: TileLook;
   /** not clickable (clicks go to the map underneath, e.g. in a point picker) */
   passive?: boolean;
+  /**
+   * shown with its hover tooltip (`title`) but does not open: no click, default cursor, `aria-disabled` on the icon
+   * (FR-W-074: the pin of an only-returned customer)
+   */
+  inert?: boolean;
 }
 
 export interface MapCluster extends LatLng {
