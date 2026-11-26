@@ -140,6 +140,18 @@ export function InvoiceViewer({ c, plan, onBack, returned = false }: { c: Custom
   );
 }
 
+/**
+ * A table that may scroll sideways on a phone: keyboard users must be able to reach and scroll it (axe
+ * scrollable-region-focusable), so the box is a named, focusable region with a visible focus ring.
+ */
+function ScrollBox({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div role="region" aria-label={label} tabIndex={0} className={cn('scrollbar-thin overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-solid', className)}>
+      {children}
+    </div>
+  );
+}
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -185,7 +197,7 @@ function ScheduleCard({ plan, rows }: { plan: Plan; rows: LineVM[] }) {
         <p className="px-4 py-6 text-sm text-fg-tertiary">{t('invoice.noSchedule')}</p>
       ) : (
         <>
-          <div className="scrollbar-thin hidden overflow-x-auto sm:block print:block">
+          <ScrollBox label={t('invoice.schedule')} className="hidden sm:block print:block">
             <table className="w-full text-sm">
               <caption className="sr-only">{t('invoice.schedule')} · {plan.invoiceNo}</caption>
               <thead className="bg-surface-subtle text-xs text-fg-secondary">
@@ -222,7 +234,7 @@ function ScheduleCard({ plan, rows }: { plan: Plan; rows: LineVM[] }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollBox>
           {/* phones: one card per installment */}
           <ol className="divide-y divide-line sm:hidden print:hidden" aria-label={t('invoice.schedule')}>
             {rows.map((r) => (
@@ -286,7 +298,7 @@ function ItemsCard({ plan }: { plan: Plan }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader title={t('items')} />
-      <div className="scrollbar-thin overflow-x-auto">
+      <ScrollBox label={t('items')}>
         <table className="w-full text-sm">
           <caption className="sr-only">{t('items')}</caption>
           <thead className="bg-surface-subtle text-xs text-fg-secondary">
@@ -314,7 +326,7 @@ function ItemsCard({ plan }: { plan: Plan }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollBox>
     </Card>
   );
 }
@@ -408,7 +420,7 @@ function PaymentsCard({ c, plan, rows, returned }: { c: CustomerDetail; plan: Pl
           {t('invoice.noPayments')}
         </p>
       ) : (
-        <div className="scrollbar-thin overflow-x-auto">
+        <ScrollBox label={t('invoice.payments')}>
           <table className="w-full text-sm">
             <caption className="sr-only">{t('invoice.payments')}</caption>
             <thead className="bg-surface-subtle text-xs text-fg-secondary">
@@ -447,7 +459,7 @@ function PaymentsCard({ c, plan, rows, returned }: { c: CustomerDetail; plan: Pl
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollBox>
       )}
     </Card>
   );

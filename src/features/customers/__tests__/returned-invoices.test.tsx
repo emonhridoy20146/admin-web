@@ -116,6 +116,10 @@ describe('invoice viewer', () => {
     const payments = screen.getByRole('table', { name: en.invoice.payments });
     expect(within(payments).getByText('PAY-20260801-00001')).toBeInTheDocument();
     expect(within(payments).getAllByTestId('returned-payment-tag')).toHaveLength(2);
+    // the sideways-scrolling table box is reachable by keyboard (axe scrollable-region-focusable at 390 px)
+    const region = screen.getByRole('region', { name: en.invoice.payments });
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toContainElement(payments);
   });
 
   it('a counted invoice never lists a payment marked returned', () => {
