@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed (owner request 2026-11-26: returned invoices are not shown)
+- Contract: field-api **1.50.0** (field-api `main` ec06250, PR #48, FR-CUS-023, ADR-068). `pnpm gen:api` from `contract/openapi.yaml`. The API no longer returns returned invoices in customer plans, counts, invoice totals or search; it adds `returnedPlanIds` (ignored by admin-web). No UI change needed.
+
 ### Changed (owner request 2026-11-26: find a customer by invoice number or mobile number)
 - The customer search box and the global search say they take a mobile or invoice number: "নাম, কোড, মোবাইল বা ইনভয়েস নম্বর" / "Name, code, mobile or invoice no.". The matching is done by field-api `GET /customers?q=` (field-api PR #46: invoice numbers without separators, Bangla digits). The mock API follows the same rules.
 
