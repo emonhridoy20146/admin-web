@@ -5,12 +5,16 @@ import { sections } from '../navigation';
 
 const all: Gate = { can: () => true, flag: () => true };
 
-/** FR-W-069 / ADR-W28: the real IA. Owner asked for roughly 8–12 sidebar items. */
+/** FR-W-069 / FR-W-075 (ADR-W32): the real IA — 8 sidebar sections, the multi-page ones fold open into submenus. */
 describe('panel navigation', () => {
-  it('has 8–12 sidebar items for a super admin with every module on', () => {
-    const n = navEntries(all).length;
-    expect(n).toBeGreaterThanOrEqual(8);
-    expect(n).toBeLessThanOrEqual(12);
+  it('has the 8 sidebar sections in order for a super admin with every module on', () => {
+    const ids = navEntries(all).map((e) => (e.kind === 'section' ? e.nav.section.id : e.route.path));
+    expect(ids).toEqual(['/', 'inbox', 'customers', 'collections', 'field', 'staff', 'reports', 'admin']);
+  });
+
+  it('gives every section but Reports more than one page, so they show as submenus; Reports stays a plain item', () => {
+    const multi = navEntries(all).flatMap((e) => (e.kind === 'section' && e.nav.tabs.length > 1 ? [e.nav.section.id] : []));
+    expect(multi).toEqual(['inbox', 'customers', 'collections', 'field', 'staff', 'admin']);
   });
 
   it('places every nav page in a section except the overview', () => {

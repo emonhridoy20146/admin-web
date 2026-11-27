@@ -42,6 +42,9 @@ Broadcasts, leave approvals, day-sheet planner, print views, SMS logs.
 
 Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/attendance/leave`), holidays and shifts (`/attendance/calendar`, shift in the user form) and notices with read tracking (`/notices`) are done on contract 1.12.0 with journeys and axe. Left: day-sheet planner, SMS logs.
 
+## Status notes (2026-11-27, sidebar submenus)
+- ☑ Sidebar sections fold open into submenus of their pages again (as dec58c6); the tab strip above pages is gone; fold state kept in the browser, the open page's section always unfolded; icon-only sidebar and phone menu covered (FR-W-075, ADR-W32). No contract change.
+
 ## Status notes (2026-11-26, contract 1.53.0: returned invoices shown, never counted)
 - ☑ Contract **1.53.0** pinned (FR-CUS-024, ADR-071).
 - ☑ "Returned ×N" / "Returned product customer" marker on the Customers table and cards, map list and pins, ⌘K results (FR-W-074, ADR-W31). Only-returned rows, cards, pins and ⌘K hits do **not** open (owner decision 2026-11-26, reverses PR #44): listed with the marker, `aria-disabled` + "Returned product customer: no open invoices"; a direct link still works.
@@ -59,7 +62,7 @@ Status (2026-11-17): ◐ brought forward on owner request: leave approvals (`/at
 ## Status notes (2026-11-24, batch 1124)
 - ☑ A — Drawer padding fixed at the root (shared `Drawer` body pads `space.20`), guarded by a component test and an e2e over 11 drawers at 390/1440 px (FR-W-067).
 - ☑ B — Audit log uses the shared date filter; server `from`/`to` (already in the pinned contract), no client-side filtering (FR-W-068).
-- ☑ C — Sidebar 8 items with section tab strips; every page kept its URL (FR-W-069, ADR-W28).
+- ☑ C — Sidebar 8 items with section tab strips; every page kept its URL (FR-W-069, ADR-W28). *Tab strips replaced by sidebar submenus on 2026-11-27 (FR-W-075, ADR-W32).*
 - ☑ D — Requests inbox on contract 1.48.0 (FR-W-070, ADR-W29). Live: turn `module.requests` on in Feature flags.
 - ☑ E — Area manager role in users, branch switcher and permissions (FR-W-071).
 - Contract pinned on the branch: **1.48.0** (field-api main 360ce85). Before it, `main` read 1.46.0; no 1.47.0 contract was in this repo.

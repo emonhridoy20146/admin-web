@@ -46,7 +46,7 @@ describe('sections', () => {
     expect(navSections(g).map((s) => s.section.id)).toEqual(['customers']);
   });
 
-  it('finds the section and the longest matching tab; pages below a tab highlight it without the strip', () => {
+  it('finds the section and the longest matching tab; pages below a page highlight it in the submenu', () => {
     const g = gate(['customer.view', 'collection.view']);
     expect(sectionForPath('/collections/conflicts/', g)).toMatchObject({ nav: { section: { id: 'collections' } }, active: { path: '/collections/conflicts' }, exact: true });
     expect(sectionForPath('/collections/', g)?.active.path).toBe('/collections');
