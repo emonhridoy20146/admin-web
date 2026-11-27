@@ -19,7 +19,8 @@ test('staff activity: the bell counts new lines, the feed names person and custo
   await expect(page.getByRole('link', { name: new RegExp(`^${actBn.bell}: `) })).toHaveCount(0);
   await expect(page.getByRole('link', { name: actBn.bell, exact: true })).toHaveCount(2);
 
-  await page.getByRole('button', { name: actBn.type.collection, exact: true }).click();
+  // scoped to the page: the sidebar's Collections heading is a button with the same name (FR-W-075)
+  await page.locator('main').getByRole('button', { name: actBn.type.collection, exact: true }).click();
   await page.waitForURL(/type=collection/);
   await expect(lines.first()).toContainText(actBn.line.collection);
   await expect(lines.first().getByRole('link')).toHaveAttribute('href', /\/collections\/\?drawer=collection:/);

@@ -3,12 +3,13 @@ import rbacBn from '../../src/features/admin-rbac/i18n/bn.json' with { type: 'js
 import flagsBn from '../../src/features/admin-flags/i18n/bn.json' with { type: 'json' };
 import auditBn from '../../src/features/audit/i18n/bn.json' with { type: 'json' };
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
+import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
 import devBn from '../../src/features/admin-devices/i18n/bn.json' with { type: 'json' };
 import sysBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
 import settingsBn from '../../src/features/admin-settings/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { confirmWithReason, login, nav, pickRange, S } from '../fixtures';
+import { confirmWithReason, login, nav, pickRange, S, submenu } from '../fixtures';
 
 test('W-E8 deny tag.set for one user; effective view shows source user; audit shows the diff', async ({ page }) => {
   await login(page);
@@ -40,9 +41,9 @@ test('W-E9 turning a module off hides its nav item and the direct route shows th
   await cashFlag.getByRole('switch').click();
   await confirmWithReason(page, 'Cash module paused during the audit week.', flagsBn.turnOff);
   await expect(page.getByRole('navigation').first().getByRole('link', { name: cashBn.title })).toHaveCount(0);
-  // FR-W-069: cash is a tab of the Collections section; with the module off the tab is gone and the section stays
-  await nav(page, S.collections);
-  await expect(page.getByTestId('section-tabs').getByRole('link', { name: new RegExp(`^${cashBn.title}`) })).toHaveCount(0);
+  // FR-W-075: cash is a page of the Collections submenu; with the module off the page is gone and the section stays
+  await nav(page, colBn.title, S.collections);
+  await expect(submenu(page.getByRole('navigation').first(), S.collections).getByRole('link', { name: new RegExp(`^${cashBn.title}`) })).toHaveCount(0);
   // keyboard shortcut g h navigates client-side to /cash/
   await page.locator('main').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('g');

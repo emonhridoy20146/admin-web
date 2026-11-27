@@ -186,24 +186,27 @@ lucide (web) / Material Symbols Rounded (app) mapped by meaning in this table so
 - Header shows **ERP freshness dot** (green < 15 min, amber < 60, red otherwise) — click → ERP status panel.
 - Branch switcher is global; persists in URL (`?branch=`) and localStorage; managers with one branch see a static label.
 
-### Navigation: sections with tabs (FR-W-069, ADR-W28)
-The sidebar has **8 items**; related pages are tabs of one section. The list lives in `src/app/navigation.ts` (the only place to regroup).
+### Navigation: sidebar sections with submenus (FR-W-075, ADR-W32; was tabs, FR-W-069 / ADR-W28)
+The sidebar has **8 sections**; a multi-page section folds open into a submenu of its pages. The list lives in `src/app/navigation.ts` (the only place to regroup).
 
-| Sidebar item | Tabs (each its own route) |
+| Sidebar section | Submenu pages (each its own route) |
 |---|---|
-| Overview | — (`/`) |
+| Overview | — plain item (`/`) |
 | Inbox | Inbox `/inbox` · Requests `/requests` · Staff activity `/activity` · Notices `/notices` |
 | Customers | Customers `/customers` · Customer map `/map` · Pin approvals `/pin-approvals` · Possible customers `/prospects` · Areas & assignments `/areas` · Data quality `/data-quality` |
 | Collections | Collections `/collections` · Conflicts `/collections/conflicts` · Cash on hand `/cash` · Handovers `/handovers` |
 | Field work | Visits `/visits` · Co-work `/cowork` · Promises `/promises` · Tasks `/tasks` · Places `/places` |
 | Staff | Staff `/staff` · Attendance `/attendance` · Leave requests `/attendance/leave` · Live map `/live` · Route history `/routes` · Leaderboard `/leaderboard` · Targets `/targets` |
-| Reports | — (`/reports`, with its own Reports / Reconciliation / Downloads tabs) |
+| Reports | — plain item (`/reports`, with its own Reports / Reconciliation / Downloads tabs) |
 | Admin | Users `/admin/users` · Devices `/admin/devices` · Permissions `/admin/permissions` · Settings `/admin/settings` · Holidays & shifts `/attendance/calendar` · Feature flags `/admin/flags` · Audit log `/admin/audit` · Photo storage `/admin/photos` · System health `/admin/system` |
 
-- Groups (top · field · insights · admin) are separated by a rule; no headings.
-- A tab shows only with its module flag on and its permission held; a section without visible tabs is hidden; the sidebar item opens the first visible tab, with the filters it was left with.
-- The **section tab strip** (`SectionTabs`, shell) sits above the page header on a tab page, not on pages below a tab (customer detail, place move requests: there only the sidebar item is highlighted). Underline tabs, `text.sm`, icon + label + count badge; active = `primary` text and a 2 px `primary` underline; ≥ 44 px on touch; scrolls sideways under `lg` with a fade at the end edge; tab text lines up with the page content edge; hidden on paper. It is a `nav` ("Customers pages") with `aria-current="page"`, not a tablist.
-- Section badge = sum of the tabs in `badgeFrom` (actionable queues only).
+- Groups (top · field · insights · admin) are separated by a rule.
+- **Section heading:** a `button` (`aria-expanded`, `aria-controls`), h 36 (44 on touch), section icon 18 px + `text.base` medium label + chevron (rotated −90° when folded); the heading of the section holding the open page uses `fg` text and a `primary` icon. Folded, it shows the section's count pill (sum of `badgeFrom`).
+- **Submenu items:** indented `space.16` behind a 1 px `line` guide (`border-s`), h 36 (44 on touch), 16 px icon + `text.sm` label + count pill; the open page = `primary-subtle` bg, semibold, 3 px `primary` start bar, `aria-current="page"`. The list is named "<section> pages".
+- The section holding the open page (also on pages below it: customer detail, place move requests) is always unfolded; fold state is a preference in `fos.ui.navClosed`.
+- **Icon-only sidebar** (collapsed, or the 64 px rail below `lg`): no headings; every page an icon with a tooltip, sections separated by a rule. **Phone menu:** the same submenus.
+- A page shows only with its module flag on and its permission held; a section without visible pages is hidden; a section with one visible page is a plain item. Links reopen a page with the filters it was left with (memory only).
+- No tab strip above the page (removed 2026-11-27).
 - Every old URL is still a page; a new page goes into a section in `navigation.ts` (until then it shows as its own sidebar item).
 
 ## 4. Page inventory (each with default sort and primary action)

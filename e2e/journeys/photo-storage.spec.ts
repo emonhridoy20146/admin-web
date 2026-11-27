@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import systemBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
 import attendanceBn from '../../src/features/attendance/i18n/bn.json' with { type: 'json' };
-import { login, nav, S } from '../fixtures';
+import { login, nav, S, submenu } from '../fixtures';
 
 // Owner request 2026-11-22 (FR-W-054/055, master FR-MED-002..004, field-api 1.37.0 ADR-050): photos live in Cloudinary;
 // from the 5th the previous months' photos can be deleted in one go after typing DELETE <YYYY-MM>; an admin deletes the
@@ -55,10 +55,11 @@ test('photo storage: alert from the 5th, typed confirmation, deletes every previ
 test('photo storage is not offered to a manager (media.delete is super admin only)', async ({ page }) => {
   await login(page, 'manager');
   await expect(page.getByRole('navigation').first().getByRole('link', { name: new RegExp(`^${systemBn.photos.title}`) })).toHaveCount(0);
-  // FR-W-069: photos is a tab of Admin; the manager sees the Admin section (users) without it
-  await page.getByRole('navigation').first().getByRole('link', { name: S.admin }).click();
-  await expect(page.getByTestId('section-tabs')).toBeVisible();
-  await expect(page.getByTestId('section-tabs').getByRole('link', { name: new RegExp(`^${systemBn.photos.title}`) })).toHaveCount(0);
+  // FR-W-075: photos is a page of the Admin submenu; the manager sees the Admin section (users) without it
+  const admin = submenu(page.getByRole('navigation').first(), S.admin);
+  await expect(admin).toBeVisible();
+  await expect(admin.getByRole('link').first()).toBeVisible();
+  await expect(admin.getByRole('link', { name: new RegExp(`^${systemBn.photos.title}`) })).toHaveCount(0);
   await expect(page.getByTestId('purge-alert')).toHaveCount(0);
 });
 

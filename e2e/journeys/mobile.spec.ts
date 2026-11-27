@@ -7,13 +7,14 @@ import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'jso
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
 import systemBn from '../../src/features/system/i18n/bn.json' with { type: 'json' };
 import prosBn from '../../src/features/prospects/i18n/bn.json' with { type: 'json' };
-import { confirmWithReason, login, S } from '../fixtures';
+import { confirmWithReason, login, S, submenu, unfold } from '../fixtures';
 
-/** Opens the menu and a sidebar item; with a section (FR-W-069), then that section's tab. */
+/** Opens the menu and a page; with a section (FR-W-075), unfolds that section's submenu first and picks the page in it. */
 async function openMenuAndGo(page: import('@playwright/test').Page, name: string, section?: string) {
   await page.getByRole('button', { name: shellBn.openMenu }).click();
-  await page.getByRole('dialog').getByRole('link', { name: new RegExp(`^${section ?? name}( [০-৯0-9,]+)?$`) }).first().click();
-  if (section) await page.getByTestId('section-tabs').getByRole('link', { name: new RegExp(`^${name}( [০-৯0-9,]+)?$`) }).click();
+  const menu = page.getByRole('dialog');
+  if (section) await unfold(menu, section);
+  await (section ? submenu(menu, section) : menu).getByRole('link', { name: new RegExp(`^${name}( [০-৯0-9,]+)?$`) }).first().click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
 }
 

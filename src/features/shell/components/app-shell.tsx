@@ -1,14 +1,14 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { Lock, PanelLeftClose, PanelLeftOpen, PowerOff, WifiOff } from 'lucide-react';
+import { ChevronDown, Lock, PanelLeftClose, PanelLeftOpen, PowerOff, WifiOff } from 'lucide-react';
 import * as D from '@radix-ui/react-dialog';
 import { cn } from '@/shared/lib/cn';
 import { useSession } from '@/shared/auth/session';
 import { onForcedLogout, refreshSession, scheduleProactiveRefresh } from '@/shared/auth/refresh';
-import { featureForPath, navEntries, sectionForPath, type NavRoute } from '@/shared/feature/registry';
+import { featureForPath, navEntries, sectionForPath, type NavRoute, type NavSection } from '@/shared/feature/registry';
 import { useGate } from '@/shared/feature/useGate';
 import type { NavGroup } from '@/shared/feature/types';
 import type { LucideIcon } from 'lucide-react';
@@ -23,7 +23,7 @@ import { IdleWatcher } from './idle-watcher';
 import { CommandPalette } from './command-palette';
 import { PrintMasthead } from './print-masthead';
 import { useBranchSync } from './branch-switcher';
-import { lastTabHref, SectionTabs, useBadgeSum } from './section-tabs';
+import { isFolded, lastTabHref, toggleFold, useBadgeSum, useRememberFilters } from './nav-state';
 import { useAutoErpSync, useBranchFlags, useMe } from '../api/queries';
 
 const GROUPS: NavGroup[] = ['top', 'field', 'people', 'insights', 'admin'];
@@ -75,6 +75,7 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
   useBranchFlags();
   useBranchSync();
   useAutoErpSync();
+  useRememberFilters();
   useEffect(() => setMobileOpen(false), [pathname]);
 
   useEffect(() => {
@@ -138,8 +139,6 @@ function ShellFrame({ children }: { children: React.ReactNode }) {
             {t('offline')}
           </div>
         )}
-        {/* FR-W-069: the section's tabs are a nav landmark of their own, above (not inside) the main content */}
-        <SectionTabs />
         <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-16 sm:pt-6 lg:px-6 print:max-w-none print:p-0" data-offline={!online || undefined}>
           <PrintMasthead />
           <ModuleGate>{children}</ModuleGate>
@@ -161,8 +160,9 @@ function SidebarContent({ collapsed, mobile, onNavigate }: { collapsed: boolean;
   const wide = mobile || !collapsed;
   const branch = sp.get('branch');
   const withBranch = (href: string) => (branch ? `${href}${href.includes('?') ? '&' : '?'}branch=${branch}` : href);
-  // FR-W-069: a section is active on any of its tabs and on pages below them (a customer's page, move requests)
-  const activeSection = sectionForPath(pathname, gate)?.nav.section.id;
+  // a section's page is open on the page itself and on pages below it (a customer's page, move requests)
+  const hit = sectionForPath(pathname, gate);
+  const activeSection = hit?.nav.section.id;
   const isActive = (r: NavRoute) => (r.path === '/' ? pathname === '/' : pathname === r.path || pathname.startsWith(r.path.replace(/\/$/, '') + '/'));
 
   return (
@@ -176,30 +176,34 @@ function SidebarContent({ collapsed, mobile, onNavigate }: { collapsed: boolean;
           </span>
         </Link>
       </div>
-      {/* a tap on a link closes the phone menu even when it opens the page already shown (the current section) */}
+      {/* a tap on a link closes the phone menu even when it opens the page already shown; a section heading does not */}
       <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3" aria-label={t('nav.menu')} onClick={(e) => (e.target as HTMLElement).closest('a') && onNavigate?.()}>
-        {/* Eight or so items: groups are separated by a rule, without headings to fold (ADR-W28). */}
+        {/* FR-W-075 (ADR-W32): sections fold open into their pages; groups are separated by a rule */}
         {GROUPS.map((g) => {
           const items = entries.filter((e) => e.group === g);
           if (!items.length) return null;
           return (
-            <ul key={g} className="space-y-px border-t border-line/70 pt-2 mt-2 first:mt-0 first:border-0 first:pt-0">
-              {items.map((e) =>
-                e.kind === 'route' ? (
-                  <NavItem key={e.route.path} label={t(e.route.title)} icon={e.route.icon} badges={e.route.useBadge ? [e.route] : []} active={!activeSection && isActive(e.route)} wide={wide} mobile={mobile} href={withBranch(e.route.path)} />
-                ) : (
-                  <NavItem
-                    key={e.nav.section.id}
-                    label={t(e.nav.section.title)}
-                    icon={e.nav.section.icon}
-                    badges={e.nav.tabs.filter((r) => r.useBadge && (!e.nav.section.badgeFrom || e.nav.section.badgeFrom.includes(r.path)))}
-                    active={activeSection === e.nav.section.id}
-                    wide={wide}
-                    mobile={mobile}
-                    href={withBranch(lastTabHref(e.nav.href))}
-                  />
-                ),
-              )}
+            <ul key={g} className="mt-2 space-y-px border-t border-line/70 pt-2 first:mt-0 first:border-0 first:pt-0">
+              {items.map((e) => {
+                if (e.kind === 'route')
+                  return <NavItem key={e.route.path} label={t(e.route.title)} icon={e.route.icon} badges={e.route.useBadge ? [e.route] : []} active={!hit && isActive(e.route)} wide={wide} mobile={mobile} href={withBranch(e.route.path)} />;
+                const only = e.nav.tabs.length === 1 ? e.nav.tabs[0]! : null;
+                // a section with one page this user may open (Reports) is a plain item named after the section
+                if (only)
+                  return (
+                    <NavItem
+                      key={e.nav.section.id}
+                      label={t(e.nav.section.title)}
+                      icon={e.nav.section.icon}
+                      badges={only.useBadge ? [only] : []}
+                      active={activeSection === e.nav.section.id}
+                      wide={wide}
+                      mobile={mobile}
+                      href={withBranch(lastTabHref(only.path))}
+                    />
+                  );
+                return <NavSectionItem key={e.nav.section.id} nav={e.nav} activeSection={activeSection} activePath={hit?.active.path} wide={wide} mobile={mobile} withBranch={withBranch} />;
+              })}
             </ul>
           );
         })}
@@ -216,32 +220,98 @@ function SidebarContent({ collapsed, mobile, onNavigate }: { collapsed: boolean;
   );
 }
 
-function NavItem({ label, icon: Icon, badges, active, wide, mobile, href }: { label: string; icon?: LucideIcon; badges: NavRoute[]; active: boolean; wide: boolean; mobile?: boolean; href: string }) {
+/**
+ * FR-W-075: a sidebar section as a foldable submenu. The heading (a button with aria-expanded) folds it; its pages are
+ * listed underneath. The section holding the open page is always unfolded. The icon-only rail has no headings and lists
+ * every page as an icon, so folding applies only where the heading is shown.
+ */
+function NavSectionItem({
+  nav,
+  activeSection,
+  activePath,
+  wide,
+  mobile,
+  withBranch,
+}: {
+  nav: NavSection;
+  activeSection?: string;
+  activePath?: string;
+  wide: boolean;
+  mobile?: boolean;
+  withBranch: (href: string) => string;
+}) {
+  const { t } = useTranslation();
+  const closed = useUi((s) => s.navClosed);
+  const setUi = useUi((s) => s.set);
+  const listId = useId();
+  const { section, tabs } = nav;
+  const holds = activeSection === section.id;
+  const folded = isFolded(section.id, activeSection, closed);
+  const [badge, probes] = useBadgeSum(tabs.filter((r) => r.useBadge && (!section.badgeFrom || section.badgeFrom.includes(r.path))));
+  const label = t(section.title);
+  const Icon = section.icon;
+  // where the heading shows: always in the phone menu, from lg up in the wide sidebar, never in the icon rail
+  const headingShown = wide ? (mobile ? '' : 'hidden lg:flex') : 'hidden';
+  const hideWhenFolded = folded && wide ? (mobile ? 'hidden' : 'lg:hidden') : '';
+  return (
+    <li data-section={section.id} className={cn(!wide && 'mt-1 border-t border-line/70 pt-1', !mobile && wide && 'max-lg:mt-1 max-lg:border-t max-lg:border-line/70 max-lg:pt-1')}>
+      {probes}
+      <button
+        type="button"
+        aria-expanded={!folded}
+        aria-controls={listId}
+        onClick={() => setUi({ navClosed: toggleFold(section.id, closed) })}
+        className={cn(
+          'group/sec h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-base font-medium transition-colors duration-[var(--dur-fast)] hover:bg-surface-hover [@media(pointer:coarse)]:h-11',
+          holds ? 'text-fg' : 'text-fg-secondary hover:text-fg',
+          headingShown || 'flex',
+        )}
+      >
+        <Icon className={cn('size-[18px] shrink-0', holds ? 'text-primary' : 'text-fg-tertiary group-hover/sec:text-fg-secondary')} aria-hidden />
+        <span className="truncate">{label}</span>
+        {folded && badge ? <CountPill n={badge} className="ms-auto" /> : null}
+        <ChevronDown className={cn('size-4 shrink-0 text-fg-tertiary transition-transform duration-[var(--dur-fast)]', !(folded && badge) && 'ms-auto', folded && '-rotate-90 rtl:rotate-90')} aria-hidden />
+      </button>
+      <ul id={listId} aria-label={t('shell:sections.tabs', { section: label })} className={cn('space-y-px', wide && (mobile ? 'ms-4 border-s border-line ps-1' : 'lg:ms-4 lg:border-s lg:border-line lg:ps-1'), hideWhenFolded)}>
+        {tabs.map((r) => (
+          // the open page's own link starts it afresh (as the tab strip did); the others reopen with their last filters
+          <NavItem key={r.path} sub label={t(r.title)} icon={r.icon} badges={r.useBadge ? [r] : []} active={r.path === activePath} wide={wide} mobile={mobile} href={withBranch(r.path === activePath ? `${r.path}/` : lastTabHref(r.path))} />
+        ))}
+      </ul>
+    </li>
+  );
+}
+
+function CountPill({ n, className }: { n: number; className?: string }) {
+  return <span className={cn('tabular rounded-full bg-danger-bg px-1.5 text-xs leading-5 font-semibold text-danger ring-1 ring-danger/15 ring-inset', className)}>{formatNumber(n > 99 ? 99 : n)}</span>;
+}
+
+function NavItem({ label, icon: Icon, badges, active, wide, mobile, href, sub }: { label: string; icon?: LucideIcon; badges: NavRoute[]; active: boolean; wide: boolean; mobile?: boolean; href: string; sub?: boolean }) {
   const [badge, probes] = useBadgeSum(badges);
   const link = (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-base transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11',
+        'group relative flex h-9 items-center gap-2.5 rounded-md px-2.5 transition-colors duration-[var(--dur-fast)] [@media(pointer:coarse)]:h-11',
+        sub ? 'text-sm' : 'text-base',
         active ? 'bg-primary-subtle font-semibold text-primary-subtle-fg' : 'font-medium text-fg-secondary hover:bg-surface-hover hover:text-fg',
         !wide && 'justify-center px-0',
         !mobile && wide && 'max-lg:justify-center max-lg:px-0',
       )}
     >
       {active && <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-primary" aria-hidden />}
-      {Icon && <Icon className={cn('size-[18px] shrink-0', active ? 'text-primary' : 'text-fg-tertiary group-hover:text-fg-secondary')} aria-hidden />}
+      {Icon && <Icon className={cn('shrink-0', sub ? 'size-4' : 'size-[18px]', active ? 'text-primary' : 'text-fg-tertiary group-hover:text-fg-secondary')} aria-hidden />}
       <span className={cn('truncate', !wide && 'sr-only', !mobile && wide && 'max-lg:sr-only')}>{label}</span>
       {badge ? (
-        <span
+        <CountPill
+          n={badge}
           className={cn(
-            'tabular ms-auto rounded-full bg-danger-bg px-1.5 text-xs leading-5 font-semibold text-danger ring-1 ring-danger/15 ring-inset',
+            'ms-auto',
             (!wide || (!mobile && wide)) && 'absolute -top-0.5 end-0.5 ms-0 min-w-4 px-1 text-center text-[10px] leading-4',
             !mobile && wide && 'lg:static lg:ms-auto lg:px-1.5 lg:text-xs lg:leading-5',
           )}
-        >
-          {formatNumber(badge > 99 ? 99 : badge)}
-        </span>
+        />
       ) : null}
     </Link>
   );

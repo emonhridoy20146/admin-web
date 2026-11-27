@@ -1,39 +1,75 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import custBn from '../../src/features/customers/i18n/bn.json' with { type: 'json' };
 import colBn from '../../src/features/collections/i18n/bn.json' with { type: 'json' };
 import cashBn from '../../src/features/cash/i18n/bn.json' with { type: 'json' };
 import usersBn from '../../src/features/admin-users/i18n/bn.json' with { type: 'json' };
+import repBn from '../../src/features/reports/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav, pickRange, S, tab } from '../fixtures';
+import shellBn from '../../src/features/shell/i18n/bn.json' with { type: 'json' };
+import { labelRe, login, nav, pickRange, S, submenu, tab } from '../fixtures';
 
 /**
- * FR-W-069 / ADR-W28 (owner request 2026-11-24, item C): 8 sidebar items; related pages are tabs of a section; every
- * tab keeps its own URL, so old links open the same page inside its section.
+ * FR-W-075 / ADR-W32 (owner request 2026-11-27): the sidebar's sections fold open into submenus of their pages (like
+ * dec58c6); the tab strip above the page is gone. Every page keeps its own URL, so old links, ⌘K and shortcuts still
+ * open the same page, and the section holding it is unfolded with the page highlighted.
  */
-test('sidebar has 8–12 items; a section opens its first tab and its tabs switch pages', async ({ page }) => {
+const heading = (page: Page, section: string) => page.getByRole('navigation').first().getByRole('button', { name: labelRe(section) });
+
+async function axeClean(page: Page, include: string) {
+  const r = await new AxeBuilder({ page }).include(include).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+}
+
+test('the sidebar shows the sections as submenus; a heading folds its pages; no tab strip above the page', async ({ page }) => {
   await login(page);
   const menu = page.getByRole('navigation').first();
-  const n = await menu.getByRole('link').count();
-  expect(n).toBeGreaterThanOrEqual(8);
-  expect(n).toBeLessThanOrEqual(12);
+  // six foldable sections (Inbox, Customers, Collections, Field work, Staff, Admin); Overview and Reports are plain items
+  for (const sec of [S.inbox, S.customers, S.collections, S.field, S.staff, S.admin]) await expect(heading(page, sec)).toHaveAttribute('aria-expanded', 'true');
+  await expect(heading(page, S.reports)).toHaveCount(0);
+  await expect(menu.getByRole('link', { name: labelRe(S.reports) })).toBeVisible();
+  await expect(page.getByTestId('section-tabs')).toHaveCount(0);
 
-  await nav(page, S.collections);
-  await expect(page).toHaveURL(/\/collections\/$/);
-  await expect(menu.getByRole('link', { name: new RegExp(`^${S.collections}`) })).toHaveAttribute('aria-current', 'page');
-  const tabs = page.getByTestId('section-tabs');
-  await expect(tabs.getByRole('link', { name: new RegExp(`^${colBn.title}`) })).toHaveAttribute('aria-current', 'page');
-
-  await tab(page, colBn.conflicts);
+  await nav(page, colBn.conflicts, S.collections);
   await expect(page).toHaveURL(/\/collections\/conflicts\/$/);
-  await expect(menu.getByRole('link', { name: new RegExp(`^${S.collections}`) })).toHaveAttribute('aria-current', 'page');
+  const cols = submenu(menu, S.collections);
+  await expect(cols.getByRole('link', { name: labelRe(colBn.conflicts) })).toHaveAttribute('aria-current', 'page');
+  await expect(cols.locator('[aria-current=page]')).toHaveCount(1);
+
+  // fold Customers: its pages hide, the choice survives a reload (kept in the browser)
+  await heading(page, S.customers).click();
+  await expect(heading(page, S.customers)).toHaveAttribute('aria-expanded', 'false');
+  await expect(submenu(menu, S.customers)).toBeHidden();
+  // the section holding the open page cannot hide it
+  await heading(page, S.collections).click();
+  await expect(heading(page, S.collections)).toHaveAttribute('aria-expanded', 'true');
+  await expect(cols.getByRole('link', { name: labelRe(colBn.conflicts) })).toBeVisible();
+  await page.reload();
+  await expect(heading(page, S.customers)).toHaveAttribute('aria-expanded', 'false');
+  await heading(page, S.customers).click();
+  await expect(submenu(menu, S.customers).getByRole('link', { name: labelRe(custBn.title) })).toBeVisible();
+
   await tab(page, cashBn.title);
   await expect(page).toHaveURL(/\/cash\/$/);
+  await nav(page, repBn.title);
+  await expect(menu.getByRole('link', { name: labelRe(S.reports) })).toHaveAttribute('aria-current', 'page');
 });
 
-test('a tab reopens with the filters it was left with', async ({ page }) => {
+test('opening a page of a folded section unfolds it, also from a link outside the sidebar', async ({ page }) => {
   await login(page);
-  await nav(page, S.collections);
+  await heading(page, S.admin).click();
+  await expect(heading(page, S.admin)).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Control+k');
+  await page.getByRole('dialog').getByRole('combobox').fill(usersBn.title);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(usersBn.title);
+  await expect(heading(page, S.admin)).toHaveAttribute('aria-expanded', 'true');
+  await expect(submenu(page.getByRole('navigation').first(), S.admin).getByRole('link', { name: labelRe(usersBn.title) })).toHaveAttribute('aria-current', 'page');
+});
+
+test('a page reopens from the submenu with the filters it was left with', async ({ page }) => {
+  await login(page);
+  await nav(page, colBn.title, S.collections);
   await pickRange(page, commonBn.range['7d']);
   await expect(page).toHaveURL(/range=7d/);
   await tab(page, colBn.conflicts);
@@ -42,29 +78,28 @@ test('a tab reopens with the filters it was left with', async ({ page }) => {
   await expect(page.getByTestId('date-range')).toContainText(commonBn.range['7d']);
 });
 
-test('old links still open their page inside its section; a page below a tab has no strip', async ({ page }) => {
+test('old links open their page with its section unfolded and the page highlighted; a page below highlights its parent', async ({ page }) => {
   await login(page);
+  const menu = page.getByRole('navigation').first();
   await page.goto('/map/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(custBn.map.title);
-  const menu = page.getByRole('navigation').first();
-  await expect(menu.getByRole('link', { name: new RegExp(`^${S.customers}`) })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('section-tabs').getByRole('link', { name: custBn.map.title })).toHaveAttribute('aria-current', 'page');
+  await expect(heading(page, S.customers)).toHaveAttribute('aria-expanded', 'true');
+  await expect(submenu(menu, S.customers).getByRole('link', { name: labelRe(custBn.map.title) })).toHaveAttribute('aria-current', 'page');
 
   await page.goto('/admin/users/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(usersBn.title);
-  await expect(menu.getByRole('link', { name: new RegExp(`^${S.admin}`) })).toHaveAttribute('aria-current', 'page');
+  await expect(submenu(menu, S.admin).getByRole('link', { name: labelRe(usersBn.title) })).toHaveAttribute('aria-current', 'page');
 
-  // a customer's own page: the Customers item is highlighted, the strip is not shown (the page has its own tabs)
-  await nav(page, S.customers);
+  // a customer's own page: the Customers page is highlighted in its submenu
+  await nav(page, custBn.title, S.customers);
   await expect(page.locator('main tbody tr a').first()).toBeVisible();
   await page.locator('main tbody tr').first().click();
   await page.getByRole('dialog').getByRole('link', { name: custBn.openFull }).click();
   await expect(page).toHaveURL(/\/customers\/[^/?]+\/$/);
-  await expect(page.getByTestId('section-tabs')).toHaveCount(0);
-  await expect(menu.getByRole('link', { name: new RegExp(`^${S.customers}`) })).toHaveAttribute('aria-current', 'page');
+  await expect(submenu(menu, S.customers).getByRole('link', { name: labelRe(custBn.title) })).toHaveAttribute('aria-current', 'page');
 });
 
-test('⌘K still opens a tab page by name, and a section by its name', async ({ page }) => {
+test('⌘K still opens a page by name, and a section by its name; keyboard folds a section', async ({ page }) => {
   await login(page);
   await page.keyboard.press('Control+k');
   await page.getByRole('dialog').getByRole('combobox').fill(colBn.conflicts);
@@ -74,20 +109,53 @@ test('⌘K still opens a tab page by name, and a section by its name', async ({ 
   await page.getByRole('dialog').getByRole('combobox').fill(S.admin);
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(usersBn.title);
+
+  await heading(page, S.staff).focus();
+  await page.keyboard.press('Enter');
+  await expect(heading(page, S.staff)).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Space');
+  await expect(heading(page, S.staff)).toHaveAttribute('aria-expanded', 'true');
+});
+
+test('at 1440 px the sidebar is axe clean; the icon-only sidebar lists every page with no headings', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await login(page);
+  await page.goto('/collections/');
+  await expect(heading(page, S.collections)).toBeVisible();
+  await axeClean(page, 'aside nav');
+  await page.getByRole('button', { name: commonBn.nav.collapse }).click();
+  const menu = page.getByRole('navigation').first();
+  await expect(heading(page, S.collections)).toBeHidden();
+  await expect(menu.locator('[aria-current=page]')).toBeVisible();
+  await expect(submenu(menu, S.admin).getByRole('link').first()).toBeVisible();
+  await axeClean(page, 'aside nav');
+  await page.getByRole('button', { name: commonBn.nav.expand }).click();
 });
 
 test.describe('at 390 px', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  test('the tab strip scrolls sideways, keeps the open tab in view, ≥ 44 px targets on touch, axe clean', async ({ page }) => {
+  test('the phone menu shows the same submenus, ≥ 44 px targets on touch, closes on a tap, axe clean', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await login(page);
     await page.goto('/data-quality/');
-    const tabs = page.getByTestId('section-tabs');
-    const current = tabs.locator('[aria-current=page]');
-    await expect(current).toBeInViewport();
+    await page.getByRole('button', { name: shellBn.openMenu }).click();
+    const menu = page.getByRole('dialog');
+    const reports = menu.getByRole('link', { name: labelRe(S.reports) });
+    await expect(reports).toBeVisible();
+    const cust = menu.getByRole('button', { name: labelRe(S.customers) });
+    await expect(cust).toHaveAttribute('aria-expanded', 'true');
+    const current = submenu(menu, S.customers).locator('[aria-current=page]');
+    await expect(current).toBeVisible();
     expect((await current.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await cust.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await menu.getByRole('button', { name: labelRe(S.staff) }).click();
+    await expect(menu.getByRole('button', { name: labelRe(S.staff) })).toHaveAttribute('aria-expanded', 'false');
+    await expect(menu).toBeVisible(); // a heading does not close the menu
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-    const r = await new AxeBuilder({ page }).include('[data-testid=section-tabs]').withTags(['wcag2a', 'wcag2aa']).analyze();
-    expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+    await axeClean(page, '[role=dialog]');
+    // tapping the open page closes the menu (FR-W-069 fix kept)
+    await current.click();
+    await expect(menu).toBeHidden();
+    await expect(page.getByTestId('section-tabs')).toHaveCount(0);
   });
 });

@@ -7,7 +7,7 @@ import flagsBn from '../../src/features/admin-flags/i18n/bn.json' with { type: '
 import rbacBn from '../../src/features/admin-rbac/i18n/bn.json' with { type: 'json' };
 import dashBn from '../../src/features/dashboard/i18n/bn.json' with { type: 'json' };
 import commonBn from '../../src/shared/i18n/common.bn.json' with { type: 'json' };
-import { login, nav, S } from '../fixtures';
+import { login, nav, S, submenu } from '../fixtures';
 
 /** FR-W-070 (owner request 2026-11-24, item D; contract 1.48.0): the requests inbox, end to end in the mock. */
 const drawer = (page: Page) => page.getByTestId('request-drawer');
@@ -124,10 +124,10 @@ test.describe('area manager (contract 1.48.0, ADR-065)', () => {
     await expect(page.getByRole('button', { name: reqBn.act.resolve, exact: true })).toHaveCount(0);
     await page.keyboard.press('Escape');
 
-    // Admin: users are visible, but no create; the drawer has no password reset; settings and flags are not tabs
+    // Admin: users are visible, but no create; the drawer has no password reset; settings and flags are not in the submenu
     await nav(page, usersBn.title, S.admin);
     await expect(page.getByRole('button', { name: usersBn.new })).toHaveCount(0);
-    const tabs = page.getByTestId('section-tabs');
+    const tabs = submenu(page.getByRole('navigation').first(), S.admin);
     await expect(tabs.getByRole('link', { name: new RegExp(`^${settingsBn.title}`) })).toHaveCount(0);
     await expect(tabs.getByRole('link', { name: new RegExp(`^${flagsBn.title}`) })).toHaveCount(0);
     await page.locator('main tbody tr[tabindex="0"]').first().click();
